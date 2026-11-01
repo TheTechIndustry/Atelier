@@ -1,9 +1,10 @@
 'use strict';
-const invoke=window.__TAURI__?.core?.invoke;
+const isPreview=Boolean(window.location&&new URLSearchParams(window.location.search).has('preview'));
+const invoke=isPreview?undefined:window.__TAURI__?.core?.invoke;
 const $=id=>document.getElementById(id);
 let cfg,items=[],refreshing=false,collapsed=false,fullscreenHidden=false,fullscreenRevision=0,hideTimer,dragId,menuItem=null,errorTimer,lastSignature='',sizeTimer;
 let visibleSize={width:320,height:110};
-const dockAudio=window.createDockAudio?.({element:$('dock'),invoke});
+const dockAudio=isPreview?null:window.createDockAudio?.({element:$('dock'),invoke});
 document.addEventListener('contextmenu',event=>event.preventDefault());
 function error(e){$('error').textContent=String(e);$('error').hidden=false;clearTimeout(errorTimer);errorTimer=setTimeout(()=>$('error').hidden=true,5000)}
 function config(c){
@@ -77,7 +78,7 @@ function openMenu(id){
 function closeMenu(){menuItem=null;$('menu').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 document.addEventListener('pointerdown',e=>{if(!$('menu').contains(e.target))closeMenu()});
-function scheduleMeasure(){clearTimeout(sizeTimer);sizeTimer=setTimeout(measure,60)}
+function scheduleMeasure(){if(isPreview)return;clearTimeout(sizeTimer);sizeTimer=setTimeout(measure,60)}
 async function measure(){
   if(!cfg||!invoke||menuItem)return;
   const vertical=['left','right'].includes(cfg.position),room=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--room'));
@@ -99,9 +100,9 @@ $('apps').addEventListener('wheel',event=>{if(cfg&&!['left','right'].includes(cf
 for(const action of ['start','search','tray','language','network','volume','clock'])$(action).addEventListener('click',()=>invoke('dock_open_system',{action}).catch(error));
 
 $('studio').addEventListener('click',()=>invoke('dock_open_studio').catch(error));
-setInterval(()=>{$('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})},1000);
+function updateClock(){$('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}updateClock();setInterval(updateClock,1000);
 async function refreshLanguage(){if(!invoke||!cfg?.show_language)return;try{$('language').textContent=await invoke('dock_input_language')}catch{}}
 setInterval(refreshLanguage,500);$('language').addEventListener('pointerenter',refreshLanguage);window.addEventListener('focus',refreshLanguage);
-window.__TAURI__?.event?.listen('dock-config-changed',()=>{lastSignature='';refresh()});
-window.__TAURI__?.event?.listen('dock-fullscreen-changed',event=>{fullscreenRevision++;fullscreenHidden=Boolean(event.payload);if(cfg)dockAudio?.configure(cfg.audio,Boolean(cfg.enabled&&!collapsed&&!fullscreenHidden),cfg.position)});
-refresh();setInterval(refresh,1600);
+if(!isPreview)window.__TAURI__?.event?.listen('dock-config-changed',()=>{lastSignature='';refresh()});
+if(!isPreview)window.__TAURI__?.event?.listen('dock-fullscreen-changed',event=>{fullscreenRevision++;fullscreenHidden=Boolean(event.payload);if(cfg)dockAudio?.configure(cfg.audio,Boolean(cfg.enabled&&!collapsed&&!fullscreenHidden),cfg.position)});
+if(isPreview){window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data?.dockPreview)return;const snapshot=event.data.dockPreview;if(!snapshot.config||!Array.isArray(snapshot.items))return;config(snapshot.config);items=snapshot.items;if(typeof snapshot.language==='string')$('language').textContent=snapshot.language;render()})}else{refresh();setInterval(refresh,1600)}

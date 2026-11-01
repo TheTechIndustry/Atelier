@@ -2,14 +2,15 @@
   'use strict';
   const $=id=>document.getElementById(id),invoke=window.__TAURI__?.core?.invoke;
   const root=$('desktop-dock-settings');
-  const fields=[...root.querySelectorAll('[id^="dd-"]')].filter(e=>['INPUT','SELECT'].includes(e.tagName));
-  let saved=null,items=[],busy=false,queued=false,timer=null,refreshing=false,revision=0;
+  const fields=[$('dd-enabled'),...root.querySelectorAll('[id^="dd-"]')].filter(e=>['INPUT','SELECT'].includes(e.tagName));
+  let saved=null,items=[],previewLanguage=null,busy=false,queued=false,timer=null,refreshing=false,revision=0;
+  const preview=window.createDockPreview?.($('dock-preview'));
   function outputs(){for(const input of fields.filter(e=>e.type==='range')){const name=input.id.slice(3),suffix=['opacity','inactive_opacity','magnification'].includes(name)?'%':name==='hide_delay'?' ms':' px';input.nextElementSibling.textContent=input.value+suffix;}}
-  function paint(c){saved=c;for(const field of fields){const value=c[field.id.slice(3)];if(field.type==='checkbox')field.checked=!!value;else field.value=value;}outputs();$('dd-status').textContent=c.enabled?'Desktop dock is on':'Desktop dock is off';}
+  function paint(c){saved=c;for(const field of fields){const value=c[field.id.slice(3)];if(field.type==='checkbox')field.checked=!!value;else field.value=value;}outputs();preview?.render(c,items,previewLanguage);$('dd-status').textContent=c.enabled?'Desktop dock is on':'Desktop dock is off';}
   function read(){const c={...saved};for(const field of fields){const name=field.id.slice(3);c[name]=field.type==='checkbox'?field.checked:['range','number'].includes(field.type)||name==='monitor'?Number(field.value):field.value;}c.hide_windows_taskbar=c.enabled;return c;}
   async function refresh(){
     if(!invoke||refreshing||busy||timer)return;refreshing=true;const startRevision=revision;
-    try{const data=await invoke('get_dock_snapshot');if(startRevision!==revision||busy||timer)return;const selected=data.config.monitor;$('dd-monitor').replaceChildren(...data.monitors.map((name,i)=>{const o=document.createElement('option');o.value=i;const match=name.match(/^\\\\\.\\DISPLAY(\d+)$/i);o.textContent=match?'Display '+match[1]:name;return o}));$('dd-monitor').value=selected;paint(data.config);items=data.items;renderApps();}
+    try{const data=await invoke('get_dock_snapshot');if(startRevision!==revision||busy||timer)return;const selected=data.config.monitor;$('dd-monitor').replaceChildren(...data.monitors.map((name,i)=>{const o=document.createElement('option');o.value=i;const match=name.match(/^\\\\\.\\DISPLAY(\d+)$/i);o.textContent=match?'Display '+match[1]:name;return o}));$('dd-monitor').value=selected;items=data.items;paint(data.config);renderApps();if(data.config.show_language){invoke('dock_input_language').then(language=>{previewLanguage=language;if(saved)preview?.render(read(),items,previewLanguage)}).catch(()=>{})}}
     catch(e){$('dd-status').textContent=String(e)}finally{refreshing=false}
   }
   function eyeSvg(hidden){return hidden?'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.8 5.3A11.4 11.4 0 0 1 12 5c5 0 8.5 4.3 9 7-.3 1.2-1.1 2.5-2.2 3.6M6.1 6.1C4.3 7.4 3.3 9.3 3 12c.5 2.7 4 7 9 7 1.2 0 2.4-.3 3.4-.8"/></svg>':'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12c.5-2.7 4-7 9-7s8.5 4.3 9 7c-.5 2.7-4 7-9 7s-8.5-4.3-9-7Z"/><circle cx="12" cy="12" r="3"/></svg>'}
@@ -41,12 +42,12 @@
     catch(e){paint(saved);toast('Could not update dock: '+e,true)}
     finally{busy=false;if(queued){queued=false;save()}else refresh()}
   }
-  for(const field of fields){field.addEventListener('input',()=>{revision++;outputs();if(field.type==='range'){clearTimeout(timer);timer=setTimeout(save,180)}});field.addEventListener('change',()=>{revision++;save()});}
+  for(const field of fields){field.addEventListener('input',()=>{revision++;outputs();if(saved)preview?.render(read(),items,previewLanguage);if(field.type==='range'){clearTimeout(timer);timer=setTimeout(save,180)}});field.addEventListener('change',()=>{revision++;if(saved)preview?.render(read(),items);save()});}
   function preset(values){if(!saved)return;revision++;const previous=saved;paint({...read(),...values,enabled:true});saved=previous;save()}
   $('dd-preset-mac').addEventListener('click',()=>preset({position:'bottom',alignment:'center',icon_size:44,spacing:6,padding:10,edge_gap:10,radius:18,opacity:72,tint:'#232532',magnification:140,icon_style:'original',inactive_opacity:90,active_background:false,indicator:'dot',indicator_color:'#f3f0ea',show_labels:true,show_running:true,show_clock:false}));
   $('dd-preset-compact').addEventListener('click',()=>preset({icon_size:24,spacing:2,padding:5,edge_gap:5,radius:12,magnification:125,show_clock:false}));
   $('dd-preset-sidebar').addEventListener('click',()=>preset({position:'left',alignment:'center',icon_size:36,spacing:5,padding:8,edge_gap:8,radius:16,magnification:125,show_clock:false}));
   if(!invoke){fields.forEach(e=>e.disabled=true);root.querySelectorAll('button').forEach(e=>e.disabled=true);$('dd-status').textContent='Launch Atelier to use the desktop dock';return}
   window.__TAURI__?.event?.listen('dock-config-changed',()=>{if(!busy&&!timer)refresh()});
-  refresh();setInterval(()=>{if(document.getElementById('taskbar').classList.contains('active')&&$('desktop-dock-details').open)refresh()},4000);
+  refresh();setInterval(()=>{if(document.getElementById('custom-taskbar').classList.contains('active')&&$('desktop-dock-details').open)refresh()},4000);
 })();
