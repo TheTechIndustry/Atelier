@@ -47,6 +47,8 @@ By default, Atelier uses `%APPDATA%\Atelier`. You can override this path by sett
 | :--- | :--- | :--- |
 | `settings.json` | Native taskbar styling, accent policy, blur radius, and color presets. | JSON |
 | `native-taskbar-enabled.json` | Whether native taskbar customization is enabled. Saved styling is retained when disabled. | JSON |
+| `animations.json` | Window transitions, duration, easing, dock bouncing, hover wave, and click feedback. | JSON |
+| `appearance.json` | System surface materials (Mica/Acrylic/Glass), opacity, corners, borders, and target surface toggles. | JSON |
 | `dock-settings.json` | Dock edge, icon size, magnification, pinned shortcuts, AppBar gap, and audio glow. | JSON |
 | `widgets.json` | Grid coordinates, dimensions, enabled states, and visual presets for all desktop widgets. | JSON |
 | `wallpapers/` | Contains `library.json`, imported video/scene directories, and extracted PKG assets. | Directory |
@@ -84,6 +86,47 @@ By default, Atelier uses `%APPDATA%\Atelier`. You can override this path by sett
   "pinned_apps": [
     { "name": "File Explorer", "path": "explorer.exe", "custom_icon": null }
   ]
+}
+```
+
+### 2. `appearance.json`
+```json
+{
+  "enabled": true,
+  "scope": "system_only",
+  "backdrop": "mica",
+  "opacity": 94,
+  "inactive_opacity": 82,
+  "corner_preference": "rounded",
+  "border_color": "default",
+  "border_width": 1,
+  "titlebar_mode": "dark",
+  "titlebar_color": "default",
+  "target_explorer": true,
+  "target_dialogs": true,
+  "target_tools": true,
+  "target_terminal": true,
+  "target_settings": true,
+  "target_flyouts": true,
+  "excluded_apps": ["cyberpunk2077.exe", "steam.exe", "discord.exe"],
+  "exclude_fullscreen_games": true
+}
+```
+
+### 3. `animations.json`
+```json
+{
+  "enabled": true,
+  "window_transitions": true,
+  "window_effect": "dock_expand",
+  "window_duration": 240,
+  "window_easing": "spring",
+  "native_min_max_animation": false,
+  "dock_bounce": "launch_only",
+  "dock_bounce_count": 2,
+  "dock_hover_wave": true,
+  "dock_hover_scale": 135,
+  "dock_click_feedback": "bounce"
 }
 ```
 

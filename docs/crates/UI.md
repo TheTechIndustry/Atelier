@@ -73,6 +73,9 @@ sequenceDiagram
 
 | Module | Source File | Description |
 | :--- | :--- | :--- |
+| **System Appearance** | [`src/system_appearance.rs`](../../crates/ui/src/system_appearance.rs) | DWM window backdrop materials (Mica, Mica Alt, Acrylic, Glass), active/inactive opacity, corner preference, titlebar mode, and granular system surface filters. |
+| **System Animations** | [`src/system_animations.rs`](../../crates/ui/src/system_animations.rs) | WinEvent hooks (`EVENT_SYSTEM_MINIMIZESTART/END`), live DWM thumbnail transitions, spring physics easing curves, and dock-origin zoom animations. |
+| **App Usage & Memory** | [`src/app_usage.rs`](../../crates/ui/src/app_usage.rs) | Zero-allocation NT query sampling (`WorkingSetPrivateSize` and CPU %), automatic background `EmptyWorkingSet` memory trimming, and studio sidebar telemetry. |
 | **Desktop Dock** | [`src/desktop_dock.rs`](../../crates/ui/src/desktop_dock.rs) | Taskbar enumeration, Explorer icon extraction, UWP ApplicationFrameWindow matching, pinned shortcut persistence, Windows AppBar space reservation, and UI Automation system tray popups. |
 | **Desktop Wallpaper** | [`src/desktop_wallpaper.rs`](../../crates/ui/src/desktop_wallpaper.rs) | Live wallpaper lifecycle controller, profile persistence, audio reactivity options, and `wallpaper-media://` byte-range video streaming. |
 | **Scene Engine Bridge** | [`src/wallpaper_scene.rs`](../../crates/ui/src/wallpaper_scene.rs) | Extraction of Wallpaper Engine `.pkg` archives, JSON project parsing, and `wallpaper-scene://` protocol asset server. |
@@ -100,9 +103,9 @@ sequenceDiagram
 ## Testing
 
 ```powershell
-# Run Rust unit tests for atelier-ui (47 tests)
+# Run Rust unit tests for atelier-ui (62 tests)
 cargo test -p atelier-ui
 
-# Run JavaScript frontend unit tests (30 tests)
+# Run JavaScript frontend unit tests (55 tests)
 node --test crates/ui/tests/*.test.cjs
 ```
