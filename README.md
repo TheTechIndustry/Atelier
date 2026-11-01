@@ -11,12 +11,21 @@
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](#license)
 
 [![Taskbar styling](https://img.shields.io/badge/Windows%20Taskbar-Styles%20%26%20Presets-3182CE)](#features)
-[![Desktop dock](https://img.shields.io/badge/macOS%20Taskbar-Desktop%20Dock-8B5CF6)](#features)
+[![Desktop dock](https://img.shields.io/badge/macOS%20Taskbar-Desktop%20Dock-8B5CF6)](docs/DOCK.md)
+[![System Appearance](https://img.shields.io/badge/DWM-System%20Appearance-0EA5E9)](docs/SYSTEM_APPEARANCE.md)
+[![Window Animations](https://img.shields.io/badge/Animations-Window%20Transitions-F43F5E)](docs/SYSTEM_ANIMATIONS.md)
+[![Dynamic Island](https://img.shields.io/badge/Desktop-Dynamic%20Island-F59E0B)](#features)
 [![Multi-monitor](https://img.shields.io/badge/Dock-Multi--monitor-14B8A6)](docs/crates/UI.md)
-[![Recovery](https://img.shields.io/badge/Shell-Recovery%20Helpers-22A06B)](docs/FAILURES_AND_RECOVERY.md)
 [![Live wallpapers](https://img.shields.io/badge/Wallpapers-Video%20%26%20Scenes-8B5CF6)](docs/SCENE_PLAYBACK.md)
+[![Audio reactivity](https://img.shields.io/badge/Audio-Reactive%20Visualizer-7C3AED)](docs/AUDIO_REACTIVITY.md)
+[![Performance](https://img.shields.io/badge/Performance-Zero--alloc%20%26%20Trimmed%20RAM-10B981)](#resource-efficiency-and-performance)
+[![Recovery](https://img.shields.io/badge/Shell-Recovery%20Helpers-22A06B)](docs/FAILURES_AND_RECOVERY.md)
 
 Atelier is a Windows desktop customization project built with Rust and Tauri v2. Its Studio customizes the Explorer taskbar, provides an optional separate dock, plays live wallpapers and manages desktop widgets. The Audio tab provides a desktop visualizer that reacts to system audio.
+
+<p align="center">
+  <img src="assets/preview.gif" alt="Atelier Desktop Studio Preview" width="100%">
+</p>
 
 ## Features
 
@@ -27,6 +36,8 @@ Atelier is a Windows desktop customization project built with Rust and Tauri v2.
 - **Scenes:** play supported 2D Wallpaper Engine scenes with per-wallpaper and author-provided controls. Compatibility is partial: custom shaders, SceneScript, 3D models and some effects and animations are not supported. See [Scene playback](docs/SCENE_PLAYBACK.md).
 - **Widgets:** configure desktop clock, calendar, system, media, battery, notes, weather, photo and countdown widgets.
 - **Dynamic Island:** an optional top-of-screen panel with media controls, a monthly calendar and battery status. Choose a display, position, appearance, modules and opening behavior in the Dynamic Island tab. The panel expands and collapses with an animation. Calendar events are not connected.
+- **Animations:** customize window opening, minimizing, and restoring transitions with Scale, Genie, Glide, and Spring physics, alongside dock icon launch bouncing, hover wave magnification, and click feedback.
+- **System Appearance:** customize surface materials and transparency across Windows system surfaces (File Explorer, Clock, Tray, Language switcher, and Settings) with Mica, Mica Alt, Acrylic, and Glass backdrops, active and inactive window opacity, rounded/square corner preferences, and custom window borders.
 - **Audio reactivity:** add a movable desktop visualizer with bars, wave, dots, circle or a symmetric wave. Customize its colors, glow, transparent background, size, sensitivity and smoothing; it responds to the default system output. Optional pulse and glow effects can also be enabled per wallpaper, and the desktop dock can react with glow and shape changes. See [Audio reactivity](docs/AUDIO_REACTIVITY.md).
 
 ## Architecture
@@ -45,16 +56,27 @@ flowchart LR
     Wallpaper --> Steam["Downloaded Steam Workshop items"]
     App --> Widgets["Desktop widgets"]
     App --> Audio["Audio capture and analysis"]
+    App --> Appearance["System Appearance & Animations"]
+    Appearance --> DWM["Windows DWM & Shell"]
     Dock --> Guardian["Recovery helper"]
 ```
 
 The Tauri application is the primary Studio entry point. The separate `atelier-core` binary has its own tray and initialization path and is not the Tauri IPC backend. Details: [Architecture](docs/ARCHITECTURE.md).
+
+## Resource Efficiency and Performance
+
+Atelier is engineered to run continuously in the background with a minimal footprint:
+- **Low Idle CPU (< 0.5%)**: Employs an event-driven design, avoiding continuous polling loops and waking up only on foreground window changes or user interaction. WASAPI audio loopback capture automatically idles when reactive visualizers are inactive or occluded.
+- **Zero-Allocation NT Process Sampling**: Queries process metrics using `NtQuerySystemInformation` (`SystemProcessInformation`) directly with a reusable static memory buffer, completely avoiding runtime heap allocation churn.
+- **Automatic Working Set Trimming**: Periodically purges unreferenced physical pages via `EmptyWorkingSet` across the main process and child WebView2 runtimes, keeping active Private Working Set RAM between ~100 MB and 160 MB.
 
 ## Documentation
 
 ### Guides and architecture
 
 - [Documentation index](docs/README.md)
+- [System Appearance](docs/SYSTEM_APPEARANCE.md)
+- [System Animations & Window Transitions](docs/SYSTEM_ANIMATIONS.md)
 - [Desktop dock](docs/DOCK.md)
 - [Wallpapers and Workshop](docs/WALLPAPERS.md)
 - [Audio reactivity](docs/AUDIO_REACTIVITY.md)
