@@ -46,6 +46,7 @@ By default, Atelier uses `%APPDATA%\Atelier`. You can override this path by sett
 | File / Folder | Purpose | Format |
 | :--- | :--- | :--- |
 | `settings.json` | Native taskbar styling, accent policy, blur radius, and color presets. | JSON |
+| `native-taskbar-enabled.json` | Whether native taskbar customization is enabled. Saved styling is retained when disabled. | JSON |
 | `dock-settings.json` | Dock edge, icon size, magnification, pinned shortcuts, AppBar gap, and audio glow. | JSON |
 | `widgets.json` | Grid coordinates, dimensions, enabled states, and visual presets for all desktop widgets. | JSON |
 | `wallpapers/` | Contains `library.json`, imported video/scene directories, and extracted PKG assets. | Directory |
