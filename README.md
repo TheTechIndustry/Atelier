@@ -21,7 +21,15 @@
 [![Performance](https://img.shields.io/badge/Performance-Zero--alloc%20%26%20Trimmed%20RAM-10B981)](#resource-efficiency-and-performance)
 [![Recovery](https://img.shields.io/badge/Shell-Recovery%20Helpers-22A06B)](docs/FAILURES_AND_RECOVERY.md)
 
-Atelier is a Windows desktop customization project built with Rust and Tauri v2. Its Studio customizes the Explorer taskbar, provides an optional separate dock, plays live wallpapers and manages desktop widgets. The Audio tab provides a desktop visualizer that reacts to system audio.
+**Atelier** is an all-in-one desktop customization and shell enhancement suite for Windows 10 and 11, engineered with Rust and Tauri v2 for native performance and ultra-low resource usage. Through its unified Studio control panel, Atelier transforms your Windows workspace:
+
+- **Windows Taskbar & macOS Dock**: Style the native Windows taskbar with floating geometry and custom materials, or switch to a separate macOS-style dock with app pinning, running window indicators, hover magnification waves, launch bounce physics, and auto-hide.
+- **System Appearance & DWM Theming**: Apply Mica, Mica Alt, Acrylic, and Glass backdrops, rounded or square corner geometry, custom accent borders, immersive dark titlebars, and active/inactive transparency across File Explorer, dialogs, Windows Terminal, and system flyouts.
+- **Physics-Based System Animations**: Replace rigid Windows animations with fluid window transitions (Scale, Genie, Glide, Spring) that visually originate from and collapse back into their specific dock icon, powered by live DWM thumbnail composition.
+- **Dynamic Island**: An interactive top-of-screen notch and pill with media controls, monthly calendar, battery status, live weather, notes, countdowns, and system performance metrics.
+- **Live Wallpapers & 2D Scenes**: Play hardware-accelerated MP4/WebM video wallpapers and interactive Wallpaper Engine 2D scenes with Steam Workshop discovery, multi-monitor display rules, and power-saving policies.
+- **Audio-Reactive Visualizers**: Real-time 64-band WASAPI spectrum analysis powering customizable desktop visualizer widgets (bars, waves, circles), dock ambient audio glow, and wallpaper bass pulse effects.
+- **Desktop Widgets & Telemetry**: Placeable desktop widgets (clock, system stats, media, weather, countdowns, notes, photos) and real-time zero-allocation CPU/RAM tracking with automatic memory trimming to keep idle usage under 0.5% CPU and ~120 MB RAM.
 
 <p align="center">
   <img src="assets/preview.gif" alt="Atelier Desktop Studio Preview" width="100%">
