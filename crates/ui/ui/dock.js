@@ -2,7 +2,9 @@
 const isPreview=Boolean(window.location&&new URLSearchParams(window.location.search).has('preview'));
 const invoke=isPreview?undefined:window.__TAURI__?.core?.invoke;
 const $=id=>document.getElementById(id);
-let cfg,items=[],refreshing=false,collapsed=false,fullscreenHidden=false,fullscreenRevision=0,hideTimer,dragId,menuItem=null,errorTimer,lastSignature='',sizeTimer;
+let cfg,items=[],refreshing=false,collapsed=false,fullscreenHidden=false,fullscreenRevision=0,hideTimer,dragId,menuItem=null,errorTimer,lastSignature='',sizeTimer,animCfg=null;
+if(invoke)invoke('get_animations_config').then(a=>{animCfg=a}).catch(()=>{});
+if(!isPreview)window.__TAURI__?.event?.listen('animations-config-changed',event=>{animCfg=event.payload});
 let visibleSize={width:320,height:110};
 const dockAudio=isPreview?null:window.createDockAudio?.({element:$('dock'),invoke});
 document.addEventListener('contextmenu',event=>event.preventDefault());
@@ -53,7 +55,20 @@ function render(){
   for(const button of current.values())button.remove();scheduleMeasure();
 }
 async function activate(id,newInstance){
-  const button=[...$('apps').children].find(b=>b.dataset.id===id),item=items.find(i=>i.id===id);if(cfg?.launch_animation!==false&&(newInstance||!item?.running)&&button){button.classList.remove('launching');void button.offsetWidth;button.classList.add('launching');clearTimeout(button.launchTimer);button.launchTimer=setTimeout(()=>button.classList.remove('launching'),550)}
+  const button=[...$('apps').children].find(b=>b.dataset.id===id),item=items.find(i=>i.id===id);
+  const feedback=animCfg?.dock_click_feedback||'bounce';
+  const bounceMode=animCfg?.dock_bounce||'launch_only';
+  const shouldBounce=(cfg?.launch_animation!==false)&&(bounceMode==='always'||(bounceMode==='launch_only'&&(newInstance||!item?.running)));
+  if(shouldBounce&&button){
+    const repeat=animCfg?.dock_bounce_count||2;
+    button.style.setProperty('--bounce-count',repeat);
+    button.classList.remove('launching','pulse','press');
+    void button.offsetWidth;
+    button.classList.add('launching');
+    if(feedback==='pulse'||feedback==='press')button.classList.add(feedback);
+    clearTimeout(button.launchTimer);
+    button.launchTimer=setTimeout(()=>{button.classList.remove('launching','pulse','press');button.style.removeProperty('--bounce-count')},550*repeat);
+  }
   try{await invoke('dock_activate',{id,newInstance});setTimeout(refresh,250)}catch(e){error(e)}
 
 }
@@ -97,12 +112,35 @@ document.documentElement.addEventListener('pointerenter',()=>{clearTimeout(hideT
 document.documentElement.addEventListener('pointerleave',()=>{closeMenu();$('label').hidden=true;clearTimeout(hideTimer);if(cfg?.auto_hide)hideTimer=setTimeout(()=>setCollapsed(true),cfg.hide_delay)});
 window.addEventListener('blur',()=>{closeMenu();$('label').hidden=true});
 $('apps').addEventListener('wheel',event=>{if(cfg&&!['left','right'].includes(cfg.position)&&$('apps').scrollWidth>$('apps').clientWidth){$('apps').scrollLeft+=event.deltaY||event.deltaX;event.preventDefault()}},{passive:false});
+$('apps').addEventListener('pointermove',event=>{
+  if(!animCfg?.dock_hover_wave||!cfg)return;
+  const isVertical=['left','right'].includes(cfg.position);
+  const maxScale=(animCfg.dock_hover_scale||135)/100;
+  const buttons=[...$('apps').children];
+  const pointerPos=isVertical?event.clientY:event.clientX;
+  for(const btn of buttons){
+    const r=btn.getBoundingClientRect();
+    const center=isVertical?(r.top+r.height/2):(r.left+r.width/2);
+    const dist=Math.abs(pointerPos-center);
+    const reach=(isVertical?r.height:r.width)*2.2;
+    const influence=Math.max(0,1-dist/reach);
+    const scale=1+(maxScale-1)*Math.sin(influence*Math.PI/2);
+    const icon=btn.querySelector('.icon');
+    if(icon)icon.style.transform=scale>1.01?`scale(${scale.toFixed(3)})`:'';
+  }
+});
+$('apps').addEventListener('pointerleave',()=>{
+  for(const btn of $('apps').children){
+    const icon=btn.querySelector('.icon');
+    if(icon)icon.style.transform='';
+  }
+});
 for(const action of ['start','search','tray','language','network','volume','clock'])$(action).addEventListener('click',()=>invoke('dock_open_system',{action}).catch(error));
 
 $('studio').addEventListener('click',()=>invoke('dock_open_studio').catch(error));
-function updateClock(){$('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}updateClock();setInterval(updateClock,1000);
+function updateClock(){$('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}updateClock();setInterval(updateClock,10000);
 async function refreshLanguage(){if(!invoke||!cfg?.show_language)return;try{$('language').textContent=await invoke('dock_input_language')}catch{}}
-setInterval(refreshLanguage,500);$('language').addEventListener('pointerenter',refreshLanguage);window.addEventListener('focus',refreshLanguage);
+setInterval(refreshLanguage,2500);$('language').addEventListener('pointerenter',refreshLanguage);window.addEventListener('focus',refreshLanguage);
 if(!isPreview)window.__TAURI__?.event?.listen('dock-config-changed',()=>{lastSignature='';refresh()});
 if(!isPreview)window.__TAURI__?.event?.listen('dock-fullscreen-changed',event=>{fullscreenRevision++;fullscreenHidden=Boolean(event.payload);if(cfg)dockAudio?.configure(cfg.audio,Boolean(cfg.enabled&&!collapsed&&!fullscreenHidden),cfg.position)});
-if(isPreview){window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data?.dockPreview)return;const snapshot=event.data.dockPreview;if(!snapshot.config||!Array.isArray(snapshot.items))return;config(snapshot.config);items=snapshot.items;if(typeof snapshot.language==='string')$('language').textContent=snapshot.language;render()})}else{refresh();setInterval(refresh,1600)}
+if(isPreview){window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||!event.data?.dockPreview)return;const snapshot=event.data.dockPreview;if(!snapshot.config||!Array.isArray(snapshot.items))return;config(snapshot.config);items=snapshot.items;if(typeof snapshot.language==='string')$('language').textContent=snapshot.language;render()})}else{refresh();setInterval(refresh,2500)}

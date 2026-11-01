@@ -1663,15 +1663,19 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     apply(app, &c)?;
     let fullscreen_app = app.clone();
     std::thread::spawn(move || loop {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(1000));
         let state = fullscreen_app.state::<DockState>();
         if state.stopping.load(Ordering::Relaxed) {
             break;
         }
-        let Ok(_write) = state.write.try_lock() else {
+        let Ok(config) = state.config.lock().map(|c| c.clone()) else {
             continue;
         };
-        let Ok(config) = state.config.lock().map(|c| c.clone()) else {
+        if !config.enabled {
+            std::thread::sleep(std::time::Duration::from_millis(1000));
+            continue;
+        }
+        let Ok(_write) = state.write.try_lock() else {
             continue;
         };
         if let Err(error) = sync_dock_visibility(&fullscreen_app, &config) {
@@ -1680,10 +1684,15 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     });
     let app = app.clone();
     std::thread::spawn(move || loop {
-        std::thread::sleep(std::time::Duration::from_secs(2));
+        std::thread::sleep(std::time::Duration::from_secs(3));
         let state = app.state::<DockState>();
         if state.stopping.load(Ordering::Relaxed) {
             break;
+        }
+        let enabled = state.config.lock().map(|c| c.enabled).unwrap_or(false);
+        if !enabled {
+            std::thread::sleep(std::time::Duration::from_secs(2));
+            continue;
         }
         if let Err(error) = state.maintain_native_taskbar() {
             tracing::warn!(%error,"Could not hide native taskbar");
@@ -1892,9 +1901,23 @@ pub async fn dock_activate(
                 let window = hwnd(r.handle);
                 let can_maximize =
                     unsafe { GetWindowLongW(window, GWL_STYLE) } as u32 & WS_MAXIMIZEBOX.0 != 0;
+                let was_iconic = unsafe { IsIconic(window) }.as_bool();
+
+                if was_iconic {
+                    let mut pt = windows::Win32::Foundation::POINT::default();
+                    let _ = unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut pt) };
+                    let rc_icon = windows::Win32::Foundation::RECT {
+                        left: pt.x - 24,
+                        top: pt.y - 24,
+                        right: pt.x + 24,
+                        bottom: pt.y + 24,
+                    };
+                    crate::system_animations::set_dock_icon_hint(window, rc_icon);
+                }
+
                 if c.maximize_on_open && can_maximize {
                     let _ = unsafe { ShowWindowAsync(window, SW_SHOWMAXIMIZED) };
-                } else if unsafe { IsIconic(window) }.as_bool() {
+                } else if was_iconic {
                     let _ = unsafe { ShowWindowAsync(window, SW_RESTORE) };
                 }
                 if !unsafe { SetForegroundWindow(hwnd(r.handle)) }.as_bool() {
