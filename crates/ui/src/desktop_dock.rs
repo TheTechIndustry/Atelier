@@ -1543,11 +1543,14 @@ fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String
     Ok(())
 }
 fn fullscreen_on_dock_monitor(app: &tauri::AppHandle, c: &DockConfig) -> bool {
+    c.enabled && fullscreen_on_monitor(app, c.monitor)
+}
+pub(crate) fn fullscreen_on_monitor(app: &tauri::AppHandle, monitor_index: usize) -> bool {
     use windows::Win32::Foundation::POINT;
     use windows::Win32::Graphics::Gdi::{
         MonitorFromPoint, MonitorFromWindow, MONITOR_DEFAULTTONEAREST,
     };
-    if super::dock_test_mode() || !c.enabled {
+    if super::dock_test_mode() {
         return false;
     }
     let foreground = unsafe { GetForegroundWindow() };
@@ -1571,7 +1574,7 @@ fn fullscreen_on_dock_monitor(app: &tauri::AppHandle, c: &DockConfig) -> bool {
     let Ok(monitors) = app.available_monitors() else {
         return false;
     };
-    let Some(monitor) = monitors.get(c.monitor).or(monitors.first()) else {
+    let Some(monitor) = monitors.get(monitor_index).or(monitors.first()) else {
         return false;
     };
     let point = POINT {

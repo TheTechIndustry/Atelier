@@ -365,7 +365,7 @@ pub async fn audio_spectrum(
     state: tauri::State<'_, super::AppState>,
 ) -> Result<serde_json::Value, String> {
     let label = window.label().to_string();
-    if label != "widget-audio" && label != "desktop-wallpaper" && label != "desktop-dock" {
+    if label != "widget-audio" && label != "desktop-wallpaper" && label != "desktop-dock" && label != "dynamic-island" {
         return Err("Audio spectrum is unavailable to this window".into());
     }
     let audio = state.audio.clone();
@@ -374,7 +374,7 @@ pub async fn audio_spectrum(
         let mut audio = audio.lock().map_err(|e| e.to_string())?;
         let enabled = if label == "widget-audio" {
             app.state::<Widgets>().0.lock().map_err(|e| e.to_string())?.iter().any(|c| c.kind == "audio" && c.enabled)
-        } else if label == "desktop-dock" { app.state::<super::desktop_dock::DockState>().audio_effects_enabled() } else { app.state::<super::desktop_wallpaper::Wallpapers>().audio_effects_enabled() };
+        } else if label == "desktop-dock" { app.state::<super::desktop_dock::DockState>().audio_effects_enabled() } else if label == "dynamic-island" { app.get_webview_window("dynamic-island").and_then(|w| w.is_visible().ok()).unwrap_or(false) && app.state::<super::desktop_island::IslandState>().audio_effects_enabled() } else { app.state::<super::desktop_wallpaper::Wallpapers>().audio_effects_enabled() };
         if !enabled { return Err("Audio reactivity is disabled".into()); }
         let s = audio.request_spectrum().map_err(|e| e.to_string())?;
         Ok(serde_json::json!({"bins":s.bins.as_slice(), "bass":s.bass, "mid":s.mid, "treble":s.treble}))
