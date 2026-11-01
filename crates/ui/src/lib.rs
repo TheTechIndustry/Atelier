@@ -11,7 +11,10 @@ use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
+mod app_usage;
 mod desktop_dock;
+mod system_appearance;
+mod system_animations;
 mod desktop_wallpaper;
 mod wallpaper_scene;
 mod scene_preview;
@@ -567,6 +570,7 @@ pub fn run() {
             ) -> i32;
         }
         unsafe extern "system" fn ctrl_handler(_: u32) -> i32 {
+            system_appearance::cleanup();
             if dock_test_mode() {
                 return 0;
             }
@@ -633,9 +637,12 @@ pub fn run() {
             widget_photo::response(request)
         })
         .manage(state)
+        .manage(app_usage::UsageMonitor::default())
         .manage(desktop_dock::DockState::new())
         .manage(desktop_widgets::Widgets::new())
         .manage(desktop_island::IslandState::new())
+        .manage(system_appearance::AppearanceState::new())
+        .manage(system_animations::AnimationsState::new())
         .manage(widget_photo::PhotoUploads::default())
         .manage(desktop_wallpaper::Wallpapers::new())
         .setup(|app| {
@@ -741,6 +748,7 @@ pub fn run() {
                         let _ = reset_defaults(state);
                     }
                     "quit" => {
+                        system_appearance::cleanup();
                         if let Err(error) = desktop_background::shutdown() { tracing::error!(%error, "Could not restore Windows background on exit"); }
                         app.state::<desktop_dock::DockState>().shutdown();
                         let state = app.state::<AppState>();
@@ -780,6 +788,8 @@ pub fn run() {
                 });
             }
             if !dock_test_mode() {
+                system_appearance::start(&app.handle());
+                system_animations::start(&app.handle());
                 let island_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     if let Err(error) = desktop_island::start(&island_handle) { tracing::error!(%error, "Could not start Dynamic Island"); }
@@ -808,6 +818,16 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            app_usage::atelier_usage,
+            app_usage::trim_atelier_memory,
+            system_appearance::get_system_appearance,
+            system_appearance::set_system_appearance,
+            system_appearance::restore_system_appearance,
+            system_appearance::open_windows_appearance_settings,
+            system_animations::get_animations_config,
+            system_animations::set_animations_config,
+            system_animations::get_window_animation,
+            system_animations::set_window_animation,
             steam_workshop::workshop_list_local,
             steam_workshop::workshop_import_video,
             steam_workshop::workshop_import_scene,
