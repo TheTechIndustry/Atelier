@@ -694,7 +694,6 @@ fn attach(w: &tauri::WebviewWindow, worker: HWND) -> Result<(), String> {
         }
         if let Ok(static_worker) = FindWindowExW(worker, HWND::default(), w!("WorkerW"), None) {
             if static_worker != hwnd {
-                let _ = ShowWindow(static_worker, SW_SHOW);
                 let _ = SetWindowPos(
                     static_worker,
                     hwnd,
@@ -743,12 +742,10 @@ fn repair_static_worker_order(parent: HWND, wallpaper: HWND) -> Result<(), Strin
             Err(_) => break,
         };
         if current == wallpaper {
-            let _ = unsafe { ShowWindow(background, SW_SHOW) };
             return Ok(());
         }
     }
     unsafe {
-        let _ = ShowWindow(background, SW_SHOW);
         SetWindowPos(
             background,
             wallpaper,
@@ -868,9 +865,27 @@ pub fn repair_after_workarea_change(app: tauri::AppHandle) {
         }
     });
 }
+fn restore_desktop_view(parent: HWND) {
+    if parent.0.is_null() || !unsafe { IsWindow(parent) }.as_bool() {
+        return;
+    }
+    if let Ok(view) = unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) } {
+        unsafe {
+            let _ = ShowWindow(view, SW_SHOW);
+            let _ = SetWindowPos(view, HWND_TOP, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+    }
+}
+
 fn apply(app: &tauri::AppHandle, c: &WallpaperConfig) -> Result<(), String> {
     if c.active.is_some() {
         if let Err(error) = super::desktop_background::suspend().and_then(|_| ensure_window(app)) {
+            if let Some(w) = app.get_webview_window("desktop-wallpaper") {
+                let parent = w.hwnd().ok().map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
+                let _ = w.destroy();
+                if let Some(parent) = parent { restore_desktop_view(parent); }
+            }
             let _ = super::desktop_background::restore();
             return Err(error);
         }
@@ -878,9 +893,13 @@ fn apply(app: &tauri::AppHandle, c: &WallpaperConfig) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
     } else {
         if let Some(w) = app.get_webview_window("desktop-wallpaper") {
+            let parent = w.hwnd().ok().map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
+            let _ = w.eval("window.location.href = 'about:blank';");
             w.destroy().map_err(|e| e.to_string())?;
+            if let Some(parent) = parent { restore_desktop_view(parent); }
         }
         super::desktop_background::restore()?;
+        crate::app_usage::trim_memory();
     }
     Ok(())
 }
@@ -986,6 +1005,9 @@ pub async fn wallpaper_options(
     if next.active.as_deref() == Some(id.as_str()) {
         app.emit_to("desktop-wallpaper", "wallpaper-changed", &next)
             .map_err(|e| e.to_string())?;
+        if paused {
+            crate::app_usage::trim_memory();
+        }
     }
     Ok(next)
 }
@@ -1315,7 +1337,9 @@ pub fn wallpaper_report(
             .recovering
             .store(true, std::sync::atomic::Ordering::SeqCst);
         if let Some(w) = app.get_webview_window("desktop-wallpaper") {
+            let parent = w.hwnd().ok().map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
             let _ = w.hide();
+            if let Some(parent) = parent { restore_desktop_view(parent); }
         }
         let _ = super::desktop_background::restore();
         let _ = app.emit_to(
