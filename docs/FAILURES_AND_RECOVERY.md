@@ -67,7 +67,7 @@ sequenceDiagram
 
 ### 1. The Windows Taskbar Remains Hidden
 - **Root Cause**: The application was forcibly terminated before the normal cleanup routine could execute, and the watchdog was blocked.
-- **Automated Fix**: Restarting Atelier and toggling the **macOS Taskbar** switch off will restore all recorded taskbars.
+- **Automated Fix**: Restarting Atelier and toggling the **Custom Taskbar** switch off will restore all recorded taskbars.
 - **Manual PowerShell Fix**: Run the following in PowerShell:
   ```powershell
   # Emergency restore Windows taskbar visibility

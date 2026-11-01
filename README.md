@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](#license)
 
 [![Taskbar styling](https://img.shields.io/badge/Windows%20Taskbar-Styles%20%26%20Presets-3182CE)](#features)
-[![Desktop dock](https://img.shields.io/badge/macOS%20Taskbar-Desktop%20Dock-8B5CF6)](docs/DOCK.md)
+[![Desktop dock](https://img.shields.io/badge/Custom%20Taskbar-Desktop%20Dock-8B5CF6)](docs/DOCK.md)
 [![System Appearance](https://img.shields.io/badge/DWM-System%20Appearance-0EA5E9)](docs/SYSTEM_APPEARANCE.md)
 [![Window Animations](https://img.shields.io/badge/Animations-Window%20Transitions-F43F5E)](docs/SYSTEM_ANIMATIONS.md)
 [![Dynamic Island](https://img.shields.io/badge/Desktop-Dynamic%20Island-F59E0B)](#features)
@@ -30,7 +30,7 @@
 ## Features
 
 - **Windows Taskbar:** configure materials, floating geometry and presets. On supported Windows 11 XAML taskbars, adjust app button and icon appearance.
-- **macOS Taskbar:** a separate dock for pinned shortcuts and running windows, with display and edge selection, appearance controls, per-app visibility, auto-hide and a configurable gap below maximized windows. It hides the native Windows taskbar while enabled and hides itself when a fullscreen app is active on its display. Some native tray and language controls are not reliably accessible while the taskbar is hidden; see [Desktop dock](docs/DOCK.md).
+- **Custom Taskbar:** a separate dock for pinned shortcuts and running windows, with display and edge selection, appearance controls, per-app visibility, auto-hide and a configurable gap below maximized windows. It hides the native Windows taskbar while enabled and hides itself when a fullscreen app is active on its display. Some native tray and language controls are not reliably accessible while the taskbar is hidden; see [Desktop dock](docs/DOCK.md).
 
   <p align="center">
     <img src="assets/custom-taskbar.jpg" alt="Custom Taskbar and Desktop Dock" width="100%">

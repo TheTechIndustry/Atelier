@@ -1,6 +1,6 @@
 # Desktop Dock
 
-The **macOS Taskbar** section in Studio's **Taskbar** tab controls Atelier's standalone floating desktop dock. Enabling it seamlessly replaces the native Windows taskbar with an interactive, animated dock.
+The **Custom Taskbar** tab in Studio controls Atelier's standalone floating desktop dock. Enabling it seamlessly replaces the native Windows taskbar with an interactive, animated dock.
 
 ```mermaid
 flowchart TD
