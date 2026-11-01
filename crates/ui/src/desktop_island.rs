@@ -125,10 +125,14 @@ pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(75)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(350)).await;
             let c = match app.state::<IslandState>().0.lock() { Ok(c) => c.clone(), Err(_) => continue };
+            if !c.enabled {
+                tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+                continue;
+            }
             if let Some(w) = app.get_webview_window("dynamic-island") {
-                let hide = !c.enabled || covered_by_foreground(&app,&c);
+                let hide = covered_by_foreground(&app,&c);
                 let visible = w.is_visible().unwrap_or(false);
                 if hide && visible { app.state::<IslandState>().1.fetch_add(1, Ordering::SeqCst); let _ = w.hide(); }
                 else if !hide && !visible { let _ = place(&app,&c,false); let _ = app.emit_to("dynamic-island", "island-config", &c); let _ = w.show(); }
