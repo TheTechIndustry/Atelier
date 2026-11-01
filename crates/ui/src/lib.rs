@@ -21,6 +21,7 @@ mod scene_effects;
 mod wallpaper_performance;
 mod desktop_background;
 mod desktop_widgets;
+mod desktop_island;
 mod steam_workshop;
 mod widget_gpu;
 mod widget_metrics;
@@ -67,6 +68,19 @@ fn save_settings(config: &TaskbarConfig) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     let bytes = serde_json::to_vec_pretty(config).map_err(|e| e.to_string())?;
     std::fs::write(path, bytes).map_err(|e| e.to_string())
+}
+
+fn native_taskbar_enabled_path() -> Option<PathBuf> { settings_path().map(|p| p.with_file_name("native-taskbar-enabled.json")) }
+fn load_native_taskbar_enabled() -> Option<bool> { native_taskbar_enabled_path().and_then(|p| std::fs::read(p).ok()).and_then(|data| serde_json::from_slice(&data).ok()) }
+#[tauri::command]
+fn get_native_taskbar_enabled(state: tauri::State<AppState>) -> bool { state.taskbar.is_enabled() }
+#[tauri::command]
+fn set_native_taskbar_enabled(state: tauri::State<AppState>, enabled: bool) -> Result<bool,String> {
+    let previous = state.taskbar.is_enabled();
+    state.taskbar.set_enabled(enabled).map_err(|e|e.to_string())?;
+    let result = (|| { let p=native_taskbar_enabled_path().ok_or("Atelier data directory is unavailable")?; std::fs::create_dir_all(p.parent().ok_or("Invalid settings path")?).map_err(|e|e.to_string())?; std::fs::write(p,serde_json::to_vec(&enabled).map_err(|e|e.to_string())?).map_err(|e|e.to_string()) })();
+    if let Err(error)=result { let _=state.taskbar.set_enabled(previous); return Err(error); }
+    Ok(enabled)
 }
 
 #[tauri::command]
@@ -572,8 +586,12 @@ pub fn run() {
         }
     }
 
+    let native_enabled_setting = load_native_taskbar_enabled();
+    let native_enabled = native_enabled_setting.unwrap_or(true);
+    let saved_config = if native_enabled_setting.is_some() { settings_path().and_then(|p| std::fs::read(p).ok()).and_then(|v| serde_json::from_slice::<TaskbarConfig>(&v).ok()) } else { None };
+    let restore_native = native_enabled && saved_config.as_ref().is_some_and(|c| *c != TaskbarConfig::default());
     let config = AtelierConfig {
-        taskbar: TaskbarConfig::default(),
+        taskbar: saved_config.unwrap_or_default(),
         ..Default::default()
     };
 
@@ -583,7 +601,9 @@ pub fn run() {
         TaskbarManager::new(config.taskbar)
     });
     if !dock_test_mode() {
+        if !native_enabled { let _ = taskbar.set_enabled(false); }
         let _ = taskbar.start_recovery();
+        if restore_native { if let Err(error) = taskbar.apply_current_style() { tracing::error!(%error, "Could not restore Windows taskbar customization"); } }
     }
 
     let wallpaper = None;
@@ -615,6 +635,7 @@ pub fn run() {
         .manage(state)
         .manage(desktop_dock::DockState::new())
         .manage(desktop_widgets::Widgets::new())
+        .manage(desktop_island::IslandState::new())
         .manage(widget_photo::PhotoUploads::default())
         .manage(desktop_wallpaper::Wallpapers::new())
         .setup(|app| {
@@ -759,6 +780,10 @@ pub fn run() {
                 });
             }
             if !dock_test_mode() {
+                let island_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(error) = desktop_island::start(&island_handle) { tracing::error!(%error, "Could not start Dynamic Island"); }
+                });
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     if let Err(error) = desktop_wallpaper::start(&handle) {
@@ -810,6 +835,12 @@ pub fn run() {
             widget_photo::photo_upload_begin,
             widget_photo::photo_upload_chunk,
             widget_photo::photo_upload_finish,
+            get_native_taskbar_enabled,
+            set_native_taskbar_enabled,
+            desktop_island::get_island,
+            desktop_island::set_island,
+            desktop_island::island_monitors,
+            desktop_island::island_expand,
             desktop_widgets::get_widgets,
             desktop_widgets::set_widget,
             desktop_widgets::audio_spectrum,
