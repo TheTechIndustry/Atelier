@@ -884,6 +884,12 @@ fn apply(app: &tauri::AppHandle, c: &WallpaperConfig) -> Result<(), String> {
     }
     Ok(())
 }
+fn promote_wallpaper(items: &mut Vec<WallpaperItem>, id: &str) {
+    if let Some(index) = items.iter().position(|item| item.id == id) {
+        let item = items.remove(index);
+        items.push(item);
+    }
+}
 #[tauri::command]
 pub async fn wallpaper_apply(
     window: tauri::Window,
@@ -920,6 +926,7 @@ pub async fn wallpaper_apply(
         }
     }
     let mut next = c.clone();
+    if let Some(ref id) = id { promote_wallpaper(&mut next.items, id); }
     next.active = id;
     save(&next)?;
     *state.config.lock().map_err(|e| e.to_string())? = next.clone();
@@ -1485,6 +1492,19 @@ mod tests {
         assert_eq!(restored.options_for("one").audio.glow_strength, 100);
         assert_eq!(restored.options_for("one").volume, 37);
         assert!(!restored.options_for("two").audio.enabled());
+    }
+    #[test]
+    fn recently_applied_wallpapers_move_to_front_of_display_order_and_persist() {
+        let make = |id: &str| WallpaperItem { id: id.into(), title: id.into(), kind: "video".into(), category: "mp4".into(), description: String::new(), asset: None };
+        let mut config = WallpaperConfig { items: vec![make("first"), make("second"), make("third")], ..Default::default() };
+        promote_wallpaper(&mut config.items, "first");
+        promote_wallpaper(&mut config.items, "second");
+        promote_wallpaper(&mut config.items, "second");
+        promote_wallpaper(&mut config.items, "missing");
+        let saved = serde_json::to_vec(&config).unwrap();
+        let restored: WallpaperConfig = serde_json::from_slice(&saved).unwrap();
+        let displayed: Vec<_> = restored.items.iter().rev().map(|item| item.id.as_str()).collect();
+        assert_eq!(displayed, ["second", "first", "third"]);
     }
     #[test]
     fn legacy_settings_are_migrated_per_wallpaper_and_remain_independent() {

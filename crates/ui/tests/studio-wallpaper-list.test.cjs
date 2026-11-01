@@ -9,7 +9,7 @@ function fixture(){
  const ids=new Map(),get=id=>{if(!ids.has(id))ids.set(id,new Element());return ids.get(id)},results=new Element(),toolbar=new Element(),importLabel=new Element();
  const tabs=['library','workshop','settings'].map(t=>{const x=new Element('button');x.dataset.wallpaperTab=t;return x});
  const items=Array.from({length:40},(_,i)=>({id:'v'+i,title:'Wallpaper '+i,kind:'video',category:'video'}));let scans=0;
- const invoke=async cmd=>{if(cmd==='wallpaper_snapshot')return {config:{items,settings:{},performance:{}},playback:'stopped'};if(cmd==='workshop_list_local'){scans++;return [{id:'123',title:'Steam item',kind:'video',video_available:true,preview:'data:image/png;base64,AA'}]}return {}};
+ const invoke=async (cmd,args)=>{if(cmd==='wallpaper_apply'&&args.id){const i=items.findIndex(item=>item.id===args.id);if(i>=0)items.push(items.splice(i,1)[0]);return {}}if(cmd==='wallpaper_snapshot')return {config:{items,settings:{},performance:{}},playback:'stopped'};if(cmd==='workshop_list_local'){scans++;return [{id:'123',title:'Steam item',kind:'video',video_available:true,preview:'data:image/png;base64,AA'}]}return {}};
  const document={getElementById:get,createElement:t=>new Element(t),querySelector:q=>q==='.wallpaper-results'?results:toolbar,querySelectorAll:q=>q==='[data-wallpaper-tab]'?tabs:[],addEventListener(){},hidden:false};
  class Observer{constructor(fn){this.fn=fn;Observer.instance=this;this.observed=[]}observe(v){this.observed.push(v)}unobserve(v){this.observed=this.observed.filter(x=>x!==v)}}
  const window={__TAURI__:{core:{invoke},event:{listen(){}}},AtelierSceneSettings:{show(){}},AtelierWallpaperSettings:{show(){}},addEventListener(){}};
@@ -25,4 +25,8 @@ test('keeps each tab’s cards and avoids repeat Steam scans on quick switches',
 });
 test('search filters the entire library and resets the page limit',async()=>{
  const f=fixture();await turn();f.get('wallpaper-more-button').onclick();const search=f.get('wallpaper-search');search.value='Wallpaper 0';search.oninput();const grid=f.get('wallpaper-grid-library');assert.equal(grid.children.length,1);search.value='';search.oninput();assert.equal(grid.children.length,18);
+});
+
+test('applying a wallpaper places its existing tile first after refresh',async()=>{
+ const f=fixture();await turn();const grid=f.get('wallpaper-grid-library');const chosen=grid.children[5],prior=grid.children[0];chosen.onclick();f.get('wallpaper-apply').onclick();await turn();await turn();assert.equal(grid.children[0],chosen);assert.equal(grid.children[1],prior);assert.equal(f.items.at(-1).id,'v34');
 });
