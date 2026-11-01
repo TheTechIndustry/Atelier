@@ -62,6 +62,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .nav button.active .nav-icon{opacity:1}
 
 .side-footer{padding:10px 8px;border-top:1px solid var(--border);margin-top:auto}
+.app-usage{margin:0 4px 10px;padding:7px 12px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.03);font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.app-usage-metrics{display:flex;gap:14px;align-items:baseline}
+.app-usage-metric{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
+.app-usage-label{color:#8da0b3;font-size:11px;font-weight:500}
+.app-usage-value{color:#fff;font-weight:700;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.sidebar-collapsed .app-usage{margin:0 0 9px;padding:6px 2px;text-align:center}
+.sidebar-collapsed .app-usage-metrics{display:grid;gap:4px}
+.sidebar-collapsed .app-usage-metric{display:grid;gap:0;font-size:9px;line-height:1.25}
+.sidebar-collapsed .app-usage-value{font-size:10px}
 .side-footer button{
   display:flex;align-items:center;gap:10px;
   width:100%;text-align:left;
@@ -103,6 +112,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   border-radius:8px;
   overflow:hidden;
 }
+.system-link{border:1px solid var(--border-strong);border-radius:6px;background:var(--surface2);color:var(--text);padding:8px 12px;cursor:pointer;white-space:nowrap}
+.system-link:hover{border-color:var(--accent-border)}
 .card-title{
   padding:14px 18px;
   border-bottom:1px solid var(--border);
@@ -354,6 +365,70 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
 .audio-toggle .switch-state::before{content:'Off'}.audio-toggle:has(input:checked) .switch-state::before{content:'On'}.audio-toggle .switch-state{min-width:20px;text-align:right}
 .dock-preview-stage{position:relative;height:200px;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,#303146,#161820 70%)}.dock-preview{position:absolute;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px #0005;max-width:calc(100% - 24px);max-height:calc(100% - 24px);overflow:visible}.dock-preview-icon{position:relative;flex:none;display:grid;place-items:center;color:#f1f2fa}.dock-preview-icon{transition:transform .15s;transform-origin:center}.dock-preview-icon:hover{transform:scale(var(--preview-zoom,1));z-index:1}.dock-preview-icon img{display:block;width:100%;height:100%;object-fit:contain}.dock-preview-icon span{display:grid;place-items:center;width:100%;height:100%;border-radius:25%;background:#505367;color:white;font-weight:700}.dock-preview-icon.is-system span{background:#ffffff16}.dock-preview-icon .dock-preview-dot{position:absolute;width:4px;height:4px;border-radius:6px;background:var(--preview-indicator);bottom:-6px;left:50%;transform:translateX(-50%)}.dock-preview.vertical .dock-preview-dot{left:auto;right:-6px;top:50%;bottom:auto;transform:translateY(-50%)}.dock-preview-icon.is-running.is-line .dock-preview-dot{width:12px;height:3px}.dock-preview.vertical .dock-preview-icon.is-running.is-line .dock-preview-dot{width:3px;height:12px}.dock-preview-clock{color:#f4f4f7;font-size:10px;white-space:nowrap;padding:3px}
 .dock-preview-stage .dock-preview-frame{position:absolute;border:0;background:transparent;pointer-events:none;transform-origin:top left}
+.anim-stage,.app-stage{margin-top:14px;border:1px solid var(--border-strong);border-radius:10px;overflow:hidden;background:#15161f}
+.anim-stage-header,.app-stage-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border-strong);font-size:11px;color:var(--muted)}
+.anim-test-actions{display:flex;gap:10px}
+.anim-stage-canvas{display:grid;place-items:center;height:240px;background:radial-gradient(ellipse at 50% 30%,#2c2d3e,#12131a 80%);position:relative;overflow:hidden}
+.anim-stage-dock-anchor{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;z-index:10}
+.anim-stage-dock-icon{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);display:grid;place-items:center;font-size:20px;box-shadow:0 4px 12px #0006;cursor:pointer;transition:transform .15s cubic-bezier(0.2,0.9,0.3,1),background .15s}
+.anim-stage-dock-icon:hover{transform:scale(1.15);background:rgba(255,255,255,.24)}
+.anim-stage-dock-icon.anim-jump{animation:animIconJump .55s cubic-bezier(.28,.84,.42,1) var(--bounce-repeat,2)}
+.anim-window{width:320px;height:180px;background:#20222e;border:1px solid rgba(255,255,255,.2);border-radius:10px;box-shadow:0 12px 30px #0008;display:flex;flex-direction:column;overflow:hidden;transform-origin:50% 120%;transition:transform var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)),opacity var(--anim-duration,240ms) ease}
+.anim-window.is-minimized{opacity:0!important;pointer-events:none;transform:translateY(75px) scale(0.08)!important}
+.anim-window-titlebar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#292b3a;border-bottom:1px solid rgba(255,255,255,.1);user-select:none}
+.anim-window-dots{display:flex;gap:5px}.anim-window-dots i{width:7px;height:7px;border-radius:50%;display:inline-block}.anim-window-dots i:nth-child(1){background:#ff5f57}.anim-window-dots i:nth-child(2){background:#febc2e}.anim-window-dots i:nth-child(3){background:#28c840}
+.anim-window-title{font-size:10px;color:#aaa;flex:1;text-align:center;margin-right:24px}
+.anim-window-body{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px}
+.anim-window-skeleton-line{height:10px;background:rgba(255,255,255,.12);border-radius:4px;width:75%}
+.anim-window-skeleton-grid{display:flex;gap:8px;flex:1}.anim-window-skeleton-grid span{flex:1;background:rgba(255,255,255,.07);border-radius:6px}
+.anim-window.anim-minimizing.effect-dock_expand{animation:animDockExpandTo var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)) forwards}
+.anim-window.anim-restoring.effect-dock_expand{animation:animDockExpandFrom var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)) forwards}
+.anim-window.anim-minimizing.effect-scale{animation:animZoomToIcon var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)) forwards}
+.anim-window.anim-restoring.effect-scale{animation:animZoomFromIcon var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)) forwards}
+.anim-window.anim-minimizing.effect-genie{animation:animGenieToIcon var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)) forwards}
+.anim-window.anim-restoring.effect-genie{animation:animGenieFromIcon var(--anim-duration,240ms) var(--anim-easing,cubic-bezier(0.16,1,0.3,1)) forwards}
+.anim-window.anim-minimizing.effect-glide{animation:animGlideOut var(--anim-duration,240ms) var(--anim-easing,ease-out) forwards}
+.anim-window.anim-restoring.effect-glide{animation:animGlideIn var(--anim-duration,240ms) var(--anim-easing,ease-out) forwards}
+.anim-window.anim-minimizing.effect-spring{animation:animSpringOut var(--anim-duration,240ms) var(--anim-easing,ease-out) forwards}
+.anim-window.anim-restoring.effect-spring{animation:animSpringIn var(--anim-duration,240ms) var(--anim-easing,ease-out) forwards}
+.anim-window.anim-minimizing.effect-fade_pop{animation:animFadePopOut var(--anim-duration,240ms) var(--anim-easing,ease-out) forwards}
+.anim-window.anim-restoring.effect-fade_pop{animation:animFadePopIn var(--anim-duration,240ms) var(--anim-easing,ease-out) forwards}
+@keyframes animDockExpandFrom{0%{opacity:0;transform:translateY(75px) scale(0.08)}30%{opacity:0.95}75%{transform:translateY(-8px) scale(1.05)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes animDockExpandTo{0%{opacity:1;transform:translateY(0) scale(1)}35%{opacity:0.85;transform:translateY(-5px) scale(1.03)}100%{opacity:0;transform:translateY(75px) scale(0.08)}}
+@keyframes animZoomFromIcon{0%{opacity:0;transform:translateY(75px) scale(0.08)}40%{opacity:0.9}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes animZoomToIcon{0%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:0.7}100%{opacity:0;transform:translateY(75px) scale(0.08)}}
+@keyframes animGenieToIcon{0%{opacity:1;clip-path:polygon(0 0,100% 0,100% 25%,100% 50%,100% 75%,100% 100%,0 100%,0 75%,0 50%,0 25%);transform:translateY(0)}55%{opacity:1;clip-path:polygon(0 0,100% 0,85% 25%,68% 50%,54% 75%,51% 100%,47% 100%,43% 75%,30% 50%,15% 25%);transform:translateY(25px)}100%{opacity:0;clip-path:polygon(48% 0,52% 0,52% 25%,52% 50%,52% 75%,52% 100%,48% 100%,48% 75%,48% 50%,48% 25%);transform:translateY(90px) scaleY(.08)}}
+@keyframes animGenieFromIcon{0%{opacity:0;clip-path:polygon(48% 0,52% 0,52% 25%,52% 50%,52% 75%,52% 100%,48% 100%,48% 75%,48% 50%,48% 25%);transform:translateY(90px) scaleY(.08)}45%{opacity:1;clip-path:polygon(0 0,100% 0,85% 25%,68% 50%,54% 75%,51% 100%,47% 100%,43% 75%,30% 50%,15% 25%);transform:translateY(25px)}100%{opacity:1;clip-path:polygon(0 0,100% 0,100% 25%,100% 50%,100% 75%,100% 100%,0 100%,0 75%,0 50%,0 25%);transform:translateY(0)}}
+@keyframes animGlideIn{0%{opacity:0;transform:translateY(35px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes animGlideOut{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(35px)}}
+@keyframes animSpringIn{0%{opacity:0;transform:scale(0.1) translateY(120px)}70%{transform:scale(1.06) translateY(-4px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes animSpringOut{0%{opacity:1;transform:scale(1) translateY(0)}30%{transform:scale(1.04) translateY(-3px)}100%{opacity:0;transform:scale(0.1) translateY(120px)}}
+@keyframes animFadePopIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:scale(1)}}
+@keyframes animFadePopOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.85)}}
+.anim-dock-preview-section{margin:14px 0 18px;background:#15161f;border:1px solid var(--border-strong);border-radius:10px;overflow:hidden}.anim-dock-canvas{min-height:160px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 15%,#35354d,#161720 75%)}.anim-stage-header small{font-size:10px;font-weight:400;color:var(--muted)}.anim-mini-icon svg,.anim-stage-dock-icon svg{width:23px;height:23px}.anim-mini-icon{color:#f4f3f8;background:linear-gradient(145deg,#6d7595,#3a3d53)!important;box-shadow:inset 0 1px #ffffff40,0 4px 10px #0005}.anim-mini-icon:nth-child(2){background:linear-gradient(145deg,#799ab4,#405474)!important}.anim-mini-icon:nth-child(3){background:linear-gradient(145deg,#a77d96,#68465f)!important}.anim-mini-icon:nth-child(4){background:linear-gradient(145deg,#626c80,#31384a)!important}.anim-mini-icon:nth-child(5){background:linear-gradient(145deg,#8f92a0,#525665)!important}.preview-notice{padding:10px 18px;font-size:11px;line-height:1.5;color:var(--muted);border-bottom:1px solid var(--border)}
+.anim-mini-dock{display:inline-flex;gap:12px;padding:8px 14px;background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.18);border-radius:16px;box-shadow:0 8px 24px #0006}
+.anim-mini-icon{background:transparent;border:0;padding:0;width:38px;height:38px;font-size:22px;display:grid;place-items:center;border-radius:10px;cursor:pointer;transition:transform .12s cubic-bezier(0.2, 0.9, 0.3, 1)}
+.anim-mini-icon.anim-jump{animation:animIconJump .55s cubic-bezier(.28,.84,.42,1) var(--bounce-repeat,2)}
+.anim-mini-icon.anim-press{animation:animIconPress .32s ease 1}
+.anim-mini-icon.anim-pulse{animation:animIconPulse .45s ease-in-out var(--bounce-repeat,2)}
+@keyframes animIconJump{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-14px) scale(.95,1.06)}55%{transform:translateY(0) scale(1.06,.94)}75%{transform:translateY(-5px)}90%{transform:translateY(0)}}
+@keyframes animIconPress{0%{transform:scale(1)}40%{transform:scale(.82)}100%{transform:scale(1)}}
+@keyframes animIconPulse{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 10px #8b5cf6) brightness(1.3)}}
+.app-stage-canvas{display:grid;place-items:center;min-height:220px;padding:20px;background:radial-gradient(ellipse at 50% 20%,#35364c,#14151c 85%);position:relative}
+.app-preview-card{width:320px;height:180px;box-shadow:0 14px 34px #0009;display:flex;flex-direction:column;overflow:hidden;transition:border-radius .2s,border .2s,opacity .2s;background:transparent;backdrop-filter:blur(16px)}
+.app-preview-titlebar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#242636;border-bottom:1px solid rgba(255,255,255,.08);font-size:11px}
+.app-preview-dots{display:flex;gap:4px}.app-preview-dots i{width:6px;height:6px;border-radius:50%;display:inline-block;background:#666}.app-preview-dots i:first-child{background:#ff5f57}
+.app-preview-title{flex:1;text-align:center;margin-right:20px;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-preview-body{flex:1;display:flex;overflow:hidden}
+.app-preview-sidebar{width:80px;border-right:1px solid rgba(255,255,255,.08);padding:8px 6px;font-size:10px;display:flex;flex-direction:column;gap:5px;color:var(--muted)}
+.app-preview-sidebar span.sel{color:var(--text);font-weight:600}
+.app-preview-content{flex:1;padding:8px 10px;font-size:10px;display:flex;flex-direction:column;gap:6px;color:var(--text)}
+.app-preview-file{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px;padding:4px;border-radius:5px;background:#ffffff08}.file-glyph{width:11px;height:14px;flex:none;border-radius:2px;background:linear-gradient(135deg,#e7edf9 65%,#a9b8cf 66%);box-shadow:0 1px 4px #0005}.file-glyph.sheet{background:linear-gradient(135deg,#9fcdbd 65%,#578b7a 66%)}.file-glyph.archive{background:linear-gradient(135deg,#d0b8a0 65%,#9b7965 66%)}.app-stage-canvas{background:radial-gradient(circle at 40% 40%,#6e5570,#343c55 38%,#171924 75%)}
+.app-preview-body.material-mica{background:linear-gradient(135deg,rgba(40,43,62,.75),rgba(20,21,30,.85));backdrop-filter:blur(20px)}
+.app-preview-body.material-mica_alt{background:linear-gradient(135deg,rgba(50,53,75,.8),rgba(28,30,42,.9));backdrop-filter:blur(24px)}
+.app-preview-body.material-acrylic{background:rgba(30,32,46,.55);backdrop-filter:blur(30px)}
+.app-preview-body.material-glass{background:rgba(255,255,255,.1);backdrop-filter:blur(14px)}
+.app-preview-body.material-default{background:#1e202c}
 </style><link rel="stylesheet" href="island-shape.css"><link rel="stylesheet" href="studio-wallpaper.css"></head>
 <body>
 <div class="window-frame">
@@ -377,6 +452,8 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="11" width="12" height="3.5" rx="1.5"/><circle cx="4.5" cy="12.75" r="0.6" fill="currentColor"/><circle cx="7" cy="12.75" r="0.6" fill="currentColor"/><circle cx="9.5" cy="12.75" r="0.6" fill="currentColor"/><circle cx="12" cy="12.75" r="0.6" fill="currentColor"/><rect x="3" y="2" width="10" height="7" rx="1"/></svg>
         <span class="nav-label">Custom Taskbar</span>
       </button>
+      <button data-tab="animations"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 12 6 8l3 2 5-7M10 3h4v4"/></svg><span class="nav-label">Animations</span></button>
+      <button data-tab="appearance"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="12" height="12" rx="3"/><path d="M2 6h12M6 6v8"/></svg><span class="nav-label">Appearance</span></button>
       <button data-tab="wallpaper">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="14" height="14" rx="2"/><circle cx="5.5" cy="5.5" r="1.5"/><path d="M1 11l4-4 3 3 2-2 5 5"/></svg>
         <span class="nav-label">Wallpapers</span>
@@ -392,6 +469,9 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
       </button>
     </nav>
     <div class="side-footer">
+      <div class="app-usage" id="app-usage" title="CPU and working memory usage">
+        <div class="app-usage-metrics"><div class="app-usage-metric"><span class="app-usage-label">CPU</span><span class="app-usage-value" id="app-usage-cpu">—</span></div><div class="app-usage-metric"><span class="app-usage-label">RAM</span><span class="app-usage-value" id="app-usage-memory">—</span></div></div>
+      </div>
       <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 3 5 8l5 5"/></svg>
         <span class="nav-label">Collapse sidebar</span>
@@ -591,6 +671,267 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
           </div>
         </section>
 
+        <section class="tab" id="animations">
+          <header class="audio-head">
+            <h2>Animations</h2>
+            <label class="audio-toggle">
+              <span class="switch-state"></span>
+              <input id="anim-enabled" class="switch" type="checkbox">
+            </label>
+          </header>
+
+          <div class="anim-stage" style="margin-bottom:18px">
+            <div class="anim-stage-header">
+              <span style="font-weight:600">Window Transition Live Preview</span>
+              <div class="anim-test-actions">
+                <button id="anim-test-restore" type="button" class="system-link">Open / Restore</button>
+                <button id="anim-test-minimize" type="button" class="system-link">Minimize to Dock</button>
+              </div>
+            </div>
+            <div class="anim-stage-canvas" id="anim-preview-box">
+              <div class="anim-window" id="anim-preview-window">
+                <div class="anim-window-titlebar">
+                  <span class="anim-window-dots"><i></i><i></i><i></i></span>
+                  <span class="anim-window-title">App Window</span>
+                </div>
+                <div class="anim-window-body">
+                  <div class="anim-window-skeleton-line"></div>
+                  <div class="anim-window-skeleton-grid"><span></span><span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:18px">
+            <div class="card-title">Window transitions</div>
+            <label class="field-row">
+              <span class="field-label">Window transitions</span>
+              <input id="anim-window-transitions" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Window animation effect</span>
+              <select id="anim-window-effect" class="inline-select">
+                <option value="dock_expand">Pop up from dock</option>
+                <option value="scale">Scale &amp; Zoom</option>
+                <option value="genie">Genie Effect</option>
+                <option value="glide">Glide &amp; Fade</option>
+                <option value="spring">Spring Pop</option>
+                <option value="fade_pop">Smooth Fade &amp; Pop</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Animation duration</span>
+              <span class="dd-range"><input id="anim-window-duration" type="range" min="80" max="600" step="20"><output id="anim-window-duration-val"></output></span>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Animation curve (Easing)</span>
+              <select id="anim-window-easing" class="inline-select">
+                <option value="spring">Spring physics</option>
+                <option value="ease_out">Smooth Ease-Out</option>
+                <option value="snappy">Snappy Cubic</option>
+                <option value="linear">Linear</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Windows native minimize/maximize</span>
+              <input id="anim-native-min-max" class="switch" type="checkbox">
+            </label>
+          </div>
+
+            <div class="anim-dock-preview-section">
+              <div class="anim-stage-header"><span>Dock Animation Live Preview</span><small>Hover or select an icon</small></div><div class="anim-dock-canvas">
+              <div class="anim-mini-dock" id="anim-mini-dock">
+                <button type="button" class="anim-mini-icon" aria-label="Finder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h6l2 2h8v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><path d="M3 11h18"/></svg></button>
+                <button type="button" class="anim-mini-icon" aria-label="Browser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16"/></svg></button>
+                <button type="button" class="anim-mini-icon" aria-label="Music"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17V6l8-2v11M10 9l8-2"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="15.5" cy="15" r="2.5"/></svg></button>
+                <button type="button" class="anim-mini-icon" aria-label="Terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 7 5 5-5 5M13 17h5"/></svg></button>
+                <button type="button" class="anim-mini-icon" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/></svg></button>
+              </div>
+              </div>
+            </div>
+          <div class="card">
+            <div class="card-title">Taskbar &amp; Dock icon animations</div>
+            <label class="field-row">
+              <span class="field-label">App launch bounce</span>
+              <select id="anim-dock-bounce" class="inline-select">
+                <option value="launch_only">Launch Bounce</option>
+                <option value="always">Always on click</option>
+                <option value="notification">Bounce on notifications</option>
+                <option value="off">Off</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Bounce iterations</span>
+              <span class="dd-range"><input id="anim-dock-bounce-count" type="range" min="1" max="5" step="1"><output id="anim-dock-bounce-count-val"></output></span>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Hover wave magnification</span>
+              <input id="anim-dock-hover-wave" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Hover magnification scale</span>
+              <span class="dd-range"><input id="anim-dock-hover-scale" type="range" min="110" max="180" step="5"><output id="anim-dock-hover-scale-val"></output></span>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Click feedback effect</span>
+              <select id="anim-dock-click-feedback" class="inline-select">
+                <option value="bounce">Squash &amp; Bounce</option>
+                <option value="press">Deep Press</option>
+                <option value="pulse">Glow Pulse</option>
+                <option value="none">None</option>
+              </select>
+            </label>
+
+
+          </div>
+          <p id="animation-status" role="status" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
+        </section>
+
+        <section class="tab" id="appearance">
+          <header class="audio-head">
+            <h2>Appearance</h2>
+            <label class="audio-toggle">
+              <span class="switch-state"></span>
+              <input id="app-enabled" class="switch" type="checkbox">
+            </label>
+          </header>
+
+          <div class="app-stage" style="margin-bottom:18px">
+            <div class="app-stage-header">
+              <span style="font-weight:600">System Appearance Live Preview</span>
+              <button id="app-preview-toggle-active" type="button" class="system-link">Preview Inactive Window</button>
+            </div>
+            <div class="app-stage-canvas">
+              <div class="app-preview-card" id="app-preview-card" data-state="active">
+                <div class="app-preview-titlebar" id="app-preview-titlebar">
+                  <span class="app-preview-dots"><i></i><i></i><i></i></span>
+                  <span class="app-preview-title">File Explorer — Documents</span>
+                </div>
+                <div class="app-preview-body material-mica" id="app-preview-body">
+                  <div class="app-preview-sidebar">
+                    <span>Quick access</span>
+                    <span class="sel">Documents</span>
+                    <span>Downloads</span>
+                    <span>Pictures</span>
+                  </div>
+                  <div class="app-preview-content">
+                    <div class="app-preview-file"><span class="file-glyph doc" aria-hidden="true"></span>Project proposal.docx</div>
+                    <div class="app-preview-file"><span class="file-glyph sheet" aria-hidden="true"></span>Budget.xlsx</div>
+                    <div class="app-preview-file"><span class="file-glyph archive" aria-hidden="true"></span>Design assets.zip</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:18px">
+            <div class="card-title">Scope &amp; window targets</div>
+            <label class="field-row">
+              <span class="field-label">Customization scope</span>
+              <select id="app-scope" class="inline-select">
+                <option value="system_only">System windows &amp; surfaces only</option>
+                <option value="all_windows">All windows (Windhawk-style global)</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">File Explorer &amp; tabs</span>
+              <input id="app-target-explorer" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">System dialogs &amp; Run (#32770, properties)</span>
+              <input id="app-target-dialogs" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Task Manager &amp; utility tools</span>
+              <input id="app-target-tools" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Terminal &amp; Command Prompt</span>
+              <input id="app-target-terminal" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Windows Settings &amp; modern apps</span>
+              <input id="app-target-settings" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Taskbar flyouts (Clock, Tray, Language)</span>
+              <input id="app-target-flyouts" class="switch" type="checkbox">
+            </label>
+            <label class="field-row">
+              <span class="field-label">Exclude fullscreen games &amp; 3D apps</span>
+              <input id="app-exclude-fullscreen" class="switch" type="checkbox">
+            </label>
+            <label class="field-row" style="align-items:flex-start">
+              <span class="field-label" style="padding-top:6px">Process exclusions list</span>
+              <input id="app-excluded-apps" type="text" class="island-module-input" placeholder="cyberpunk2077.exe, discord.exe, steam.exe">
+            </label>
+          </div>
+
+          <div class="card" style="margin-bottom:18px">
+            <div class="card-title">Backdrop &amp; transparency</div>
+            <label class="field-row">
+              <span class="field-label">Backdrop material</span>
+              <select id="app-backdrop" class="inline-select">
+                <option value="mica">Mica</option>
+                <option value="mica_alt">Mica Alt (Tabbed window texture)</option>
+                <option value="acrylic">Acrylic (Frosted blur)</option>
+                <option value="glass">Transparent Glass (Aero Glass blur)</option>
+                <option value="default">Default Windows</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Active window opacity</span>
+              <span class="dd-range"><input id="app-opacity" type="range" min="50" max="100" step="1"><output id="app-opacity-val"></output></span>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Inactive window opacity</span>
+              <span class="dd-range"><input id="app-inactive-opacity" type="range" min="50" max="100" step="1"><output id="app-inactive-opacity-val"></output></span>
+            </label>
+          </div>
+
+          <div class="card" style="margin-bottom:18px">
+            <div class="card-title">Corners, borders &amp; titlebars</div>
+            <label class="field-row">
+              <span class="field-label">Window corners</span>
+              <select id="app-corner-preference" class="inline-select">
+                <option value="rounded">Rounded</option>
+                <option value="small_rounded">Small rounded</option>
+                <option value="square">Square</option>
+                <option value="default">System default</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Window border color</span>
+              <span style="display:flex;align-items:center;gap:8px">
+                <input id="app-border-color" type="color" value="#ffffff">
+                <button id="app-border-color-default" type="button" class="system-link" style="font-size:11px">Default</button>
+              </span>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Border width</span>
+              <span class="dd-range"><input id="app-border-width" type="range" min="0" max="4" step="1"><output id="app-border-width-val"></output></span>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Titlebar &amp; theme mode</span>
+              <select id="app-titlebar-mode" class="inline-select">
+                <option value="system">Match Windows theme</option>
+                <option value="dark">Immersive Dark Mode</option>
+                <option value="light">Light Mode</option>
+                <option value="custom">Custom Titlebar Color</option>
+              </select>
+            </label>
+            <label class="field-row">
+              <span class="field-label">Custom titlebar color</span>
+              <span style="display:flex;align-items:center;gap:8px">
+                <input id="app-titlebar-color" type="color" value="#ffffff">
+                <button id="app-titlebar-color-default" type="button" class="system-link" style="font-size:11px">Default</button>
+              </span>
+            </label>
+          </div>
+
+          <div style="display:flex;justify-content:center"><button id="app-restore-defaults" type="button" class="wallpaper-primary">Restore Windows defaults</button></div>
+          <p id="appearance-status" role="status" style="color:var(--muted);font-size:12px;margin-top:12px"></p>
+        </section>
         <section class="tab" id="wallpaper">
           <div class="wallpaper-layout" id="wallpaper-layout">
             <div class="wallpaper-browser">
@@ -917,7 +1258,7 @@ function paint(c,remember=true){
 }
 
 async function loadPreviewInfo(){
-  if(!invoke)return;
+  if(!invoke||!el('taskbar')?.classList.contains('active'))return;
   try{
     realPreviewData=await invoke('get_taskbar_preview_info');
     renderPreviewApps();
@@ -1117,12 +1458,21 @@ all('[data-tab]').forEach(b=>{
   b.setAttribute('aria-label',b.textContent.trim());
   b.title=b.textContent.trim();
   b.addEventListener('click',()=>{
-  all('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));
-  all('.tab').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));
-  document.querySelector('.scroll-area').classList.toggle('wallpaper-mode',b.dataset.tab==='wallpaper');
-  document.querySelector('.main-col').classList.toggle('wallpaper-shell',b.dataset.tab==='wallpaper');
+    const prevTab = document.querySelector('.tab.active')?.id;
+    all('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));
+    all('.tab').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));
+    document.querySelector('.scroll-area').classList.toggle('wallpaper-mode',b.dataset.tab==='wallpaper');
+    document.querySelector('.main-col').classList.toggle('wallpaper-shell',b.dataset.tab==='wallpaper');
+    if(b.dataset.tab==='taskbar')loadPreviewInfo();
+    if(prevTab==='wallpaper' && b.dataset.tab!=='wallpaper'){
+      document.querySelectorAll('#wallpaper video').forEach(v=>{ try{ v.pause(); v.currentTime=0; }catch(_){} });
+      if(window.__TAURI__?.core?.invoke){
+        window.__TAURI__.core.invoke('trim_atelier_memory').catch(()=>{});
+      }
+    }
   });
 });
+all('[data-go]').forEach(b=>b.addEventListener('click',()=>document.querySelector(`[data-tab="${b.dataset.go}"]`)?.click()));
 
 (async()=>{
   if(!invoke){
@@ -1142,4 +1492,4 @@ all('[data-tab]').forEach(b=>{
     toast('Could not read taskbar state: '+e,true);
   }
 })();
-</script><script src="scene-properties.js"></script><script src="studio-scene-settings.js"></script><script src="studio-wallpaper-settings.js"></script><script src="studio-wallpaper.js"></script><script src="studio-dock-preview.js"></script><script src="studio-dock.js"></script><script src="studio-widgets.js"></script><script src="island-layout.js"></script><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="studio-island.js"></script><script src="audio-visualizer.js"></script><script src="studio-audio.js"></script><script src="studio-dock-audio.js"></script></body></html>
+</script><script src="scene-properties.js"></script><script src="studio-scene-settings.js"></script><script src="studio-wallpaper-settings.js"></script><script src="studio-wallpaper.js"></script><script src="studio-dock-preview.js"></script><script src="studio-dock.js"></script><script src="studio-widgets.js"></script><script src="island-layout.js"></script><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="studio-island.js"></script><script src="audio-visualizer.js"></script><script src="studio-audio.js"></script><script src="studio-dock-audio.js"></script><script src="studio-usage.js"></script><script src="studio-animations.js"></script><script src="studio-appearance.js"></script></body></html>
