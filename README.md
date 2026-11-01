@@ -31,14 +31,48 @@
 
 - **Windows Taskbar:** configure materials, floating geometry and presets. On supported Windows 11 XAML taskbars, adjust app button and icon appearance.
 - **macOS Taskbar:** a separate dock for pinned shortcuts and running windows, with display and edge selection, appearance controls, per-app visibility, auto-hide and a configurable gap below maximized windows. It hides the native Windows taskbar while enabled and hides itself when a fullscreen app is active on its display. Some native tray and language controls are not reliably accessible while the taskbar is hidden; see [Desktop dock](docs/DOCK.md).
+
+  <p align="center">
+    <img src="assets/custom-taskbar.jpg" alt="Custom Taskbar and Desktop Dock" width="100%">
+  </p>
+
 - **Recovery:** the dock uses a helper process before hiding Explorer windows; native taskbar positioning has a separate guardian. See [Failure Modes & Recovery](docs/FAILURES_AND_RECOVERY.md).
 - **Wallpapers:** import MP4/WebM files, apply and manage them in a local library, and configure playback and scene quality. The Workshop tab discovers Wallpaper Engine items already downloaded by Steam; browse the Workshop, subscribe in Steam, refresh, then import a supported video or 2D scene. Atelier does not download Workshop items directly. See [Wallpapers and Workshop](docs/WALLPAPERS.md).
+
+  <p align="center">
+    <img src="assets/wallpapers.jpg" alt="Live Wallpapers and Workshop" width="100%">
+  </p>
+
 - **Scenes:** play supported 2D Wallpaper Engine scenes with per-wallpaper and author-provided controls. Compatibility is partial: custom shaders, SceneScript, 3D models and some effects and animations are not supported. See [Scene playback](docs/SCENE_PLAYBACK.md).
 - **Widgets:** configure desktop clock, calendar, system, media, battery, notes, weather, photo and countdown widgets.
+
+  <p align="center">
+    <img src="assets/widgets.jpg" alt="Desktop Widgets" width="100%">
+  </p>
+
 - **Dynamic Island:** an optional top-of-screen panel with media controls, a monthly calendar and battery status. Choose a display, position, appearance, modules and opening behavior in the Dynamic Island tab. The panel expands and collapses with an animation. Calendar events are not connected.
+
+  <p align="center">
+    <img src="assets/dynamic-island.jpg" alt="Dynamic Island" width="100%">
+  </p>
+
 - **Animations:** customize window opening, minimizing, and restoring transitions with Scale, Genie, Glide, and Spring physics, alongside dock icon launch bouncing, hover wave magnification, and click feedback.
+
+  <p align="center">
+    <img src="assets/animations.jpg" alt="Window Animations and Transitions" width="100%">
+  </p>
+
 - **System Appearance:** customize surface materials and transparency across Windows system surfaces (File Explorer, Clock, Tray, Language switcher, and Settings) with Mica, Mica Alt, Acrylic, and Glass backdrops, active and inactive window opacity, rounded/square corner preferences, and custom window borders.
+
+  <p align="center">
+    <img src="assets/appearance.jpg" alt="System Appearance and DWM Theming" width="100%">
+  </p>
+
 - **Audio reactivity:** add a movable desktop visualizer with bars, wave, dots, circle or a symmetric wave. Customize its colors, glow, transparent background, size, sensitivity and smoothing; it responds to the default system output. Optional pulse and glow effects can also be enabled per wallpaper, and the desktop dock can react with glow and shape changes. See [Audio reactivity](docs/AUDIO_REACTIVITY.md).
+
+  <p align="center">
+    <img src="assets/audio.jpg" alt="Audio Reactivity and Desktop Visualizer" width="100%">
+  </p>
 
 ## Architecture
 
