@@ -98,8 +98,10 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
     let current_exe = std::env::current_exe().map_err(|e| format!("Failed to get current executable path: {}", e))?;
     let target_exe = target_dir.join("Atelier.exe");
 
-    // Copy Atelier.exe to destination
+    // Close running Atelier instance if updating
     if current_exe != target_exe {
+        let _ = Command::new("taskkill").args(["/F", "/IM", "Atelier.exe"]).output();
+        std::thread::sleep(std::time::Duration::from_millis(250));
         std::fs::copy(&current_exe, &target_exe).map_err(|e| format!("Failed to copy Atelier.exe: {}", e))?;
     }
 
@@ -225,31 +227,46 @@ pub fn run_installer() {
             installer_exit,
         ])
         .setup(|app| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_title("Atelier Setup");
-                let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 680.0, height: 520.0 }));
-                let _ = window.set_resizable(false);
-                let _ = window.center();
-                let _ = window.eval("window.location.replace('installer.html');");
+            if let Some(main) = app.get_webview_window("main") {
+                let _ = main.destroy();
+            }
 
-                #[cfg(target_os = "windows")]
-                {
-                    use windows::Win32::Foundation::HWND;
-                    use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
-                    if let Ok(raw_hwnd) = window.hwnd() {
-                        let dark: i32 = 1;
-                        let _ = unsafe {
-                            DwmSetWindowAttribute(
-                                HWND(raw_hwnd.0 as _),
-                                DWMWA_USE_IMMERSIVE_DARK_MODE,
-                                &dark as *const _ as _,
-                                std::mem::size_of::<i32>() as u32,
-                            )
-                        };
-                    }
+            let installer_win = tauri::WebviewWindowBuilder::new(
+                app,
+                "installer",
+                tauri::WebviewUrl::App("installer.html".into()),
+            )
+            .title("Atelier Setup")
+            .inner_size(680.0, 520.0)
+            .resizable(false)
+            .decorations(false)
+            .transparent(true)
+            .center()
+            .build()?;
+
+            #[cfg(target_os = "windows")]
+            {
+                use windows::Win32::Foundation::HWND;
+                use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
+                if let Ok(raw_hwnd) = installer_win.hwnd() {
+                    let dark: i32 = 1;
+                    let _ = unsafe {
+                        DwmSetWindowAttribute(
+                            HWND(raw_hwnd.0 as _),
+                            DWMWA_USE_IMMERSIVE_DARK_MODE,
+                            &dark as *const _ as _,
+                            std::mem::size_of::<i32>() as u32,
+                        )
+                    };
                 }
             }
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                window.app_handle().exit(0);
+            }
         })
         .run(tauri::generate_context!());
 }
