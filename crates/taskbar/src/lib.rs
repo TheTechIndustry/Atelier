@@ -22,6 +22,7 @@ pub struct TaskbarManager {
     restore_on_drop: bool,
     appearance_applied: Arc<AtomicBool>,
     modified: Arc<AtomicBool>,
+    enabled: Arc<AtomicBool>,
     position: Arc<position::NativePositionController>,
 }
 
@@ -37,6 +38,7 @@ impl TaskbarManager {
             restore_on_drop: true,
             appearance_applied: Arc::new(AtomicBool::new(false)),
             modified: Arc::new(AtomicBool::new(false)),
+            enabled: Arc::new(AtomicBool::new(true)),
             position: Arc::new(position::NativePositionController::default()),
         }
     }
@@ -48,6 +50,7 @@ impl TaskbarManager {
     }
 
     pub fn apply_current_style(&self) -> Result<()> {
+        if !self.enabled.load(Ordering::SeqCst) { return Ok(()); }
         self.modified.store(true, Ordering::Relaxed);
         let config = {
             let lock = self
@@ -164,6 +167,28 @@ impl TaskbarManager {
         self.apply_current_style()
     }
 
+    pub fn is_enabled(&self) -> bool { self.enabled.load(Ordering::SeqCst) }
+
+    pub fn set_enabled(&self, enabled: bool) -> Result<()> {
+        if enabled == self.is_enabled() { return Ok(()); }
+        if !enabled {
+            let previous = self.config()?;
+            self.reset_all()?;
+            *self.config.lock().map_err(|e| atelier_common::error::AtelierError::Generic(e.to_string()))? = previous;
+            self.enabled.store(false, Ordering::SeqCst);
+        } else {
+            self.enabled.store(true, Ordering::SeqCst);
+            if let Err(error) = self.apply_current_style() {
+                let saved = self.config()?;
+                let _ = self.reset_all();
+                if let Ok(mut config) = self.config.lock() { *config = saved; }
+                self.enabled.store(false, Ordering::SeqCst);
+                return Err(error);
+            }
+        }
+        Ok(())
+    }
+
     pub fn reset_all(&self) -> Result<()> {
         if !self.modified.load(Ordering::Relaxed) {
             return Ok(());
@@ -223,5 +248,21 @@ impl Drop for TaskbarManager {
         if self.restore_on_drop && Arc::strong_count(&self.config) <= 2 {
             let _ = self.reset_all();
         }
+    }
+}
+
+#[cfg(test)]
+mod enabled_tests {
+    use super::*;
+    #[test]
+    fn disabled_manager_preserves_edits_without_applying() {
+        let manager=TaskbarManager::passive(TaskbarConfig::default());
+        manager.set_enabled(false).unwrap();
+        let mut config=manager.config().unwrap();
+        config.style=TaskbarStyle::Clear;
+        manager.set_config(config.clone()).unwrap();
+        assert!(!manager.is_enabled());
+        assert_eq!(manager.config().unwrap(),config);
+        assert!(!manager.modified.load(Ordering::SeqCst));
     }
 }
