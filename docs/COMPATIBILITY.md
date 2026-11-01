@@ -19,7 +19,7 @@ flowchart LR
 
 | Feature | Windows 10 (19044+) | Windows 11 (22000+) | Windows 11 (22621+) | Windows 11 (26100+ / 24H2) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Desktop Dock (macOS Style)** | Full Support | Full Support | Full Support | Full Support |
+| **Custom Taskbar (Desktop Dock)** | Full Support | Full Support | Full Support | Full Support |
 | **Live Wallpapers (Video & 2D)** | Full Support | Full Support | Full Support | Full Support |
 | **Desktop Widgets Suite** | Full Support | Full Support | Full Support | Full Support |
 | **Audio Spectrum Visualizer** | Full Support | Full Support | Full Support | Full Support |

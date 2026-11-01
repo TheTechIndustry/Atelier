@@ -5,7 +5,7 @@ Notable changes are recorded here. Entries describe the current development tree
 ## Unreleased
 
 - Added Studio controls for Windows taskbar appearance and presets.
-- Added a separate macOS-style taskbar with pinned apps, visibility and order controls, custom icons, fullscreen hiding, a maximized-window gap and recovery for hidden Windows taskbars.
+- Added a separate Custom Taskbar dock with pinned apps, visibility and order controls, custom icons, fullscreen hiding, a maximized-window gap and recovery for hidden Windows taskbars.
 - Added a Windows 11 XAML bridge and recovery paths for taskbar appearance and positioning.
 - Added Studio window styling, packaging assets and development/test scripts.
 - Added local MP4/WebM and partial 2D scene playback, per-wallpaper and global playback controls, and import of supported Workshop items already downloaded by Steam.

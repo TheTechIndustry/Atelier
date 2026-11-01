@@ -45,7 +45,7 @@ flowchart TD
 ---
 
 ### 2. Dock Reactivity
-Provides ambient illumination behind the floating macOS-style dock:
+Provides ambient illumination behind the floating Custom Taskbar dock:
 - **Audio Glow**: Emits an ethereal colored glow beneath the dock container proportional to system audio volume.
 - **Dynamic Deformations**:
   - `Breathing`: Expands dock vertical padding rhythmically on heavy bass hits.

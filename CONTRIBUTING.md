@@ -16,3 +16,7 @@ Use concise Conventional Commit-style subjects, for example `fix(taskbar): resto
 ## Shell integration
 
 Taskbar and Explorer changes affect the live desktop. Preserve original state, review cleanup and crash recovery, and prefer isolated fixtures for automated tests. Do not assume undocumented Explorer behavior is stable across Windows versions. Do not claim experimental wallpaper, audio or widget features are complete without verifying the full user-facing path.
+
+## Code of Conduct
+
+All contributors and participants are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT.md). Please report any unacceptable behavior via GitHub repository issues or private maintainer communications.

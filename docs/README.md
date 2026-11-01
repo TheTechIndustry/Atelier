@@ -83,7 +83,7 @@ sequenceDiagram
 | :--- | :--- | :--- |
 | **[System Appearance](SYSTEM_APPEARANCE.md)** | DWM backdrops & transparency | Mica, Acrylic, Glass backdrops, active/inactive opacity, corner preference, titlebar mode, system surface filters. |
 | **[System Animations](SYSTEM_ANIMATIONS.md)** | Window transitions & physics | DWM thumbnail minimize/restore transitions, Spring/Snappy easing curves, zoom-from-icon origin, dock bounce & hover wave. |
-| **[Desktop Dock](DOCK.md)** | macOS-style floating dock | Pinning shortcuts, running app detection, AppBar gap reservation, system tray popups, multi-monitor behavior. |
+| **[Desktop Dock](DOCK.md)** | Standalone Custom Taskbar dock | Pinning shortcuts, running app detection, AppBar gap reservation, system tray popups, multi-monitor behavior. |
 | **[Live Wallpapers](WALLPAPERS.md)** | Video and 2D scene wallpapers | MP4/WebM video looping, Wallpaper Engine 2D scene parsing, Steam Workshop discovery, multi-monitor rules. |
 | **[Audio Reactivity](AUDIO_REACTIVITY.md)** | Real-time audio spectrum | WASAPI loopback, 64-band logarithmic FFT, visualizer widget, dock audio glow, wallpaper pulse. |
 | **[Scene Playback](SCENE_PLAYBACK.md)** | 2D Wallpaper Engine parser | PKG unpacking, TEX/DXT decoding, layer hierarchies, bone animation, shader effects, author properties. |

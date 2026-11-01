@@ -2,7 +2,7 @@
 
 Directory: [`crates/ui/src/system_animations.rs`](../crates/ui/src/system_animations.rs) · Configuration: `%APPDATA%\Atelier\animations.json`
 
-The **System Animations** engine brings fluid, physics-based transitions to Windows application windows and desktop interactions. It intercepts minimize, restore, and launch actions across the desktop shell to deliver smooth visual feedback reminiscent of modern macOS and iPadOS animations.
+The **System Animations** engine brings fluid, physics-based transitions to Windows application windows and desktop interactions. It intercepts minimize, restore, and launch actions across the desktop shell to deliver smooth, modern visual feedback.
 
 ```mermaid
 flowchart TD

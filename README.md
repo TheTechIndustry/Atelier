@@ -9,6 +9,7 @@
 [![Direct3D 11](https://img.shields.io/badge/Graphics-Direct3D%2011-0078D7?logo=windows)](docs/crates/WALLPAPER.md)
 [![WASAPI](https://img.shields.io/badge/Audio-WASAPI-7D57C1)](docs/crates/AUDIO.md)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](#license)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 [![Taskbar styling](https://img.shields.io/badge/Windows%20Taskbar-Styles%20%26%20Presets-3182CE)](#features)
 [![Desktop dock](https://img.shields.io/badge/Custom%20Taskbar-Desktop%20Dock-8B5CF6)](docs/DOCK.md)
@@ -21,7 +22,7 @@
 [![Performance](https://img.shields.io/badge/Performance-Zero--alloc%20%26%20Trimmed%20RAM-10B981)](#resource-efficiency-and-performance)
 [![Recovery](https://img.shields.io/badge/Shell-Recovery%20Helpers-22A06B)](docs/FAILURES_AND_RECOVERY.md)
 
-**Atelier** is an all-in-one desktop customization suite for Windows 10 and 11 built with Rust and Tauri v2. Through its Studio, Atelier styles the native taskbar or provides a separate macOS-style dock, customizes system window appearance with Mica and Acrylic backdrops, and adds fluid physics-based window animations. It features an interactive Dynamic Island, live video and 2D scene wallpapers, audio-reactive visualizers, and customizable desktop widgets all engineered with zero-allocation telemetry and automatic memory trimming for near-zero idle CPU and RAM usage.
+**Atelier** is an all-in-one desktop customization suite for Windows 10 and 11 built with Rust and Tauri v2. Through its Studio, Atelier styles the native Windows taskbar or provides a standalone Custom Taskbar dock, tailors system surface materials with Mica and Acrylic backdrops, and adds fluid physics-based window animations. It features an interactive Dynamic Island, live video and 2D scene wallpapers, audio-reactive visualizers, and customizable desktop widgets — all engineered with zero-allocation telemetry and automatic memory trimming for near-zero idle CPU and RAM usage.
 
 <p align="center">
   <img src="assets/preview.gif" alt="Atelier Desktop Studio Preview" width="100%">
@@ -122,7 +123,7 @@ Atelier is engineered to run continuously in the background with a minimal footp
 - [Development and testing](docs/DEVELOPMENT.md)
 - [Scene playback and compatibility](docs/SCENE_PLAYBACK.md)
 - [Security considerations](docs/SECURITY.md)
-- [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Changelog](CHANGELOG.md)
 
 ### Crate references
 
