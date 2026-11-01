@@ -2,8 +2,7 @@ const invoke = (cmd, args) => {
   if (window.__TAURI__?.core?.invoke) {
     return window.__TAURI__.core.invoke(cmd, args);
   }
-  console.warn("Tauri invoke unavailable, falling back:", cmd, args);
-  return Promise.resolve();
+  return Promise.reject(new Error("Installer connection unavailable. Restart setup."));
 };
 
 const $ = (id) => document.getElementById(id);
@@ -21,14 +20,13 @@ async function init() {
       if (info.default_dir) $("install-dir").value = info.default_dir;
       if (info.current_version) $("app-version").textContent = "v" + info.current_version;
       if (info.is_already_installed) {
-        $("btn-install").innerHTML = `
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Update Atelier
-        `;
+        $("btn-install").textContent = "Update Atelier";
       }
     }
   } catch (err) {
     console.error("Failed to get installer info:", err);
+    alert("Could not start setup: " + err);
+    $("btn-install").disabled = true;
   }
 
   $("btn-browse").onclick = async () => {
@@ -47,7 +45,7 @@ async function init() {
       await invoke("installer_launch_app", { installedPath: installedPath || $("install-dir").value + "\\Atelier.exe" });
     } catch (e) {
       console.error(e);
-      await invoke("installer_exit");
+      alert("Could not launch Atelier: " + e);
     }
   };
 
@@ -86,7 +84,8 @@ async function startInstall() {
 
     setProgress(65, "Configuring Windows Shell...", "Creating Desktop and Start Menu shortcuts");
     const result = await invoke("installer_perform_install", { options });
-    installedPath = result?.installed_path || (installDir + "\\Atelier.exe");
+    if (!result?.success || !result.installed_path) throw new Error(result?.message || "Installation failed.");
+    installedPath = result.installed_path;
 
     setProgress(85, "Registering System Integration...", "Setting startup and uninstaller hooks");
     await sleep(350);

@@ -3,15 +3,17 @@ use std::{
     collections::{HashMap, HashSet},
     sync::Mutex,
 };
+use windows::core::{s, w};
 use windows::Win32::{
     Foundation::FILETIME,
     System::{
         LibraryLoader::{GetModuleHandleW, GetProcAddress},
         ProcessStatus::EmptyWorkingSet,
-        Threading::{GetSystemTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA},
+        Threading::{
+            GetSystemTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
+        },
     },
 };
-use windows::core::{s, w};
 
 pub struct UsageMonitor(Mutex<UsageState>);
 
@@ -58,7 +60,14 @@ fn query_system_processes() -> Result<Vec<RawProcessEntry>, String> {
         buf.resize(1024 * 1024 * 2, 0);
     }
     let mut ret_len = 0u32;
-    let status = unsafe { nt_query(5, buf.as_mut_ptr() as *mut _, buf.len() as u32, &mut ret_len) };
+    let status = unsafe {
+        nt_query(
+            5,
+            buf.as_mut_ptr() as *mut _,
+            buf.len() as u32,
+            &mut ret_len,
+        )
+    };
     if status != 0 {
         if ret_len as usize > buf.len() {
             buf.resize(ret_len as usize + 65536, 0);
@@ -176,7 +185,10 @@ impl UsageMonitor {
             let proc_delta: u64 = current_process_times
                 .iter()
                 .filter_map(|(pid, &curr)| {
-                    state.process_times.get(pid).map(|&old| curr.saturating_sub(old))
+                    state
+                        .process_times
+                        .get(pid)
+                        .map(|&old| curr.saturating_sub(old))
                 })
                 .sum();
             Some(((proc_delta as f64 * 100.0) / (sys_elapsed as f64)).clamp(0.0, 100.0))
@@ -220,7 +232,9 @@ pub fn trim_pids(pids: &HashSet<usize>) {
 }
 
 pub fn trim_memory() {
-    let Ok(all_procs) = query_system_processes() else { return };
+    let Ok(all_procs) = query_system_processes() else {
+        return;
+    };
     let root_pid = std::process::id() as usize;
     let mut atelier_pids = HashSet::from([root_pid]);
     loop {
@@ -251,7 +265,10 @@ mod tests {
         let procs = query_system_processes().expect("query should succeed");
         let my_pid = std::process::id() as usize;
         let me = procs.iter().find(|p| p.pid == my_pid);
-        assert!(me.is_some(), "Current process must be present in NT process list");
+        assert!(
+            me.is_some(),
+            "Current process must be present in NT process list"
+        );
         let me = me.unwrap();
         assert!(me.ws_private > 0, "Private working set must be > 0");
     }

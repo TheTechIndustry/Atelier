@@ -3,6 +3,17 @@ use std::path::PathBuf;
 use std::process::Command;
 use tauri::Manager;
 
+// Console utilities must not create a visible terminal for a GUI installer.
+fn hidden_command(program: &str) -> Command {
+    let mut command = Command::new(program);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    command
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InstallerInfo {
     pub default_dir: String,
@@ -27,7 +38,10 @@ pub struct InstallResult {
 
 pub fn is_installer_mode() -> bool {
     let args: Vec<String> = std::env::args().collect();
-    if args.iter().any(|a| a == "--installer" || a == "--setup" || a == "-s") {
+    if args
+        .iter()
+        .any(|a| a == "--installer" || a == "--setup" || a == "-s")
+    {
         return true;
     }
     if let Ok(exe) = std::env::current_exe() {
@@ -50,7 +64,10 @@ pub fn default_install_dir() -> PathBuf {
     if let Some(local) = std::env::var_os("LOCALAPPDATA") {
         PathBuf::from(local).join("Atelier")
     } else if let Some(userprofile) = std::env::var_os("USERPROFILE") {
-        PathBuf::from(userprofile).join("AppData").join("Local").join("Atelier")
+        PathBuf::from(userprofile)
+            .join("AppData")
+            .join("Local")
+            .join("Atelier")
     } else {
         PathBuf::from(r"C:\Atelier")
     }
@@ -70,15 +87,16 @@ pub fn installer_get_info() -> InstallerInfo {
 #[tauri::command]
 pub fn installer_browse_folder(current: String) -> Option<String> {
     let script = format!(
-        "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; \
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; \
+        Add-Type -AssemblyName System.Windows.Forms; \
         $f = New-Object System.Windows.Forms.FolderBrowserDialog; \
         $f.Description = 'Select destination folder for Atelier'; \
         $f.SelectedPath = '{}'; \
         if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {{ [Console]::Out.Write($f.SelectedPath) }}",
         current.replace('\'', "''")
     );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+    let output = hidden_command("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-STA", "-Command", &script])
         .output()
         .ok()?;
     if output.status.success() {
@@ -93,25 +111,19 @@ pub fn installer_browse_folder(current: String) -> Option<String> {
 #[tauri::command]
 pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResult, String> {
     let target_dir = PathBuf::from(&options.install_dir);
+    if !target_dir.is_absolute() || target_dir.parent().is_none() {
+        return Err("Choose an absolute installation folder, not a drive root.".into());
+    }
     std::fs::create_dir_all(&target_dir).map_err(|e| format!("Failed to create folder: {}", e))?;
 
-    let current_exe = std::env::current_exe().map_err(|e| format!("Failed to get current executable path: {}", e))?;
+    let current_exe = std::env::current_exe()
+        .map_err(|e| format!("Failed to get current executable path: {}", e))?;
     let target_exe = target_dir.join("Atelier.exe");
 
     // Close running Atelier instance if updating
     if current_exe != target_exe {
-        let _ = Command::new("taskkill").args(["/F", "/IM", "Atelier.exe"]).output();
-        std::thread::sleep(std::time::Duration::from_millis(250));
-        std::fs::copy(&current_exe, &target_exe).map_err(|e| format!("Failed to copy Atelier.exe: {}", e))?;
-    }
-
-    // Copy atelier-core.exe if present
-    if let Some(src_parent) = current_exe.parent() {
-        let core_src = src_parent.join("atelier-core.exe");
-        if core_src.exists() {
-            let core_dst = target_dir.join("atelier-core.exe");
-            let _ = std::fs::copy(&core_src, &core_dst);
-        }
+        std::fs::copy(&current_exe, &target_exe)
+            .map_err(|e| format!("Failed to copy Atelier.exe: {}", e))?;
     }
 
     let target_exe_str = target_exe.to_string_lossy().replace('\'', "''");
@@ -129,7 +141,7 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
             $s.Save();",
             target_exe_str, target_dir_str
         );
-        let _ = Command::new("powershell")
+        let _ = hidden_command("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
             .output();
     }
@@ -147,14 +159,14 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
             $s.Save();",
             target_exe_str, target_dir_str
         );
-        let _ = Command::new("powershell")
+        let _ = hidden_command("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
             .output();
     }
 
     // Startup
     if options.launch_on_startup {
-        let _ = Command::new("reg")
+        let _ = hidden_command("reg")
             .args([
                 "add",
                 r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
@@ -169,14 +181,98 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
             .output();
     }
 
+    if !options.launch_on_startup {
+        let _ = hidden_command("reg")
+            .args([
+                "delete",
+                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
+                "/v",
+                "Atelier",
+                "/f",
+            ])
+            .output();
+    }
+
     // Windows Add/Remove Programs uninstall registry entry
     let uninstall_key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier";
-    let _ = Command::new("reg").args(["add", uninstall_key, "/v", "DisplayName", "/t", "REG_SZ", "/d", "Atelier Desktop Studio", "/f"]).output();
-    let _ = Command::new("reg").args(["add", uninstall_key, "/v", "DisplayVersion", "/t", "REG_SZ", "/d", env!("CARGO_PKG_VERSION"), "/f"]).output();
-    let _ = Command::new("reg").args(["add", uninstall_key, "/v", "Publisher", "/t", "REG_SZ", "/d", "Atelier", "/f"]).output();
-    let _ = Command::new("reg").args(["add", uninstall_key, "/v", "InstallLocation", "/t", "REG_SZ", "/d", &target_dir.to_string_lossy(), "/f"]).output();
-    let _ = Command::new("reg").args(["add", uninstall_key, "/v", "DisplayIcon", "/t", "REG_SZ", "/d", &format!("\"{}\",0", target_exe.to_string_lossy()), "/f"]).output();
-    let _ = Command::new("reg").args(["add", uninstall_key, "/v", "UninstallString", "/t", "REG_SZ", "/d", &format!("\"{}\" --uninstall", target_exe.to_string_lossy()), "/f"]).output();
+    let _ = hidden_command("reg")
+        .args([
+            "add",
+            uninstall_key,
+            "/v",
+            "DisplayName",
+            "/t",
+            "REG_SZ",
+            "/d",
+            "Atelier Desktop Studio",
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args([
+            "add",
+            uninstall_key,
+            "/v",
+            "DisplayVersion",
+            "/t",
+            "REG_SZ",
+            "/d",
+            env!("CARGO_PKG_VERSION"),
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args([
+            "add",
+            uninstall_key,
+            "/v",
+            "Publisher",
+            "/t",
+            "REG_SZ",
+            "/d",
+            "Atelier",
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args([
+            "add",
+            uninstall_key,
+            "/v",
+            "InstallLocation",
+            "/t",
+            "REG_SZ",
+            "/d",
+            &target_dir.to_string_lossy(),
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args([
+            "add",
+            uninstall_key,
+            "/v",
+            "DisplayIcon",
+            "/t",
+            "REG_SZ",
+            "/d",
+            &format!("\"{}\",0", target_exe.to_string_lossy()),
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args([
+            "add",
+            uninstall_key,
+            "/v",
+            "UninstallString",
+            "/t",
+            "REG_SZ",
+            "/d",
+            &format!("\"{}\" --uninstall", target_exe.to_string_lossy()),
+            "/f",
+        ])
+        .output();
 
     Ok(InstallResult {
         success: true,
@@ -186,11 +282,12 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
 }
 
 #[tauri::command]
-pub fn installer_launch_app(installed_path: String, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub fn installer_launch_app(
+    installed_path: String,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
     let path = PathBuf::from(installed_path);
-    if path.exists() {
-        let _ = Command::new(&path).spawn().map_err(|e| e.to_string())?;
-    }
+    Command::new(&path).spawn().map_err(|e| e.to_string())?;
     app_handle.exit(0);
     Ok(())
 }
@@ -201,24 +298,69 @@ pub fn installer_exit(app_handle: tauri::AppHandle) {
 }
 
 pub fn run_uninstaller() {
-    let _ = Command::new("reg").args(["delete", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "Atelier", "/f"]).output();
-    let _ = Command::new("reg").args(["delete", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier", "/f"]).output();
-    let _ = Command::new("reg").args(["delete", r"HKCU\Software\Atelier", "/f"]).output();
+    let _ = hidden_command("reg")
+        .args([
+            "delete",
+            r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
+            "/v",
+            "Atelier",
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args([
+            "delete",
+            r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier",
+            "/f",
+        ])
+        .output();
+    let _ = hidden_command("reg")
+        .args(["delete", r"HKCU\Software\Atelier", "/f"])
+        .output();
 
     let script = "\
         $desktop = [Environment]::GetFolderPath('Desktop'); \
         Remove-Item \"$desktop\\Atelier.lnk\" -ErrorAction SilentlyContinue; \
         $programs = [Environment]::GetFolderPath('Programs'); \
-        Remove-Item \"$programs\\Atelier\" -Recurse -Force -ErrorAction SilentlyContinue;";
-    let _ = Command::new("powershell")
+        Remove-Item \"$programs\\Atelier\\Atelier.lnk\" -Force -ErrorAction SilentlyContinue; \
+        Remove-Item \"$programs\\Atelier\\Uninstall Atelier.lnk\" -Force -ErrorAction SilentlyContinue; \
+        [System.IO.Directory]::Delete(\"$programs\\Atelier\", $false);";
+    let _ = hidden_command("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
         .output();
 
-    println!("Atelier uninstalled successfully.");
+    // Wait for the running executable to exit before deleting it.
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let quote = |p: &std::path::Path| p.to_string_lossy().replace('\'', "''");
+            let script = format!(
+                "Wait-Process -Id {} -ErrorAction SilentlyContinue; Remove-Item -LiteralPath '{}' -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath '{}' -Force -ErrorAction SilentlyContinue; [System.IO.Directory]::Delete('{}', $false)",
+                std::process::id(), quote(&exe), quote(&dir.join("atelier-core.exe")), quote(dir)
+            );
+            let _ = hidden_command("powershell")
+                .args([
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-Command",
+                    &script,
+                ])
+                .spawn();
+        }
+    }
 }
 
 pub fn run_installer() {
-    let _ = tauri::Builder::default()
+    let mut context = tauri::generate_context!();
+    let effects = context
+        .config()
+        .app
+        .windows
+        .first()
+        .and_then(|window| window.window_effects.clone());
+    context.config_mut().app.windows.clear();
+    let result = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             installer_get_info,
             installer_browse_folder,
@@ -226,12 +368,8 @@ pub fn run_installer() {
             installer_launch_app,
             installer_exit,
         ])
-        .setup(|app| {
-            if let Some(main) = app.get_webview_window("main") {
-                let _ = main.destroy();
-            }
-
-            let installer_win = tauri::WebviewWindowBuilder::new(
+        .setup(move |app| {
+            let mut builder = tauri::WebviewWindowBuilder::new(
                 app,
                 "installer",
                 tauri::WebviewUrl::App("installer.html".into()),
@@ -241,13 +379,18 @@ pub fn run_installer() {
             .resizable(false)
             .decorations(false)
             .transparent(true)
-            .center()
-            .build()?;
+            .center();
+            if let Some(effects) = effects {
+                builder = builder.effects(effects);
+            }
+            let installer_win = builder.build()?;
 
             #[cfg(target_os = "windows")]
             {
                 use windows::Win32::Foundation::HWND;
-                use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
+                use windows::Win32::Graphics::Dwm::{
+                    DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                };
                 if let Ok(raw_hwnd) = installer_win.hwnd() {
                     let dark: i32 = 1;
                     let _ = unsafe {
@@ -268,5 +411,8 @@ pub fn run_installer() {
                 window.app_handle().exit(0);
             }
         })
-        .run(tauri::generate_context!());
+        .run(context);
+    if let Err(error) = result {
+        eprintln!("Installer failed: {error}");
+    }
 }

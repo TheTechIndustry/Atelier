@@ -16,13 +16,13 @@ use windows::Win32::{
     UI::WindowsAndMessaging::{
         FindWindowExW, GetAncestor, GetClassNameW, GetDesktopWindow, GetSystemMetrics, GetWindow,
         GetWindowLongPtrW, GetWindowRect, IsWindow, SetLayeredWindowAttributes, SetParent,
-        SetWindowLongPtrW, SetWindowPos, ShowWindow, GA_PARENT, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV,
-        HWND_TOP, LWA_ALPHA, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
-        SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
-        SWP_SHOWWINDOW, SW_SHOW, WS_BORDER, WS_CAPTION, WS_CHILD, WS_CLIPCHILDREN,
-        WS_CLIPSIBLINGS, WS_DLGFRAME, WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME, WS_EX_LAYERED,
-        WS_EX_NOACTIVATE, WS_EX_STATICEDGE, WS_EX_TOOLWINDOW,
-        WS_EX_WINDOWEDGE, WS_HSCROLL, WS_POPUP, WS_THICKFRAME, WS_VISIBLE, WS_VSCROLL,
+        SetWindowLongPtrW, SetWindowPos, ShowWindow, GA_PARENT, GWL_EXSTYLE, GWL_STYLE,
+        GW_HWNDPREV, HWND_TOP, LWA_ALPHA, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
+        SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
+        SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SW_SHOW, WS_BORDER, WS_CAPTION, WS_CHILD,
+        WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_DLGFRAME, WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME,
+        WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_STATICEDGE, WS_EX_TOOLWINDOW, WS_EX_WINDOWEDGE,
+        WS_HSCROLL, WS_POPUP, WS_THICKFRAME, WS_VISIBLE, WS_VSCROLL,
     },
 };
 const MAX_VIDEO: u64 = 1024 * 1024 * 1024;
@@ -723,7 +723,9 @@ fn attach(w: &tauri::WebviewWindow, worker: HWND) -> Result<(), String> {
     Ok(())
 }
 fn repair_static_worker_order(parent: HWND, wallpaper: HWND) -> Result<(), String> {
-    if let Ok(shelldll) = unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) } {
+    if let Ok(shelldll) =
+        unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) }
+    {
         if !shelldll.0.is_null() {
             let _ = unsafe { ShowWindow(shelldll, SW_SHOW) };
         }
@@ -848,7 +850,8 @@ pub fn repair_after_workarea_change(app: tauri::AppHandle) {
                 IsWindow(parent).as_bool()
                     && !parent.0.is_null()
                     && parent != GetDesktopWindow()
-                    && (GetWindowLongPtrW(HWND(hwnd.0 as _), GWL_STYLE) & WS_VISIBLE.0 as isize != 0)
+                    && (GetWindowLongPtrW(HWND(hwnd.0 as _), GWL_STYLE) & WS_VISIBLE.0 as isize
+                        != 0)
             })
             .unwrap_or(false);
         if is_healthy {
@@ -869,11 +872,20 @@ fn restore_desktop_view(parent: HWND) {
     if parent.0.is_null() || !unsafe { IsWindow(parent) }.as_bool() {
         return;
     }
-    if let Ok(view) = unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) } {
+    if let Ok(view) =
+        unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) }
+    {
         unsafe {
             let _ = ShowWindow(view, SW_SHOW);
-            let _ = SetWindowPos(view, HWND_TOP, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            let _ = SetWindowPos(
+                view,
+                HWND_TOP,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            );
         }
     }
 }
@@ -882,9 +894,14 @@ fn apply(app: &tauri::AppHandle, c: &WallpaperConfig) -> Result<(), String> {
     if c.active.is_some() {
         if let Err(error) = super::desktop_background::suspend().and_then(|_| ensure_window(app)) {
             if let Some(w) = app.get_webview_window("desktop-wallpaper") {
-                let parent = w.hwnd().ok().map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
+                let parent = w
+                    .hwnd()
+                    .ok()
+                    .map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
                 let _ = w.destroy();
-                if let Some(parent) = parent { restore_desktop_view(parent); }
+                if let Some(parent) = parent {
+                    restore_desktop_view(parent);
+                }
             }
             let _ = super::desktop_background::restore();
             return Err(error);
@@ -893,10 +910,15 @@ fn apply(app: &tauri::AppHandle, c: &WallpaperConfig) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
     } else {
         if let Some(w) = app.get_webview_window("desktop-wallpaper") {
-            let parent = w.hwnd().ok().map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
+            let parent = w
+                .hwnd()
+                .ok()
+                .map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
             let _ = w.eval("window.location.href = 'about:blank';");
             w.destroy().map_err(|e| e.to_string())?;
-            if let Some(parent) = parent { restore_desktop_view(parent); }
+            if let Some(parent) = parent {
+                restore_desktop_view(parent);
+            }
         }
         super::desktop_background::restore()?;
         crate::app_usage::trim_memory();
@@ -945,7 +967,9 @@ pub async fn wallpaper_apply(
         }
     }
     let mut next = c.clone();
-    if let Some(ref id) = id { promote_wallpaper(&mut next.items, id); }
+    if let Some(ref id) = id {
+        promote_wallpaper(&mut next.items, id);
+    }
     next.active = id;
     save(&next)?;
     *state.config.lock().map_err(|e| e.to_string())? = next.clone();
@@ -1337,9 +1361,14 @@ pub fn wallpaper_report(
             .recovering
             .store(true, std::sync::atomic::Ordering::SeqCst);
         if let Some(w) = app.get_webview_window("desktop-wallpaper") {
-            let parent = w.hwnd().ok().map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
+            let parent = w
+                .hwnd()
+                .ok()
+                .map(|raw| unsafe { GetAncestor(HWND(raw.0 as _), GA_PARENT) });
             let _ = w.hide();
-            if let Some(parent) = parent { restore_desktop_view(parent); }
+            if let Some(parent) = parent {
+                restore_desktop_view(parent);
+            }
         }
         let _ = super::desktop_background::restore();
         let _ = app.emit_to(
@@ -1519,15 +1548,30 @@ mod tests {
     }
     #[test]
     fn recently_applied_wallpapers_move_to_front_of_display_order_and_persist() {
-        let make = |id: &str| WallpaperItem { id: id.into(), title: id.into(), kind: "video".into(), category: "mp4".into(), description: String::new(), asset: None };
-        let mut config = WallpaperConfig { items: vec![make("first"), make("second"), make("third")], ..Default::default() };
+        let make = |id: &str| WallpaperItem {
+            id: id.into(),
+            title: id.into(),
+            kind: "video".into(),
+            category: "mp4".into(),
+            description: String::new(),
+            asset: None,
+        };
+        let mut config = WallpaperConfig {
+            items: vec![make("first"), make("second"), make("third")],
+            ..Default::default()
+        };
         promote_wallpaper(&mut config.items, "first");
         promote_wallpaper(&mut config.items, "second");
         promote_wallpaper(&mut config.items, "second");
         promote_wallpaper(&mut config.items, "missing");
         let saved = serde_json::to_vec(&config).unwrap();
         let restored: WallpaperConfig = serde_json::from_slice(&saved).unwrap();
-        let displayed: Vec<_> = restored.items.iter().rev().map(|item| item.id.as_str()).collect();
+        let displayed: Vec<_> = restored
+            .items
+            .iter()
+            .rev()
+            .map(|item| item.id.as_str())
+            .collect();
         assert_eq!(displayed, ["second", "first", "third"]);
     }
     #[test]

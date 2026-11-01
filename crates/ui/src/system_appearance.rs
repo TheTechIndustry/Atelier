@@ -17,9 +17,8 @@ use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW, GetWindowTextW,
     GetWindowThreadProcessId, IsIconic, IsWindowVisible, SetLayeredWindowAttributes,
-    SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, LWA_ALPHA,
-    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
-    SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNORMAL, WS_EX_LAYERED,
+    SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, LWA_ALPHA, SWP_FRAMECHANGED, SWP_NOACTIVATE,
+    SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNORMAL, WS_EX_LAYERED,
 };
 
 const DWMWA_USE_IMMERSIVE_DARK_MODE_ATTR: DWMWINDOWATTRIBUTE = DWMWINDOWATTRIBUTE(20);
@@ -107,9 +106,7 @@ impl SystemAppearanceConfig {
         if self.scope != "system_only" && self.scope != "all_windows" {
             self.scope = "system_only".into();
         }
-        if !["default", "mica", "mica_alt", "acrylic", "glass"]
-            .contains(&self.backdrop.as_str())
-        {
+        if !["default", "mica", "mica_alt", "acrylic", "glass"].contains(&self.backdrop.as_str()) {
             self.backdrop = "mica".into();
         }
         if !["default", "rounded", "small_rounded", "square"]
@@ -216,11 +213,25 @@ pub fn is_fullscreen_or_game(hwnd: HWND, class: &str) -> bool {
     if unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowRect(hwnd, &mut rect) }.is_ok() {
         let width = rect.right - rect.left;
         let height = rect.bottom - rect.top;
-        let sm_cx = unsafe { windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(windows::Win32::UI::WindowsAndMessaging::SM_CXSCREEN) };
-        let sm_cy = unsafe { windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(windows::Win32::UI::WindowsAndMessaging::SM_CYSCREEN) };
+        let sm_cx = unsafe {
+            windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
+                windows::Win32::UI::WindowsAndMessaging::SM_CXSCREEN,
+            )
+        };
+        let sm_cy = unsafe {
+            windows::Win32::UI::WindowsAndMessaging::GetSystemMetrics(
+                windows::Win32::UI::WindowsAndMessaging::SM_CYSCREEN,
+            )
+        };
         if width >= sm_cx && height >= sm_cy {
-            let style = unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowLongW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWL_STYLE) } as u32;
-            let has_border = (style & windows::Win32::UI::WindowsAndMessaging::WS_THICKFRAME.0) != 0;
+            let style = unsafe {
+                windows::Win32::UI::WindowsAndMessaging::GetWindowLongW(
+                    hwnd,
+                    windows::Win32::UI::WindowsAndMessaging::GWL_STYLE,
+                )
+            } as u32;
+            let has_border =
+                (style & windows::Win32::UI::WindowsAndMessaging::WS_THICKFRAME.0) != 0;
             let has_caption = (style & windows::Win32::UI::WindowsAndMessaging::WS_CAPTION.0) != 0;
             if !has_border || !has_caption {
                 return true;
@@ -242,11 +253,10 @@ pub fn matches_target(
     }
 
     let lower_proc = proc_name.to_lowercase();
-    if config
-        .excluded_apps
-        .iter()
-        .any(|app| lower_proc == app.to_lowercase() || lower_proc.ends_with(&format!("\\{}", app.to_lowercase())))
-    {
+    if config.excluded_apps.iter().any(|app| {
+        lower_proc == app.to_lowercase()
+            || lower_proc.ends_with(&format!("\\{}", app.to_lowercase()))
+    }) {
         return false;
     }
 
@@ -316,7 +326,12 @@ pub fn matches_target(
     }
 
     if config.scope == "all_windows" {
-        let style = unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowLongW(hwnd, windows::Win32::UI::WindowsAndMessaging::GWL_STYLE) } as u32;
+        let style = unsafe {
+            windows::Win32::UI::WindowsAndMessaging::GetWindowLongW(
+                hwnd,
+                windows::Win32::UI::WindowsAndMessaging::GWL_STYLE,
+            )
+        } as u32;
         let has_caption = (style & windows::Win32::UI::WindowsAndMessaging::WS_CAPTION.0) != 0;
         let is_child = (style & windows::Win32::UI::WindowsAndMessaging::WS_CHILD.0) != 0;
         return has_caption && !is_child;
@@ -374,21 +389,9 @@ fn restore_single_window(hwnd: HWND, originally_layered: bool) {
 
     let ex_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
     if !originally_layered && (ex_style & (WS_EX_LAYERED.0 as isize)) != 0 {
-        let _ = unsafe {
-            SetLayeredWindowAttributes(
-                hwnd,
-                COLORREF(0),
-                255,
-                LWA_ALPHA,
-            )
-        };
-        let _ = unsafe {
-            SetWindowLongPtrW(
-                hwnd,
-                GWL_EXSTYLE,
-                ex_style & !(WS_EX_LAYERED.0 as isize),
-            )
-        };
+        let _ = unsafe { SetLayeredWindowAttributes(hwnd, COLORREF(0), 255, LWA_ALPHA) };
+        let _ =
+            unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_LAYERED.0 as isize)) };
     }
 
     let _ = unsafe {
@@ -413,17 +416,27 @@ fn restore_single_window(hwnd: HWND, originally_layered: bool) {
 }
 
 fn restore_tracked_window(hwnd: HWND) {
-    let record = modified_set().lock().ok().and_then(|mut set| set.remove(&(hwnd.0 as isize)));
+    let record = modified_set()
+        .lock()
+        .ok()
+        .and_then(|mut set| set.remove(&(hwnd.0 as isize)));
     if let Some((original_pid, originally_layered)) = record {
         let mut pid = 0;
         unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
-        if pid != 0 && pid == original_pid { restore_single_window(hwnd, originally_layered); }
+        if pid != 0 && pid == original_pid {
+            restore_single_window(hwnd, originally_layered);
+        }
     }
 }
 
 pub fn restore_all_system_and_desktop_windows() {
-    let handles: Vec<isize> = modified_set().lock().map(|set| set.keys().copied().collect()).unwrap_or_default();
-    for raw in handles { restore_tracked_window(HWND(raw as *mut c_void)); }
+    let handles: Vec<isize> = modified_set()
+        .lock()
+        .map(|set| set.keys().copied().collect())
+        .unwrap_or_default();
+    for raw in handles {
+        restore_tracked_window(HWND(raw as *mut c_void));
+    }
 }
 
 pub fn cleanup() {
@@ -450,12 +463,20 @@ pub fn apply_to_window(hwnd: HWND, config: &SystemAppearanceConfig, is_active: b
 
     let mut pid = 0;
     unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
-    if pid == 0 { return; }
+    if pid == 0 {
+        return;
+    }
     let originally_layered = {
-        let Ok(mut set) = modified_set().lock() else { return };
+        let Ok(mut set) = modified_set().lock() else {
+            return;
+        };
         let ex_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
-        let record = set.entry(raw_hwnd).or_insert((pid, (ex_style & WS_EX_LAYERED.0 as isize) != 0));
-        if record.0 != pid { *record = (pid, (ex_style & WS_EX_LAYERED.0 as isize) != 0); }
+        let record = set
+            .entry(raw_hwnd)
+            .or_insert((pid, (ex_style & WS_EX_LAYERED.0 as isize) != 0));
+        if record.0 != pid {
+            *record = (pid, (ex_style & WS_EX_LAYERED.0 as isize) != 0);
+        }
         record.1
     };
 
@@ -492,7 +513,14 @@ pub fn apply_to_window(hwnd: HWND, config: &SystemAppearanceConfig, is_active: b
 
     if config.titlebar_mode != "custom" || config.titlebar_color == "default" {
         let color = DWMWA_COLOR_DEFAULT;
-        let _ = unsafe { DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR_ATTR, &color as *const _ as *const c_void, 4) };
+        let _ = unsafe {
+            DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_CAPTION_COLOR_ATTR,
+                &color as *const _ as *const c_void,
+                4,
+            )
+        };
     }
     match config.titlebar_mode.as_str() {
         "dark" => {
@@ -556,39 +584,17 @@ pub fn apply_to_window(hwnd: HWND, config: &SystemAppearanceConfig, is_active: b
         let ex_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
         if (ex_style & (WS_EX_LAYERED.0 as isize)) == 0 {
             let _ = unsafe {
-                SetWindowLongPtrW(
-                    hwnd,
-                    GWL_EXSTYLE,
-                    ex_style | (WS_EX_LAYERED.0 as isize),
-                )
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_LAYERED.0 as isize))
             };
         }
         let alpha = (target_opacity * 255 / 100).clamp(30, 255) as u8;
-        let _ = unsafe {
-            SetLayeredWindowAttributes(
-                hwnd,
-                COLORREF(0),
-                alpha,
-                LWA_ALPHA,
-            )
-        };
+        let _ = unsafe { SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA) };
     } else if !originally_layered {
         let ex_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
         if (ex_style & (WS_EX_LAYERED.0 as isize)) != 0 {
+            let _ = unsafe { SetLayeredWindowAttributes(hwnd, COLORREF(0), 255, LWA_ALPHA) };
             let _ = unsafe {
-                SetLayeredWindowAttributes(
-                    hwnd,
-                    COLORREF(0),
-                    255,
-                    LWA_ALPHA,
-                )
-            };
-            let _ = unsafe {
-                SetWindowLongPtrW(
-                    hwnd,
-                    GWL_EXSTYLE,
-                    ex_style & !(WS_EX_LAYERED.0 as isize),
-                )
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_LAYERED.0 as isize))
             };
         }
     }
@@ -604,21 +610,13 @@ pub fn apply_to_all_windows(config: &SystemAppearanceConfig) {
         config: &'a SystemAppearanceConfig,
         foreground: HWND,
     }
-    let data = EnumData {
-        config,
-        foreground,
-    };
+    let data = EnumData { config, foreground };
     unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         let data = unsafe { &*(lparam.0 as *const EnumData) };
         apply_to_window(hwnd, data.config, hwnd == data.foreground);
         BOOL(1)
     }
-    let _ = unsafe {
-        EnumWindows(
-            Some(enum_proc),
-            LPARAM(&data as *const _ as isize),
-        )
-    };
+    let _ = unsafe { EnumWindows(Some(enum_proc), LPARAM(&data as *const _ as isize)) };
 }
 
 pub fn start(app: &tauri::AppHandle) {
@@ -643,7 +641,9 @@ pub fn start(app: &tauri::AppHandle) {
             }
             was_enabled = true;
             scan_tick = scan_tick.wrapping_add(1);
-            if scan_tick % 20 == 0 { apply_to_all_windows(&config); }
+            if scan_tick % 20 == 0 {
+                apply_to_all_windows(&config);
+            }
             let current_fg = unsafe { GetForegroundWindow() };
             let current_raw = current_fg.0 as isize;
             if current_raw != last_foreground_raw {
@@ -773,21 +773,75 @@ mod tests {
             scope: "system_only".into(),
             ..Default::default()
         };
-        assert!(matches_target(HWND::default(), "CabinetWClass", "Docs", "explorer.exe", &config));
-        assert!(matches_target(HWND::default(), "#32770", "Properties", "explorer.exe", &config));
-        assert!(matches_target(HWND::default(), "TaskManagerWindow", "Task Manager", "taskmgr.exe", &config));
-        assert!(matches_target(HWND::default(), "ConsoleWindowClass", "cmd", "cmd.exe", &config));
+        assert!(matches_target(
+            HWND::default(),
+            "CabinetWClass",
+            "Docs",
+            "explorer.exe",
+            &config
+        ));
+        assert!(matches_target(
+            HWND::default(),
+            "#32770",
+            "Properties",
+            "explorer.exe",
+            &config
+        ));
+        assert!(matches_target(
+            HWND::default(),
+            "TaskManagerWindow",
+            "Task Manager",
+            "taskmgr.exe",
+            &config
+        ));
+        assert!(matches_target(
+            HWND::default(),
+            "ConsoleWindowClass",
+            "cmd",
+            "cmd.exe",
+            &config
+        ));
 
-        assert!(!matches_target(HWND::default(), "Chrome_WidgetWin_1", "Google Chrome", "chrome.exe", &config));
+        assert!(!matches_target(
+            HWND::default(),
+            "Chrome_WidgetWin_1",
+            "Google Chrome",
+            "chrome.exe",
+            &config
+        ));
 
         config.excluded_apps.push("chrome.exe".into());
         config.scope = "all_windows".into();
-        assert!(!matches_target(HWND::default(), "Chrome_WidgetWin_1", "Google Chrome", "chrome.exe", &config));
+        assert!(!matches_target(
+            HWND::default(),
+            "Chrome_WidgetWin_1",
+            "Google Chrome",
+            "chrome.exe",
+            &config
+        ));
 
-        assert!(!matches_target(HWND::default(), "Valve001", "Counter-Strike", "cs2.exe", &config));
-        assert!(!matches_target(HWND::default(), "UnrealWindow", "Cyberpunk 2077", "cyberpunk2077.exe", &config));
+        assert!(!matches_target(
+            HWND::default(),
+            "Valve001",
+            "Counter-Strike",
+            "cs2.exe",
+            &config
+        ));
+        assert!(!matches_target(
+            HWND::default(),
+            "UnrealWindow",
+            "Cyberpunk 2077",
+            "cyberpunk2077.exe",
+            &config
+        ));
 
         config.enabled = false;
-        assert!(!matches_target(HWND::default(), "CabinetWClass", "Docs", "explorer.exe", &config));
+        assert!(!matches_target(
+            HWND::default(),
+            "CabinetWClass",
+            "Docs",
+            "explorer.exe",
+            &config
+        ));
     }
 }

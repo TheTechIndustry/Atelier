@@ -557,7 +557,15 @@ fn show_taskbar(handle: isize) {
                 SetWindowLongPtrW(h, GWL_EXSTYLE, ex & !(WS_EX_LAYERED.0 as isize));
             }
             let _ = ShowWindow(h, SW_SHOW);
-            let _ = SetWindowPos(h, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            let _ = SetWindowPos(
+                h,
+                HWND_TOP,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW,
+            );
             let _ = windows::Win32::Graphics::Gdi::UpdateWindow(h);
         }
     }
@@ -578,7 +586,8 @@ pub fn dismiss_stuck_input_hosts() {
                     let _ = GetWindowRect(w, &mut rect);
                     let screen_w = GetSystemMetrics(SM_CXVIRTUALSCREEN);
                     let screen_h = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-                    if (rect.right - rect.left) >= screen_w && (rect.bottom - rect.top) >= screen_h {
+                    if (rect.right - rect.left) >= screen_w && (rect.bottom - rect.top) >= screen_h
+                    {
                         let _ = ShowWindow(w, SW_HIDE);
                     }
                 }
@@ -1905,7 +1914,8 @@ pub async fn dock_activate(
 
                 if was_iconic {
                     let mut pt = windows::Win32::Foundation::POINT::default();
-                    let _ = unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut pt) };
+                    let _ =
+                        unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut pt) };
                     let rc_icon = windows::Win32::Foundation::RECT {
                         left: pt.x - 24,
                         top: pt.y - 24,
@@ -2112,7 +2122,11 @@ fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> 
         let was_visible = IsWindowVisible(taskbar).as_bool();
         let original_ex_style = GetWindowLongPtrW(taskbar, GWL_EXSTYLE);
         if !was_visible {
-            SetWindowLongPtrW(taskbar, GWL_EXSTYLE, original_ex_style | WS_EX_LAYERED.0 as isize);
+            SetWindowLongPtrW(
+                taskbar,
+                GWL_EXSTYLE,
+                original_ex_style | WS_EX_LAYERED.0 as isize,
+            );
             let _ = SetLayeredWindowAttributes(taskbar, COLORREF(0), 0, LWA_ALPHA);
             let _ = ShowWindow(taskbar, SW_SHOWNA);
             let _ = SetForegroundWindow(taskbar);
@@ -2173,9 +2187,9 @@ fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> 
                     break;
                 }
             }
-            if let Ok(pattern) = element
-                .GetCurrentPatternAs::<IUIAutomationExpandCollapsePattern>(UIA_ExpandCollapsePatternId)
-            {
+            if let Ok(pattern) = element.GetCurrentPatternAs::<IUIAutomationExpandCollapsePattern>(
+                UIA_ExpandCollapsePatternId,
+            ) {
                 if pattern.Expand().is_ok() {
                     invoked = true;
                     break;
@@ -2333,8 +2347,11 @@ pub async fn dock_open_system(window: tauri::Window, action: String) -> Result<(
         let languages = dock_languages(window.clone())
             .map(|list| list.into_iter().map(|l| l.name).collect::<Vec<_>>())
             .unwrap_or_default();
-        return tauri::async_runtime::spawn_blocking(move || open_native_flyout(&action, &languages))
-            .await.map_err(|e| e.to_string())?;
+        return tauri::async_runtime::spawn_blocking(move || {
+            open_native_flyout(&action, &languages)
+        })
+        .await
+        .map_err(|e| e.to_string())?;
     }
     let inputs = match action.as_str() {
         "start" => vec![key(VK_LWIN, false), key(VK_LWIN, true)],
@@ -2409,25 +2426,54 @@ pub struct DockLanguage {
 }
 
 #[tauri::command]
-pub async fn dock_open_language(window: tauri::Window, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+pub async fn dock_open_language(
+    window: tauri::Window,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
     if window.label() != "desktop-dock" || ![x, y, width, height].iter().all(|n| n.is_finite()) {
         return Err("Invalid language menu request".into());
     }
     let _ = dock_input_language(window.clone())?;
     let count = dock_languages(window.clone())?.len();
-    if count == 0 { return Err("Windows did not report any keyboard layouts".into()); }
+    if count == 0 {
+        return Err("Windows did not report any keyboard layouts".into());
+    }
     let app = window.app_handle();
     let popup = match app.get_webview_window("dock-language") {
         Some(popup) => popup,
-        None => tauri::WebviewWindowBuilder::new(app, "dock-language", tauri::WebviewUrl::App("dock-language.html".into()))
-            .title("Input language").decorations(false).transparent(true).shadow(false)
-            .skip_taskbar(true).always_on_top(true).resizable(false).visible(false)
-            .inner_size(220., 180.).build().map_err(|e| e.to_string())?,
+        None => tauri::WebviewWindowBuilder::new(
+            app,
+            "dock-language",
+            tauri::WebviewUrl::App("dock-language.html".into()),
+        )
+        .title("Input language")
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .resizable(false)
+        .visible(false)
+        .inner_size(220., 180.)
+        .build()
+        .map_err(|e| e.to_string())?,
     };
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
     let origin = window.outer_position().map_err(|e| e.to_string())?;
-    let monitor = window.current_monitor().map_err(|e| e.to_string())?.ok_or("No monitor available")?;
-    let position = window.state::<DockState>().config.lock().map_err(|e| e.to_string())?.position.clone();
+    let monitor = window
+        .current_monitor()
+        .map_err(|e| e.to_string())?
+        .ok_or("No monitor available")?;
+    let position = window
+        .state::<DockState>()
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .position
+        .clone();
     let pw = (220.0 * scale).round() as i32;
     let ph = ((count.min(8) as f64 * 42.0 + 20.0) * scale).round() as i32;
     let ax = origin.x + (x * scale).round() as i32;
@@ -2441,11 +2487,16 @@ pub async fn dock_open_language(window: tauri::Window, x: f64, y: f64, width: f6
         "right" => (ax - pw - gap, ay + ah / 2 - ph / 2),
         _ => (ax + aw / 2 - pw / 2, ay - ph - gap),
     };
-    let mp = monitor.position(); let ms = monitor.size();
+    let mp = monitor.position();
+    let ms = monitor.size();
     px = px.clamp(mp.x, (mp.x + ms.width as i32 - pw).max(mp.x));
     py = py.clamp(mp.y, (mp.y + ms.height as i32 - ph).max(mp.y));
-    popup.set_size(tauri::PhysicalSize::new(pw as u32, ph as u32)).map_err(|e| e.to_string())?;
-    popup.set_position(tauri::PhysicalPosition::new(px, py)).map_err(|e| e.to_string())?;
+    popup
+        .set_size(tauri::PhysicalSize::new(pw as u32, ph as u32))
+        .map_err(|e| e.to_string())?;
+    popup
+        .set_position(tauri::PhysicalPosition::new(px, py))
+        .map_err(|e| e.to_string())?;
     popup.show().map_err(|e| e.to_string())?;
     popup.set_focus().map_err(|e| e.to_string())?;
     Ok(())
@@ -2453,27 +2504,49 @@ pub async fn dock_open_language(window: tauri::Window, x: f64, y: f64, width: f6
 
 #[tauri::command]
 pub fn dock_select_language(window: tauri::Window, id: String) -> Result<(), String> {
-    if window.label() != "dock-language" { return Err("Only the language menu can select a layout".into()); }
+    if window.label() != "dock-language" {
+        return Err("Only the language menu can select a layout".into());
+    }
     let languages = dock_languages(window.clone())?;
-    if !languages.iter().any(|language| language.id == id) { return Err("Unknown keyboard layout".into()); }
+    if !languages.iter().any(|language| language.id == id) {
+        return Err("Unknown keyboard layout".into());
+    }
     let layout = usize::from_str_radix(&id, 16).map_err(|e| e.to_string())?;
-    let target = *window.state::<DockState>().language_target.lock().map_err(|e| e.to_string())?;
-    let (handle, expected_pid) = target.ok_or("Select an application before changing its input language")?;
+    let target = *window
+        .state::<DockState>()
+        .language_target
+        .lock()
+        .map_err(|e| e.to_string())?;
+    let (handle, expected_pid) =
+        target.ok_or("Select an application before changing its input language")?;
     let target = hwnd(handle);
     let mut pid = 0;
     unsafe {
         GetWindowThreadProcessId(target, Some(&mut pid));
-        if pid != expected_pid || !IsWindow(target).as_bool() { return Err("The target application is no longer available".into()); }
+        if pid != expected_pid || !IsWindow(target).as_bool() {
+            return Err("The target application is no longer available".into());
+        }
         let root = GetAncestor(target, GA_ROOT);
-        if !root.0.is_null() { let _ = SetForegroundWindow(root); }
-        PostMessageW(target, WM_INPUTLANGCHANGEREQUEST, WPARAM(0), LPARAM(layout as isize)).map_err(|e| e.to_string())?;
+        if !root.0.is_null() {
+            let _ = SetForegroundWindow(root);
+        }
+        PostMessageW(
+            target,
+            WM_INPUTLANGCHANGEREQUEST,
+            WPARAM(0),
+            LPARAM(layout as isize),
+        )
+        .map_err(|e| e.to_string())?;
     }
     window.hide().map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[allow(dead_code)]
-fn show_language_menu(languages: Vec<DockLanguage>, target: Option<(isize, u32)>) -> Result<(), String> {
+fn show_language_menu(
+    languages: Vec<DockLanguage>,
+    target: Option<(isize, u32)>,
+) -> Result<(), String> {
     use windows::Win32::Foundation::{POINT, WPARAM};
     use windows::Win32::System::LibraryLoader::GetModuleHandleW;
     let target = target.ok_or("Select an application before changing its input language")?;
@@ -2493,15 +2566,36 @@ fn show_language_menu(languages: Vec<DockLanguage>, target: Option<(isize, u32)>
         }
         let instance = GetModuleHandleW(None).map_err(|e| e.to_string())?;
         let owner = match CreateWindowExW(
-            WS_EX_TOOLWINDOW, w!("STATIC"), w!(""), WS_POPUP | WS_VISIBLE,
-            -32000, -32000, 1, 1, None, None, instance, None,
+            WS_EX_TOOLWINDOW,
+            w!("STATIC"),
+            w!(""),
+            WS_POPUP | WS_VISIBLE,
+            -32000,
+            -32000,
+            1,
+            1,
+            None,
+            None,
+            instance,
+            None,
         ) {
             Ok(owner) => owner,
-            Err(error) => { let _ = DestroyMenu(menu); return Err(error.to_string()); }
+            Err(error) => {
+                let _ = DestroyMenu(menu);
+                return Err(error.to_string());
+            }
         };
         let _ = SetForegroundWindow(owner);
-        let selected = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY | TPM_BOTTOMALIGN,
-            point.x, point.y, 0, owner, None).0 as usize;
+        let selected = TrackPopupMenu(
+            menu,
+            TPM_RETURNCMD | TPM_NONOTIFY | TPM_BOTTOMALIGN,
+            point.x,
+            point.y,
+            0,
+            owner,
+            None,
+        )
+        .0 as usize;
         let _ = DestroyMenu(menu);
         let _ = DestroyWindow(owner);
         let target_window = hwnd(target.0);
@@ -2509,17 +2603,25 @@ fn show_language_menu(languages: Vec<DockLanguage>, target: Option<(isize, u32)>
         if !root.0.is_null() {
             let _ = SetForegroundWindow(root);
         }
-        if selected == 0 { return Ok(()); }
-        let language = languages.get(selected - 1).ok_or("Invalid keyboard layout")?;
-        let layout = usize::from_str_radix(&language.id, 16)
-            .map_err(|e| e.to_string())?;
+        if selected == 0 {
+            return Ok(());
+        }
+        let language = languages
+            .get(selected - 1)
+            .ok_or("Invalid keyboard layout")?;
+        let layout = usize::from_str_radix(&language.id, 16).map_err(|e| e.to_string())?;
         let mut pid = 0;
         GetWindowThreadProcessId(target_window, Some(&mut pid));
         if pid != target.1 || !IsWindow(target_window).as_bool() {
             return Err("The target application is no longer available".into());
         }
-        PostMessageW(target_window, WM_INPUTLANGCHANGEREQUEST, WPARAM(0), LPARAM(layout as isize))
-            .map_err(|e| e.to_string())?;
+        PostMessageW(
+            target_window,
+            WM_INPUTLANGCHANGEREQUEST,
+            WPARAM(0),
+            LPARAM(layout as isize),
+        )
+        .map_err(|e| e.to_string())?;
     }
     Ok(())
 }

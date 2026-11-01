@@ -1,5 +1,5 @@
-pub mod occlusion;
 pub mod model;
+pub mod occlusion;
 pub mod package;
 pub mod renderer;
 pub mod texture;

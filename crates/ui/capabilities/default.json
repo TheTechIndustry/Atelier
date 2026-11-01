@@ -4,6 +4,7 @@
   "description": "Default capability for Atelier",
   "windows": [
     "main",
+    "installer",
     "dynamic-island",
     "desktop-dock",
     "dock-language",

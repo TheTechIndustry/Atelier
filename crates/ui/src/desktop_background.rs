@@ -212,7 +212,10 @@ mod tests {
                 std::process::id(),
                 original_tick
             ));
-            let mut lease = Some(Record { owner: std::process::id(), slideshow_tick: original_tick });
+            let mut lease = Some(Record {
+                owner: std::process::id(),
+                slideshow_tick: original_tick,
+            });
             std::fs::write(&path, b"legacy journal").unwrap();
             let system = Cell::new(Some(u32::MAX));
             let set = |tick| {

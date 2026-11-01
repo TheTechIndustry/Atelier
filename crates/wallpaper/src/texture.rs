@@ -132,7 +132,7 @@ fn blocks(format: u32, width: u32, height: u32, data: &[u8]) -> io::Result<Vec<u
     for by in 0..rows {
         for bx in 0..cols {
             let block = &data[(by * cols + bx) * block_size..][..block_size];
-            let color = if format == 7 { &block[..] } else { &block[8..] };
+            let color = if format == 7 { block } else { &block[8..] };
             let c0 = u16::from_le_bytes([color[0], color[1]]);
             let c1 = u16::from_le_bytes([color[2], color[3]]);
             let a = rgb565(c0);
@@ -275,10 +275,13 @@ pub fn decode(data: &[u8]) -> io::Result<Texture> {
     let pixels = tw as usize * th as usize;
     let rgba = match format {
         0 if raw.len() == pixels * 4 => raw,
-        8 if raw.len() == pixels * 2 => raw
-            .chunks_exact(2)
-            .flat_map(|p| [p[0], p[1], 0, 255])
-            .collect(),
+        8 if raw.len() == pixels * 2 =>
+        {
+            #[allow(clippy::chunks_exact_to_as_chunks)]
+            raw.chunks_exact(2)
+                .flat_map(|p| [p[0], p[1], 0, 255])
+                .collect()
+        }
         9 if raw.len() == pixels => raw.iter().flat_map(|&p| [p, p, p, 255]).collect(),
         4 | 6 | 7 => blocks(format, tw, th, &raw)?,
         _ => return Err(invalid("Unsupported or malformed texture format")),

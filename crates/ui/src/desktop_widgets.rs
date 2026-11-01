@@ -365,7 +365,11 @@ pub async fn audio_spectrum(
     state: tauri::State<'_, super::AppState>,
 ) -> Result<serde_json::Value, String> {
     let label = window.label().to_string();
-    if label != "widget-audio" && label != "desktop-wallpaper" && label != "desktop-dock" && label != "dynamic-island" {
+    if label != "widget-audio"
+        && label != "desktop-wallpaper"
+        && label != "desktop-dock"
+        && label != "dynamic-island"
+    {
         return Err("Audio spectrum is unavailable to this window".into());
     }
     let audio = state.audio.clone();

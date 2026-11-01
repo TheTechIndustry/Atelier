@@ -12,24 +12,24 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 mod app_usage;
-mod desktop_dock;
-mod system_appearance;
-mod system_animations;
-mod desktop_wallpaper;
-mod wallpaper_scene;
-mod scene_preview;
-mod scene_geometry;
-mod scene_properties;
-mod scene_effects;
-mod wallpaper_performance;
 mod desktop_background;
-mod desktop_widgets;
+mod desktop_dock;
 mod desktop_island;
+mod desktop_wallpaper;
+mod desktop_widgets;
+pub mod installer;
+mod scene_effects;
+mod scene_geometry;
+mod scene_preview;
+mod scene_properties;
 mod steam_workshop;
+mod system_animations;
+mod system_appearance;
+mod wallpaper_performance;
+mod wallpaper_scene;
 mod widget_gpu;
 mod widget_metrics;
 mod widget_photo;
-pub mod installer;
 pub fn watchdog_args() -> bool {
     atelier_taskbar::position::guardian_args() || desktop_dock::watchdog_args()
 }
@@ -38,7 +38,9 @@ pub fn watchdog_args() -> bool {
 mod dock_fixture;
 pub fn desktop_test_args() -> bool {
     #[cfg(debug_assertions)]
-    if wallpaper_scene::test_args() { return true; }
+    if wallpaper_scene::test_args() {
+        return true;
+    }
     #[cfg(debug_assertions)]
     {
         dock_fixture::run()
@@ -74,16 +76,39 @@ fn save_settings(config: &TaskbarConfig) -> Result<(), String> {
     std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
-fn native_taskbar_enabled_path() -> Option<PathBuf> { settings_path().map(|p| p.with_file_name("native-taskbar-enabled.json")) }
-fn load_native_taskbar_enabled() -> Option<bool> { native_taskbar_enabled_path().and_then(|p| std::fs::read(p).ok()).and_then(|data| serde_json::from_slice(&data).ok()) }
+fn native_taskbar_enabled_path() -> Option<PathBuf> {
+    settings_path().map(|p| p.with_file_name("native-taskbar-enabled.json"))
+}
+fn load_native_taskbar_enabled() -> Option<bool> {
+    native_taskbar_enabled_path()
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|data| serde_json::from_slice(&data).ok())
+}
 #[tauri::command]
-fn get_native_taskbar_enabled(state: tauri::State<AppState>) -> bool { state.taskbar.is_enabled() }
+fn get_native_taskbar_enabled(state: tauri::State<AppState>) -> bool {
+    state.taskbar.is_enabled()
+}
 #[tauri::command]
-fn set_native_taskbar_enabled(state: tauri::State<AppState>, enabled: bool) -> Result<bool,String> {
+fn set_native_taskbar_enabled(
+    state: tauri::State<AppState>,
+    enabled: bool,
+) -> Result<bool, String> {
     let previous = state.taskbar.is_enabled();
-    state.taskbar.set_enabled(enabled).map_err(|e|e.to_string())?;
-    let result = (|| { let p=native_taskbar_enabled_path().ok_or("Atelier data directory is unavailable")?; std::fs::create_dir_all(p.parent().ok_or("Invalid settings path")?).map_err(|e|e.to_string())?; std::fs::write(p,serde_json::to_vec(&enabled).map_err(|e|e.to_string())?).map_err(|e|e.to_string()) })();
-    if let Err(error)=result { let _=state.taskbar.set_enabled(previous); return Err(error); }
+    state
+        .taskbar
+        .set_enabled(enabled)
+        .map_err(|e| e.to_string())?;
+    let result = (|| {
+        let p = native_taskbar_enabled_path().ok_or("Atelier data directory is unavailable")?;
+        std::fs::create_dir_all(p.parent().ok_or("Invalid settings path")?)
+            .map_err(|e| e.to_string())?;
+        std::fs::write(p, serde_json::to_vec(&enabled).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())
+    })();
+    if let Err(error) = result {
+        let _ = state.taskbar.set_enabled(previous);
+        return Err(error);
+    }
     Ok(enabled)
 }
 
@@ -593,8 +618,17 @@ pub fn run() {
 
     let native_enabled_setting = load_native_taskbar_enabled();
     let native_enabled = native_enabled_setting.unwrap_or(true);
-    let saved_config = if native_enabled_setting.is_some() { settings_path().and_then(|p| std::fs::read(p).ok()).and_then(|v| serde_json::from_slice::<TaskbarConfig>(&v).ok()) } else { None };
-    let restore_native = native_enabled && saved_config.as_ref().is_some_and(|c| *c != TaskbarConfig::default());
+    let saved_config = if native_enabled_setting.is_some() {
+        settings_path()
+            .and_then(|p| std::fs::read(p).ok())
+            .and_then(|v| serde_json::from_slice::<TaskbarConfig>(&v).ok())
+    } else {
+        None
+    };
+    let restore_native = native_enabled
+        && saved_config
+            .as_ref()
+            .is_some_and(|c| *c != TaskbarConfig::default());
     let config = AtelierConfig {
         taskbar: saved_config.unwrap_or_default(),
         ..Default::default()
@@ -606,9 +640,15 @@ pub fn run() {
         TaskbarManager::new(config.taskbar)
     });
     if !dock_test_mode() {
-        if !native_enabled { let _ = taskbar.set_enabled(false); }
+        if !native_enabled {
+            let _ = taskbar.set_enabled(false);
+        }
         let _ = taskbar.start_recovery();
-        if restore_native { if let Err(error) = taskbar.apply_current_style() { tracing::error!(%error, "Could not restore Windows taskbar customization"); } }
+        if restore_native {
+            if let Err(error) = taskbar.apply_current_style() {
+                tracing::error!(%error, "Could not restore Windows taskbar customization");
+            }
+        }
     }
 
     let wallpaper = None;
@@ -629,7 +669,9 @@ pub fn run() {
             std::thread::spawn(move || responder.respond(desktop_wallpaper::response(request)));
         })
         .register_asynchronous_uri_scheme_protocol("workshop-media", |_ctx, request, responder| {
-            std::thread::spawn(move || responder.respond(steam_workshop::workshop_media_response(request)));
+            std::thread::spawn(move || {
+                responder.respond(steam_workshop::workshop_media_response(request))
+            });
         })
         .register_asynchronous_uri_scheme_protocol("wallpaper-scene", |_ctx, request, responder| {
             std::thread::spawn(move || responder.respond(wallpaper_scene::response(request)));
@@ -653,8 +695,11 @@ pub fn run() {
                     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     let audio = audio.clone();
                     let _ = tauri::async_runtime::spawn_blocking(move || {
-                        if let Ok(mut audio) = audio.lock() { audio.stop_if_idle(std::time::Duration::from_secs(3)); }
-                    }).await;
+                        if let Ok(mut audio) = audio.lock() {
+                            audio.stop_if_idle(std::time::Duration::from_secs(3));
+                        }
+                    })
+                    .await;
                 }
             });
             let icon = Image::new(include_bytes!("../icons/icon.rgba"), 128, 128);
@@ -750,7 +795,9 @@ pub fn run() {
                     }
                     "quit" => {
                         system_appearance::cleanup();
-                        if let Err(error) = desktop_background::shutdown() { tracing::error!(%error, "Could not restore Windows background on exit"); }
+                        if let Err(error) = desktop_background::shutdown() {
+                            tracing::error!(%error, "Could not restore Windows background on exit");
+                        }
                         app.state::<desktop_dock::DockState>().shutdown();
                         let state = app.state::<AppState>();
                         let _ = state.taskbar.reset_all();
@@ -793,13 +840,15 @@ pub fn run() {
                 system_animations::start(&app.handle());
                 let island_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(error) = desktop_island::start(&island_handle) { tracing::error!(%error, "Could not start Dynamic Island"); }
+                    if let Err(error) = desktop_island::start(&island_handle) {
+                        tracing::error!(%error, "Could not start Dynamic Island");
+                    }
                 });
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     if let Err(error) = desktop_wallpaper::start(&handle) {
                         tracing::error!(%error,"Could not restore wallpaper");
-                        desktop_wallpaper::report_start_error(&handle,&error);
+                        desktop_wallpaper::report_start_error(&handle, &error);
                     }
                 });
             }
@@ -911,7 +960,9 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(false) = event {
                 desktop_widgets::dismiss_resize(window);
-                if window.label() == "dock-language" { let _ = window.hide(); }
+                if window.label() == "dock-language" {
+                    let _ = window.hide();
+                }
             }
             if let tauri::WindowEvent::Moved(position) = event {
                 desktop_widgets::moved(window, position);
@@ -920,7 +971,9 @@ pub fn run() {
                 if window.label() != "main" {
                     return;
                 }
-                if let Err(error) = desktop_background::shutdown() { tracing::error!(%error, "Could not restore Windows background on close"); }
+                if let Err(error) = desktop_background::shutdown() {
+                    tracing::error!(%error, "Could not restore Windows background on close");
+                }
                 window.state::<desktop_dock::DockState>().shutdown();
                 let state = window.state::<AppState>();
                 if !dock_test_mode() {
@@ -931,5 +984,7 @@ pub fn run() {
         })
         .run(tauri::generate_context!());
     desktop_dock::restore_all_taskbars();
-    if let Err(error) = desktop_background::shutdown() { tracing::error!(%error, "Could not restore Windows background after exit"); }
+    if let Err(error) = desktop_background::shutdown() {
+        tracing::error!(%error, "Could not restore Windows background after exit");
+    }
 }

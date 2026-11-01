@@ -76,6 +76,7 @@ impl WasapiCapture {
                 running.store(false, Ordering::SeqCst);
                 return;
             }
+            #[allow(clippy::type_complexity)]
             let setup = (|| -> Result<(IMMDeviceEnumerator, String, IAudioClient, IAudioCaptureClient, u32, usize, usize, SampleFormat)> {
                 let enumerator: IMMDeviceEnumerator = unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }.map_err(|e| AtelierError::Platform(e.to_string()))?;
                 let device = unsafe { enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia) }.map_err(|e| AtelierError::Platform(format!("No output device: {e}")))?;
@@ -90,7 +91,7 @@ impl WasapiCapture {
                     let subtype = if info.wFormatTag == 0xfffe && info.cbSize >= 22 {
                         let ext = unsafe { std::ptr::read_unaligned(format.cast::<WAVEFORMATEXTENSIBLE>()) };
                         ext.SubFormat
-                    } else { GUID::from_u128((info.wFormatTag as u128) << 96 | 0x0000_0010_8000_00aa00389b71u128) };
+                    } else { GUID::from_u128((info.wFormatTag as u128) << 96 | 0x0000_0010_8000_00aa_0038_9b71_u128) };
                     let float = GUID::from_u128(0x00000003_0000_0010_8000_00aa00389b71);
                     let pcm = GUID::from_u128(0x00000001_0000_0010_8000_00aa00389b71);
                     let sample = match (subtype == float, subtype == pcm, bits) {

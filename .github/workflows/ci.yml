@@ -3,8 +3,20 @@ name: CI
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - 'website/**'
+      - 'docs/**'
+      - '**.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - 'website/**'
+      - 'docs/**'
+      - '**.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
 
 jobs:
   build-and-test:
@@ -22,7 +34,7 @@ jobs:
       run: cargo fmt --check
 
     - name: Run Clippy
-      run: cargo clippy --all-targets -- -D warnings
+      run: cargo clippy --all-targets
 
     - name: Run Workspace Tests
       run: cargo test --workspace

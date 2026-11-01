@@ -11,12 +11,11 @@ use windows::Win32::Graphics::Dwm::{
 use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW, GetSystemMetrics,
-    GetWindowRect, RegisterClassExW, SetLayeredWindowAttributes, ShowWindow,
-    SystemParametersInfoW, TranslateMessage, ANIMATIONINFO, CS_HREDRAW, CS_VREDRAW,
-    LWA_ALPHA, MSG, SM_CXSCREEN, SM_CYSCREEN, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE,
-    SPI_GETANIMATION, SPI_SETANIMATION, SW_HIDE, SW_SHOWNOACTIVATE, WNDCLASSEXW,
-    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_EX_TRANSPARENT, WS_POPUP,
+    GetWindowRect, RegisterClassExW, SetLayeredWindowAttributes, ShowWindow, SystemParametersInfoW,
+    TranslateMessage, ANIMATIONINFO, CS_HREDRAW, CS_VREDRAW, LWA_ALPHA, MSG, SM_CXSCREEN,
+    SM_CYSCREEN, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SPI_GETANIMATION, SPI_SETANIMATION, SW_HIDE,
+    SW_SHOWNOACTIVATE, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -62,8 +61,15 @@ impl SystemAnimationsConfig {
         if self.window_effect == "macos_scale" {
             self.window_effect = "dock_expand".into();
         }
-        if !["dock_expand", "scale", "genie", "glide", "fade_pop", "spring"]
-            .contains(&self.window_effect.as_str())
+        if ![
+            "dock_expand",
+            "scale",
+            "genie",
+            "glide",
+            "fade_pop",
+            "spring",
+        ]
+        .contains(&self.window_effect.as_str())
         {
             self.window_effect = "dock_expand".into();
         }
@@ -84,8 +90,9 @@ pub struct AnimationsState(pub Mutex<SystemAnimationsConfig>);
 static OVERLAY_HWND: OnceLock<Mutex<isize>> = OnceLock::new();
 static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
 static OVERLAY_LOCK: Mutex<()> = Mutex::new(());
-static DOCK_ICON_HINTS: Mutex<Option<std::collections::HashMap<isize, (RECT, std::time::Instant)>>> =
-    Mutex::new(None);
+static DOCK_ICON_HINTS: Mutex<
+    Option<std::collections::HashMap<isize, (RECT, std::time::Instant)>>,
+> = Mutex::new(None);
 static ANIMATING_WINDOWS: Mutex<Option<std::collections::HashMap<isize, std::time::Instant>>> =
     Mutex::new(None);
 
@@ -205,10 +212,15 @@ pub fn play_window_transition(
     }
     if rc_win.left <= -10000 || rc_win.top <= -10000 {
         let mut wp = windows::Win32::UI::WindowsAndMessaging::WINDOWPLACEMENT {
-            length: std::mem::size_of::<windows::Win32::UI::WindowsAndMessaging::WINDOWPLACEMENT>() as u32,
+            length: std::mem::size_of::<windows::Win32::UI::WindowsAndMessaging::WINDOWPLACEMENT>()
+                as u32,
             ..Default::default()
         };
-        if unsafe { windows::Win32::UI::WindowsAndMessaging::GetWindowPlacement(source_hwnd, &mut wp) }.is_ok() {
+        if unsafe {
+            windows::Win32::UI::WindowsAndMessaging::GetWindowPlacement(source_hwnd, &mut wp)
+        }
+        .is_ok()
+        {
             rc_win = wp.rcNormalPosition;
         }
     }
@@ -397,17 +409,8 @@ unsafe extern "system" fn win_event_hook_proc(
 pub fn start(app: &tauri::AppHandle) {
     let _ = APP_HANDLE.set(app.clone());
     std::thread::spawn(move || {
-        let hook = unsafe {
-            SetWinEventHook(
-                0x0016,
-                0x0017,
-                None,
-                Some(win_event_hook_proc),
-                0,
-                0,
-                0,
-            )
-        };
+        let hook =
+            unsafe { SetWinEventHook(0x0016, 0x0017, None, Some(win_event_hook_proc), 0, 0, 0) };
         let mut msg = MSG::default();
         while unsafe { GetMessageW(&mut msg, None, 0, 0) }.as_bool() {
             let _ = unsafe { TranslateMessage(&msg) };

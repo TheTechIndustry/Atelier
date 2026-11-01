@@ -112,7 +112,7 @@ impl SpectrumAnalyzer {
 
         let energy = (bass * 0.5 + mid * 0.3 + treble * 0.2).min(1.0);
 
-        let max_freq = (self.sample_rate * 0.5).min(16000.0).max(40.0);
+        let max_freq = (self.sample_rate * 0.5).clamp(40.0, 16000.0);
         let ratio = max_freq / 35.0;
         for b in 0..NUM_BINS {
             let low = 35.0 * ratio.powf(b as f32 / NUM_BINS as f32);

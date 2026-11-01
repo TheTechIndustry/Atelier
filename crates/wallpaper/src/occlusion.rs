@@ -5,8 +5,7 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::System::Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
 use windows::Win32::System::Threading::{
-    OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT,
-    PROCESS_QUERY_LIMITED_INFORMATION,
+    OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION,
 };
 use windows::Win32::UI::Shell::{
     SHQueryUserNotificationState, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN,
@@ -75,7 +74,8 @@ pub fn is_screenshot_process(process_id: u32) -> bool {
     if process_id == 0 {
         return false;
     }
-    let Ok(handle) = (unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id) }) else {
+    let Ok(handle) = (unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id) })
+    else {
         return false;
     };
     let mut buffer = [0u16; 1024];
