@@ -4,6 +4,16 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
+    if atelier_ui_lib::installer::is_uninstall_mode() {
+        atelier_ui_lib::installer::run_uninstaller();
+        return;
+    }
+
+    if atelier_ui_lib::installer::is_installer_mode() {
+        atelier_ui_lib::installer::run_installer();
+        return;
+    }
+
     if atelier_ui_lib::watchdog_args() || atelier_ui_lib::desktop_test_args() {
         return;
     }

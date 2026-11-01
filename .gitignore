@@ -18,6 +18,7 @@ dist-ssr/
 Thumbs.db
 
 *.log
+*.exe
 .env
 .env.*
 !.env.example

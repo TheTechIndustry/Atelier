@@ -29,6 +29,7 @@ mod steam_workshop;
 mod widget_gpu;
 mod widget_metrics;
 mod widget_photo;
+pub mod installer;
 pub fn watchdog_args() -> bool {
     atelier_taskbar::position::guardian_args() || desktop_dock::watchdog_args()
 }
