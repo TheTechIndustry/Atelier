@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation & Architecture
+    url: https://github.com/polichdev/atelier/tree/main/docs
+    about: Read Atelier's architecture, crate documentation, and recovery guides.
