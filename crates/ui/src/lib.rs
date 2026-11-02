@@ -235,7 +235,68 @@ fn repair_taskbar_icons(state: tauri::State<AppState>) -> Result<TaskbarConfig, 
 
 #[tauri::command]
 fn hide_window(window: tauri::Window) {
-    let _ = window.hide();
+    if window.label() == "main" {
+        let _ = window.destroy();
+        crate::app_usage::trim_memory();
+    } else {
+        let _ = window.hide();
+    }
+}
+
+pub fn show_or_create_studio(app: &tauri::AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+
+    let icon = Image::new(include_bytes!("../icons/icon.rgba"), 128, 128);
+    let mut builder =
+        tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
+            .title("Atelier Desktop Studio")
+            .inner_size(940.0, 660.0)
+            .min_inner_size(640.0, 500.0)
+            .resizable(true)
+            .decorations(false)
+            .transparent(true)
+            .shadow(true);
+
+    if let Some(effects) = app
+        .config()
+        .app
+        .windows
+        .first()
+        .and_then(|w| w.window_effects.clone())
+    {
+        builder = builder.effects(effects);
+    }
+
+    let window = builder.build().map_err(|e| e.to_string())?;
+    let _ = window.set_icon(icon);
+    let _ = window.set_theme(Some(tauri::Theme::Dark));
+
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
+        if let Ok(raw_hwnd) = window.hwnd() {
+            let dark: i32 = 1;
+            let _ = unsafe {
+                DwmSetWindowAttribute(
+                    HWND(raw_hwnd.0 as _),
+                    DWMWA_USE_IMMERSIVE_DARK_MODE,
+                    &dark as *const _ as _,
+                    std::mem::size_of::<i32>() as u32,
+                )
+            };
+        }
+    }
+
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+    Ok(())
 }
 
 #[tauri::command]
@@ -750,11 +811,7 @@ pub fn run() {
                         button_state: MouseButtonState::Up,
                         ..
                     } => {
-                        if let Some(w) = tray.app_handle().get_webview_window("main") {
-                            let _ = w.unminimize();
-                            let _ = w.show();
-                            let _ = w.set_focus();
-                        }
+                        let _ = show_or_create_studio(tray.app_handle());
                     }
                     _ => {}
                 })
@@ -904,9 +961,8 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close();
-                    if let Err(error) = window.hide() {
-                        tracing::error!(%error, "Could not hide the studio window");
-                    }
+                    let _ = window.destroy();
+                    crate::app_usage::trim_memory();
                 }
             }
         })
