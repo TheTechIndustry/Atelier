@@ -36,8 +36,9 @@
       <img src="assets/download-button.svg" alt="Download Atelier" height="40">
     </picture>
   </a>
+  <br>
   <a href="https://github.com/polichdev/Atelier/releases">
-    <img src="https://img.shields.io/github/downloads/polichdev/Atelier/total?style=for-the-badge&labelColor=20211f&color=10b981" alt="Total Downloads" height="40">
+    <img src="https://img.shields.io/github/downloads/polichdev/Atelier/total?label=Downloads&color=10B981" alt="Total Downloads">
   </a>
 </p>
 
