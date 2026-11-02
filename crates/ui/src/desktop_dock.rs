@@ -2744,12 +2744,7 @@ pub async fn dock_set_icon(
 }
 #[tauri::command]
 pub fn dock_open_studio(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(w) = app.get_webview_window("main") {
-        w.show().map_err(|e| e.to_string())?;
-        w.unminimize().map_err(|e| e.to_string())?;
-        w.set_focus().map_err(|e| e.to_string())?
-    }
-    Ok(())
+    crate::show_or_create_studio(&app)
 }
 
 #[tauri::command]

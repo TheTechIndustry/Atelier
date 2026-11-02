@@ -352,10 +352,7 @@ pub fn widget_open_settings(app: tauri::AppHandle, kind: String) -> Result<(), S
     if !KINDS.contains(&kind.as_str()) {
         return Err("Unknown widget".into());
     }
-    let w = app.get_webview_window("main").ok_or("Studio unavailable")?;
-    w.unminimize().map_err(|e| e.to_string())?;
-    w.show().map_err(|e| e.to_string())?;
-    w.set_focus().map_err(|e| e.to_string())?;
+    crate::show_or_create_studio(&app)?;
     app.emit_to("main", "widget-open-settings", kind)
         .map_err(|e| e.to_string())
 }

@@ -67,11 +67,7 @@ pub fn show(app: &tauri::AppHandle, x: f64, y: f64) -> tauri::Result<()> {
 pub async fn tray_action(app: tauri::AppHandle, action: String) -> Result<(), String> {
     match action.as_str() {
         "show" => {
-            if let Some(w) = app.get_webview_window("main") {
-                w.unminimize().map_err(|e| e.to_string())?;
-                w.show().map_err(|e| e.to_string())?;
-                w.set_focus().map_err(|e| e.to_string())?;
-            }
+            crate::show_or_create_studio(&app)?;
         }
         "minimal clean" | "cyberpunk neon" | "frosted glass" | "nordic dark" => {
             crate::apply_preset(app.state::<crate::AppState>(), action)?;
