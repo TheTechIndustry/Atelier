@@ -28,6 +28,19 @@
   <img src="assets/preview.gif" alt="Atelier Desktop Studio Preview" width="100%">
 </p>
 
+<p align="center">
+  <a href="https://github.com/polichdev/Atelier/releases/latest/download/Atelier-Setup.exe">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/download-button.svg">
+      <source media="(prefers-color-scheme: light)" srcset="assets/download-button-light.svg">
+      <img src="assets/download-button.svg" alt="Download Atelier" height="40">
+    </picture>
+  </a>
+  <a href="https://github.com/polichdev/Atelier/releases">
+    <img src="https://img.shields.io/github/downloads/polichdev/Atelier/total?style=for-the-badge&labelColor=20211f&color=10b981" alt="Total Downloads" height="40">
+  </a>
+</p>
+
 ## Features
 
 - **Windows Taskbar:** configure materials, floating geometry and presets. On supported Windows 11 XAML taskbars, adjust app button and icon appearance.

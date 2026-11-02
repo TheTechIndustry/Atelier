@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="136" height="40" viewBox="0 0 136 40" fill="none">
+  <style>
+    rect { transition: fill 0.2s, transform 0.2s; }
+    rect:hover { fill: #d3d6cb; }
+    text { pointer-events: none; }
+  </style>
+  <rect x="0.5" y="0.5" width="135" height="39" rx="19.5" fill="#F1F1EB" stroke="#DADBD4" stroke-width="1"/>
+  <text x="68" y="20.5" fill="#171815" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" text-anchor="middle" dominant-baseline="central" letter-spacing="-0.2px">Download</text>
+</svg>
