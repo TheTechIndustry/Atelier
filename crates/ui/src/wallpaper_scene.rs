@@ -45,6 +45,7 @@ impl Exporter<'_> {
                     let mut png = Vec::new();
                     {
                         let mut encoder = png::Encoder::new(&mut png, image.width, image.height);
+                        encoder.set_compression(png::Compression::Fast);
                         encoder.set_color(png::ColorType::Rgba);
                         encoder.set_depth(png::BitDepth::Eight);
                         encoder
@@ -256,7 +257,7 @@ fn prepare_inner(source: &Path, destination: &Path) -> Result<String, String> {
             warnings.push("Particles or 3D models".into());
         }
     }
-    let mut preview = layers
+    let preview = layers
         .iter()
         .find_map(|l| l["src"].as_str())
         .ok_or("This scene has no supported 2D image layers")?
@@ -280,11 +281,6 @@ fn prepare_inner(source: &Path, destination: &Path) -> Result<String, String> {
         serde_json::to_vec(&output).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
-    if let Ok(png) = super::scene_preview::render(source) {
-        if fs::write(destination.join("256.png"), png).is_ok() {
-            preview = "256.png".into();
-        }
-    }
     Ok(preview)
 }
 

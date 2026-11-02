@@ -311,6 +311,7 @@ pub struct Snapshot {
 pub fn import_workshop_scene(
     app: &tauri::AppHandle,
     source: &Path,
+    workshop_id: &str,
     title: &str,
     description: &str,
 ) -> Result<WallpaperItem, String> {
@@ -321,7 +322,12 @@ pub fn import_workshop_scene(
         .to_string();
     std::fs::create_dir_all(root()).map_err(|e| e.to_string())?;
     let directory = root().join(format!("{id}.scene"));
-    let preview = super::wallpaper_scene::prepare(source, &directory)?;
+    let mut preview = super::wallpaper_scene::prepare(source, &directory)?;
+    if let Some(cached) = super::steam_workshop::preview_cache_path(workshop_id, source) {
+        if std::fs::copy(cached, directory.join("256.png")).is_ok() {
+            preview = "256.png".into();
+        }
+    }
     let item = WallpaperItem {
         id: id.clone(),
         title: title.into(),
@@ -1107,6 +1113,9 @@ pub async fn wallpaper_scene_info(
                 let staged=root().join(format!("{id}-update-{suffix}.scene"));
                 let backup=root().join(format!("{id}-backup-{suffix}.scene"));
                 if super::wallpaper_scene::prepare(&source,&staged).is_ok() {
+                    if item.asset.as_deref() == Some("256.png") {
+                        let _ = std::fs::copy(directory.join("256.png"), staged.join("256.png"));
+                    }
                     if std::fs::rename(&directory,&backup).is_ok() {
                         match std::fs::rename(&staged,&directory) {
                             Ok(())=>{upgraded=true;let _=std::fs::remove_dir_all(&backup);},

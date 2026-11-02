@@ -375,20 +375,12 @@ pub fn workshop_media_response(
             let Some(source) = item.scene else {
                 return missing();
             };
-            let Ok(meta) = fs::metadata(&source) else {
+            let Some(path) = preview_cache_path(parts[0], &source) else {
                 return missing();
             };
-            let stamp = meta
-                .modified()
-                .ok()
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| d.as_nanos())
-                .unwrap_or(0);
-            let cache = super::settings_path()
-                .unwrap_or_else(|| std::env::temp_dir().join("Atelier/settings.json"))
-                .with_file_name("cache")
-                .join("workshop-previews");
-            let path = cache.join(format!("v2-{}-{}-{stamp}.png", parts[0], meta.len()));
+            let Some(cache) = path.parent() else {
+                return missing();
+            };
             let unavailable = path.with_extension("unavailable");
             if unavailable.is_file() {
                 return missing();
@@ -402,7 +394,7 @@ pub fn workshop_media_response(
                     if unavailable.is_file() {
                         return missing();
                     }
-                    if fs::create_dir_all(&cache).is_err() {
+                    if fs::create_dir_all(cache).is_err() {
                         return missing();
                     }
                     let Ok(png) = super::scene_preview::render(&source) else {
@@ -612,6 +604,21 @@ pub fn scene_source_for_title(title: &str) -> Option<PathBuf> {
     local_item(&items[0].id, &root)?.scene
 }
 
+pub fn preview_cache_path(id: &str, source: &Path) -> Option<PathBuf> {
+    let meta = fs::metadata(source).ok()?;
+    let stamp = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let cache = super::settings_path()
+        .unwrap_or_else(|| std::env::temp_dir().join("Atelier/settings.json"))
+        .with_file_name("cache")
+        .join("workshop-previews");
+    Some(cache.join(format!("v2-{id}-{}-{stamp}.png", meta.len())))
+}
+
 #[tauri::command]
 pub async fn workshop_import_video(
     window: tauri::Window,
@@ -657,6 +664,7 @@ pub async fn workshop_import_scene(
         super::desktop_wallpaper::import_workshop_scene(
             &app,
             &source,
+            &id,
             &item.title,
             &item.description,
         )

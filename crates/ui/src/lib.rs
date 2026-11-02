@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 mod app_usage;
@@ -25,6 +24,7 @@ mod scene_properties;
 mod steam_workshop;
 mod system_animations;
 mod system_appearance;
+mod tray_panel;
 mod wallpaper_performance;
 mod wallpaper_scene;
 mod widget_gpu;
@@ -681,6 +681,7 @@ pub fn run() {
         })
         .manage(state)
         .manage(app_usage::UsageMonitor::default())
+        .manage(tray_panel::TrayUsage::default())
         .manage(desktop_dock::DockState::new())
         .manage(desktop_widgets::Widgets::new())
         .manage(desktop_island::IslandState::new())
@@ -726,107 +727,38 @@ pub fn run() {
                     }
                 }
             }
-            let show_i = MenuItem::with_id(app, "show", "Open Theme Studio", true, None::<&str>)?;
-            let minimal_i =
-                MenuItem::with_id(app, "preset_minimal", "Minimal Clean", true, None::<&str>)?;
-            let cyberpunk_i = MenuItem::with_id(
-                app,
-                "preset_cyberpunk",
-                "Cyberpunk Neon",
-                true,
-                None::<&str>,
-            )?;
-            let frosted_i =
-                MenuItem::with_id(app, "preset_frosted", "Frosted Glass", true, None::<&str>)?;
-            let nordic_i =
-                MenuItem::with_id(app, "preset_nordic", "Nordic Dark", true, None::<&str>)?;
-            let reset_i =
-                MenuItem::with_id(app, "reset", "Restore Windows Defaults", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit Atelier", true, None::<&str>)?;
-
-            let menu = Menu::with_items(
-                app,
-                &[
-                    &show_i,
-                    &minimal_i,
-                    &cyberpunk_i,
-                    &frosted_i,
-                    &nordic_i,
-                    &reset_i,
-                    &quit_i,
-                ],
-            )?;
-
-            let mut builder = TrayIconBuilder::new()
+            tray_panel::create(app.handle())?;
+            let _tray = TrayIconBuilder::new()
                 .tooltip("Atelier Desktop Engine")
-                .menu(&menu)
+                .icon(icon)
                 .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show" => {
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.unminimize();
-                            let _ = w.show();
-                            let _ = w.set_focus();
+                .on_tray_icon_event(|tray, event| match event {
+                    TrayIconEvent::Click {
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Up,
+                        position,
+                        ..
+                    } => {
+                        if let Err(error) =
+                            tray_panel::show(tray.app_handle(), position.x, position.y)
+                        {
+                            tracing::error!(%error, "Could not show tray panel");
                         }
                     }
-                    "preset_minimal" => {
-                        let state = app.state::<AppState>();
-                        let _ = apply_preset(state, "minimal clean".to_string());
-                    }
-                    "preset_cyberpunk" => {
-                        let state = app.state::<AppState>();
-                        let _ = apply_preset(state, "cyberpunk neon".to_string());
-                    }
-                    "preset_frosted" => {
-                        let state = app.state::<AppState>();
-                        let _ = apply_preset(state, "frosted glass".to_string());
-                    }
-                    "preset_nordic" => {
-                        let state = app.state::<AppState>();
-                        let _ = apply_preset(state, "nordic dark".to_string());
-                    }
-                    "reset" => {
-                        let dock_app = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let _ = desktop_dock::reset_desktop_dock(dock_app).await;
-                        });
-                        let state = app.state::<AppState>();
-                        let _ = reset_defaults(state);
-                    }
-                    "quit" => {
-                        system_appearance::cleanup();
-                        if let Err(error) = desktop_background::shutdown() {
-                            tracing::error!(%error, "Could not restore Windows background on exit");
-                        }
-                        app.state::<desktop_dock::DockState>().shutdown();
-                        let state = app.state::<AppState>();
-                        let _ = state.taskbar.reset_all();
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
+                    TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
                         ..
-                    }
-                    | TrayIconEvent::DoubleClick {
-                        button: MouseButton::Left,
-                        ..
-                    } = event
-                    {
+                    } => {
                         if let Some(w) = tray.app_handle().get_webview_window("main") {
                             let _ = w.unminimize();
                             let _ = w.show();
                             let _ = w.set_focus();
                         }
                     }
-                });
-
-            builder = builder.icon(icon);
-
-            let _tray = builder.build(app)?;
+                    _ => {}
+                })
+                .build(app)?;
             if !dock_test_mode() || std::env::var_os("ATELIER_WIDGET_TEST").is_some() {
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
@@ -870,6 +802,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_usage::atelier_usage,
             app_usage::trim_atelier_memory,
+            tray_panel::tray_usage,
+            tray_panel::tray_action,
             system_appearance::get_system_appearance,
             system_appearance::set_system_appearance,
             system_appearance::restore_system_appearance,
@@ -960,7 +894,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(false) = event {
                 desktop_widgets::dismiss_resize(window);
-                if window.label() == "dock-language" {
+                if window.label() == "dock-language" || window.label() == "tray-panel" {
                     let _ = window.hide();
                 }
             }
