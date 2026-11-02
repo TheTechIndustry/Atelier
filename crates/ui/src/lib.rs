@@ -901,19 +901,13 @@ pub fn run() {
             if let tauri::WindowEvent::Moved(position) = event {
                 desktop_widgets::moved(window, position);
             }
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                if window.label() != "main" {
-                    return;
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    if let Err(error) = window.hide() {
+                        tracing::error!(%error, "Could not hide the studio window");
+                    }
                 }
-                if let Err(error) = desktop_background::shutdown() {
-                    tracing::error!(%error, "Could not restore Windows background on close");
-                }
-                window.state::<desktop_dock::DockState>().shutdown();
-                let state = window.state::<AppState>();
-                if !dock_test_mode() {
-                    let _ = state.taskbar.reset_all();
-                }
-                window.app_handle().exit(0);
             }
         })
         .run(tauri::generate_context!());
