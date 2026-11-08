@@ -1,3 +1,4 @@
+mod dock_glass;
 use atelier_audio::AudioManager;
 use atelier_common::config::{AtelierConfig, TaskbarConfig, TaskbarStyle};
 use atelier_common::presets::ThemePreset;
@@ -935,6 +936,8 @@ pub fn run() {
             desktop_dock::dock_audio_error,
             desktop_dock::reset_desktop_dock,
             desktop_dock::dock_resize,
+            desktop_dock::dock_backdrop,
+            desktop_dock::dock_menu_open,
             desktop_dock::dock_activate,
             desktop_dock::dock_pin,
             desktop_dock::dock_set_hidden,
