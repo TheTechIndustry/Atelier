@@ -774,6 +774,42 @@ pub fn widget_resize(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn fetch_antigravity_quota() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let script = r#"
+        $p = Get-CimInstance Win32_Process -Filter "Name like 'language_server%'" | Select-Object -First 1
+        if (-not $p) { return '{"connected":false,"error":"Antigravity not running"}' }
+        $csrf = ''
+        if ($p.CommandLine -match '--csrf_token\s+([a-f0-9\-]+)') { $csrf = $matches[1] }
+        $lines = netstat -ano | Select-String "127\.0\.0\.1:(\d+)\s+.*LISTENING\s+$($p.ProcessId)"
+        foreach ($line in $lines) {
+            if ($line -match '127\.0\.0\.1:(\d+)') {
+                $port = $matches[1]
+                $raw = & curl.exe -k -s -X POST "https://127.0.0.1:$port/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary" -H "Content-Type: application/json" -H "x-codeium-csrf-token: $csrf" -d "{}" --max-time 2
+                if ($raw -and $raw -match '"groups"') { return $raw }
+            }
+        }
+        return '{"connected":false,"error":"Could not connect to language server"}'
+        "#;
+
+        let mut cmd = std::process::Command::new("powershell");
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+        cmd.args(["-NoProfile", "-NonInteractive", "-Command", script]);
+
+        let output = cmd.output().map_err(|e| e.to_string())?;
+        let text = String::from_utf8_lossy(&output.stdout);
+        let val: serde_json::Value = serde_json::from_str(text.trim()).map_err(|e| format!("{}: {}", e, text))?;
+        Ok(val)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
