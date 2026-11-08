@@ -2882,6 +2882,11 @@ pub async fn dock_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Result<(),
         .iter()
         .filter_map(|id| c.pinned.iter().find(|p| &p.path == id).cloned())
         .collect();
+    let ordered_keys: Vec<String> = ids.iter().map(|id| format!("app:{id}")).filter(|key| c.item_order.contains(key)).collect();
+    let mut pinned_keys = ordered_keys.iter();
+    for key in &mut c.item_order {
+        if ordered_keys.contains(key) { *key = pinned_keys.next().expect("matching pinned order").clone(); }
+    }
     persist(&c)?;
     *state.config.lock().map_err(|e| e.to_string())? = c.clone();
     app.emit("dock-config-changed", &c)
@@ -3275,6 +3280,39 @@ mod tests {
         assert!(p.x >= 0 && p.y >= 0)
     }
     #[test]
+    fn full_width_and_custom_width_placement() {
+        let c = DockConfig {
+            full_width: true,
+            position: "bottom".into(),
+            ..Default::default()
+        };
+        let p = placement(&c, (0, 0), (1920, 1080), 1., (600., 70.), false);
+        assert_eq!(p.x, 0);
+        assert_eq!(p.w, 1920);
+        assert_eq!(p.y, 1010);
+        assert_eq!(p.h, 70);
+
+        let c_top = DockConfig {
+            full_width: true,
+            position: "top".into(),
+            ..Default::default()
+        };
+        let p_top = placement(&c_top, (0, 0), (1920, 1080), 1., (600., 70.), false);
+        assert_eq!(p_top.x, 0);
+        assert_eq!(p_top.y, 0);
+        assert_eq!(p_top.w, 1920);
+
+        let c_vert = DockConfig {
+            full_width: true,
+            position: "left".into(),
+            ..Default::default()
+        };
+        let p_vert = placement(&c_vert, (0, 0), (1920, 1080), 1., (70., 600.), false);
+        assert_eq!(p_vert.x, 0);
+        assert_eq!(p_vert.y, 0);
+        assert_eq!(p_vert.h, 1080);
+    }
+    #[test]
     fn auto_hide_strip_reaches_screen_edge() {
         let c = DockConfig::default();
         let p = placement(&c, (0, 0), (1920, 1080), 1., (500., 100.), true);
@@ -3329,6 +3367,31 @@ mod tests {
         edited.audio.frequency = "invalid".into();
         assert!(edited.validate().is_err());
     }
+    #[test]
+    fn glass_material_roundtrip_and_validation() {
+        let mut c: DockConfig = serde_json::from_str("{}").unwrap();
+        assert_eq!(c.material, "solid");
+        for material in ["solid", "liquid", "ios"] {
+            c.material = material.into(); c.validate().unwrap();
+            let saved = serde_json::to_string(&c).unwrap();
+            assert_eq!(serde_json::from_str::<DockConfig>(&saved).unwrap().material, material);
+        }
+        c.material = "unknown".into(); assert!(c.validate().is_err());
+    }
+    #[test]
+    fn mixed_order_accepts_system_items_and_rejects_invalid_orders() {
+        let widgets = vec!["timer".to_string()];
+        let order = ["system:search", "widget:timer", "system:start", "app:editor", "system:divider", "system:clock", "system:studio"]
+            .iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert!(validate_dock_item_order(&order, &widgets).is_ok());
+        let mut duplicate = order.clone(); duplicate.push("system:start".into());
+        assert!(validate_dock_item_order(&duplicate, &widgets).is_err());
+        let mut unknown = order.clone(); unknown.push("system:unknown".into());
+        assert!(validate_dock_item_order(&unknown, &widgets).is_err());
+        let missing = order.into_iter().filter(|id| id != "widget:timer").collect::<Vec<_>>();
+        assert!(validate_dock_item_order(&missing, &widgets).is_err());
+    }
+
     #[test]
     fn legacy_config_defaults_and_validation() {
         let mut c: DockConfig = serde_json::from_str("{\"icon_size\":1}").unwrap();
