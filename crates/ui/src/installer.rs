@@ -3,13 +3,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use tauri::Manager;
 
-// Console utilities must not create a visible terminal for a GUI installer.
 fn hidden_command(program: &str) -> Command {
     let mut command = Command::new(program);
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        command.creation_flags(0x08000000);
     }
     command
 }
@@ -120,7 +119,6 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
         .map_err(|e| format!("Failed to get current executable path: {}", e))?;
     let target_exe = target_dir.join("Atelier.exe");
 
-    // Close running Atelier instance if updating
     if current_exe != target_exe {
         std::fs::copy(&current_exe, &target_exe)
             .map_err(|e| format!("Failed to copy Atelier.exe: {}", e))?;
@@ -129,7 +127,6 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
     let target_exe_str = target_exe.to_string_lossy().replace('\'', "''");
     let target_dir_str = target_dir.to_string_lossy().replace('\'', "''");
 
-    // Shortcuts
     if options.create_desktop_shortcut {
         let script = format!(
             "$ws = New-Object -ComObject WScript.Shell; \
@@ -164,7 +161,6 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
             .output();
     }
 
-    // Startup
     if options.launch_on_startup {
         let _ = hidden_command("reg")
             .args([
@@ -193,7 +189,6 @@ pub fn installer_perform_install(options: InstallOptions) -> Result<InstallResul
             .output();
     }
 
-    // Windows Add/Remove Programs uninstall registry entry
     let uninstall_key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier";
     let _ = hidden_command("reg")
         .args([
@@ -329,7 +324,6 @@ pub fn run_uninstaller() {
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
         .output();
 
-    // Wait for the running executable to exit before deleting it.
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             let quote = |p: &std::path::Path| p.to_string_lossy().replace('\'', "''");
