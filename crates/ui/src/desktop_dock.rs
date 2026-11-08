@@ -12,6 +12,7 @@ use windows::{
     core::{w, Interface, PCWSTR},
     Win32::{
         Foundation::{BOOL, COLORREF, HWND, LPARAM, WPARAM},
+        Graphics::Gdi::{SetWindowRgn, HRGN},
         System::{Com::*, Threading::*},
         UI::{Shell::*, WindowsAndMessaging::*},
     },
@@ -79,6 +80,7 @@ pub struct DockConfig {
     pub radius: u32,
     pub opacity: u32,
     pub tint: String,
+    pub material: String,
     pub magnification: u32,
     pub icon_style: String,
     pub inactive_opacity: u32,
@@ -98,6 +100,12 @@ pub struct DockConfig {
     pub launch_animation: bool,
     pub maximize_on_open: bool,
     pub maximized_bottom_gap: u32,
+    pub auto_adjust_workarea: bool,
+    pub full_width: bool,
+    pub dock_width: u32,
+    #[serde(default)]
+    pub widgets: Vec<String>,
+    pub item_order: Vec<String>,
     pub hidden_apps: Vec<Pin>,
     pub auto_hide: bool,
     pub hide_delay: u32,
@@ -121,6 +129,7 @@ impl Default for DockConfig {
             radius: 18,
             opacity: 72,
             tint: "#232532".into(),
+            material: "solid".into(),
             magnification: 135,
             icon_style: "original".into(),
             inactive_opacity: 85,
@@ -140,6 +149,11 @@ impl Default for DockConfig {
             launch_animation: true,
             maximize_on_open: true,
             maximized_bottom_gap: 0,
+            auto_adjust_workarea: false,
+            full_width: false,
+            dock_width: 0,
+            widgets: Vec::new(),
+            item_order: Vec::new(),
             hidden_apps: Vec::new(),
             auto_hide: false,
             hide_delay: 700,
@@ -158,14 +172,29 @@ pub struct Pin {
     pub icon: Option<String>,
 }
 impl DockConfig {
+    pub fn effective_bottom_gap(&self) -> u32 {
+        if self.auto_adjust_workarea {
+            if !self.enabled || self.auto_hide || self.position != "bottom" {
+                0
+            } else {
+                let extra = if self.full_width { 0 } else { self.edge_gap };
+                (self.icon_size + 7 + self.padding * 2 + extra + 4).min(200)
+            }
+        } else {
+            self.maximized_bottom_gap
+        }
+    }
     fn preserve_managed(&mut self, old: &Self) {
         self.pinned = old.pinned.clone();
         self.imported = old.imported;
         self.audio = old.audio.clone();
         self.hidden_apps = old.hidden_apps.clone();
+        self.widgets = old.widgets.clone();
+        self.item_order = old.item_order.clone();
     }
     fn validate(&mut self) -> Result<(), String> {
         self.audio.validate()?;
+        if !["solid", "liquid", "ios"].contains(&self.material.as_str()) { return Err("Unknown dock material".into()); }
         if !["bottom", "top", "left", "right"].contains(&self.position.as_str())
             || !["start", "center", "end"].contains(&self.alignment.as_str())
             || !["original", "rounded", "monochrome"].contains(&self.icon_style.as_str())
@@ -185,6 +214,7 @@ impl DockConfig {
         self.spacing = self.spacing.min(24);
         self.padding = self.padding.clamp(4, 28);
         self.edge_gap = self.edge_gap.min(100);
+        self.dock_width = self.dock_width.min(4000);
         self.maximized_bottom_gap = self.maximized_bottom_gap.min(200);
         self.radius = self.radius.min(48);
         self.opacity = self.opacity.clamp(10, 100);
@@ -192,6 +222,8 @@ impl DockConfig {
         self.inactive_opacity = self.inactive_opacity.clamp(20, 100);
         self.hide_delay = self.hide_delay.clamp(200, 3000);
         self.hide_windows_taskbar = self.enabled;
+        let mut widget_seen = HashSet::new();
+        self.widgets.retain(|id| !id.is_empty() && widget_seen.insert(id.clone()));
         if self.hidden_apps.len() > 256 {
             return Err("Too many hidden apps".into());
         }
