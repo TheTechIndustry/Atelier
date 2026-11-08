@@ -524,6 +524,9 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
 .app-preview-body.material-acrylic{background:rgba(30,32,46,.55);backdrop-filter:blur(30px)}
 .app-preview-body.material-glass{background:rgba(255,255,255,.1);backdrop-filter:blur(14px)}
 .app-preview-body.material-default{background:#1e202c}
+.dock-style-card{margin-bottom:18px}.dock-style-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:14px 18px 18px}.dock-style-option{border:0;background:none;color:var(--muted);display:grid;gap:8px;justify-items:center;min-width:0;width:100%;padding:4px;cursor:pointer;font-size:11px}.dock-style-swatch{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;height:60px;border-radius:12px;background:var(--swatch);border:1px solid #ffffff20;box-shadow:0 3px 8px #0002}.dock-style-swatch i{width:12px;height:12px;border-radius:4px;background:#9095aa66}.dock-style-option[aria-pressed=true] .dock-style-swatch{outline:2px solid #71a7ff;outline-offset:3px}.dock-style-option[aria-pressed=true]{color:var(--text)}.dock-style-option:focus-visible{outline:2px solid #71a7ff;border-radius:10px}
+.dock-color-options{display:flex;flex-wrap:wrap;gap:10px;padding:16px 18px 18px}.dock-color-options button{width:23px;height:23px;border-radius:50%;border:1px solid #ffffff45;cursor:pointer}.dock-color-options button:focus-visible{outline:2px solid #71a7ff;outline-offset:3px}
+.dock-widgets-pills{display:flex;flex-wrap:wrap;gap:8px}.dock-widget-pill{border:1px solid var(--border-strong);background:var(--surface2);color:var(--muted);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s ease}.dock-widget-pill:hover{background:rgba(255,255,255,.09);color:var(--text)}.dock-widget-pill.active{background:#38bdf820;border-color:#38bdf8;color:#38bdf8;font-weight:600;box-shadow:0 0 10px #38bdf830}
 </style><link rel="stylesheet" href="island-shape.css"><link rel="stylesheet" href="studio-wallpaper.css"></head>
 <body>
 <div class="window-frame">
@@ -564,9 +567,6 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
       </button>
     </nav>
     <div class="side-footer">
-      <div class="app-usage" id="app-usage" title="CPU and working memory usage">
-        <div class="app-usage-metrics"><div class="app-usage-metric"><span class="app-usage-label">CPU</span><span class="app-usage-value" id="app-usage-cpu">—</span></div><div class="app-usage-metric"><span class="app-usage-label">RAM</span><span class="app-usage-value" id="app-usage-memory">—</span></div></div>
-      </div>
       <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 3 5 8l5 5"/></svg>
         <span class="nav-label">Collapse sidebar</span>
@@ -588,181 +588,221 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
         <section class="tab active" id="taskbar">
           <header class="audio-head"><h2>Windows Taskbar</h2><label class="audio-toggle"><span class="switch-state" aria-hidden="true"></span><input id="native-enabled" class="switch" type="checkbox" disabled aria-label="Enable Windows taskbar customization"></label></header>
           <div id="native-settings">
-          <div class="card" style="margin-bottom:18px" id="native-taskbar-appearance">
-            <div class="card-title">Taskbar</div>
-            <p id="native-taskbar-status" hidden style="padding:14px 18px;color:var(--muted);font-size:12px"></p>
-            <div class="dd-controls">
-              <label class="dd-field">Taskbar position<select id="native-position" class="inline-select"><option value="-1">Default (Bottom)</option><option value="3">Bottom</option><option value="1">Top</option><option value="0" disabled>Left (Not supported in Win 11)</option><option value="2" disabled>Right (Not supported in Win 11)</option></select></label>
-              <label class="dd-field">Icon size<select id="native-icon-size" class="inline-select"><option value="0">Default</option><option value="16">16 px</option><option value="20">20 px</option><option value="24">24 px</option><option value="28">28 px</option><option value="32">32 px</option><option value="40">40 px</option><option value="48">48 px</option><option value="64">64 px</option></select></label>
-              <label class="dd-field">Button width<select id="native-button-width" class="inline-select"><option value="0">Default</option><option value="24">24 px</option><option value="28">28 px</option><option value="32">32 px</option><option value="36">36 px</option><option value="40">40 px</option><option value="44">44 px</option><option value="48">48 px</option><option value="56">56 px</option><option value="64">64 px</option><option value="72">72 px</option><option value="96">96 px</option><option value="120">120 px</option></select></label>
-              <label class="dd-field">Button corners<span class="dd-range"><input id="native-button-radius" type="range" min="-1" max="24"><output></output></span></label>
-              <label class="dd-field">Inactive app opacity<span class="dd-range"><input id="native-inactive-opacity" type="range" min="30" max="100" step="5"><output></output></span></label>
-              <label class="dd-field">Running indicator<select id="native-running-indicator" class="inline-select"><option value="0">Default</option><option value="1">Dot</option><option value="2">Line</option><option value="3">Hidden</option></select></label>
-              <label class="dd-field">Hover size<span class="dd-range"><input id="native-hover-scale" type="range" min="100" max="150" step="5"><output></output></span></label>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="col-stack">
-
-              <div class="card">
-                <div class="card-title">Material</div>
-                <div class="material-tiles" id="material-tiles">
-                  <button class="mat-tile" data-mat="Default" aria-pressed="false">
-                    <div class="mat-thumb mat-thumb-default"></div>
-                    Windows
-                  </button>
-                  <button class="mat-tile" data-mat="Clear" aria-pressed="false">
-                    <div class="mat-thumb mat-thumb-clear"></div>
-                    Clear
-                  </button>
-                  <button class="mat-tile" data-mat="Blur" aria-pressed="false">
-                    <div class="mat-thumb mat-thumb-blur"></div>
-                    Blur
-                  </button>
-                  <button class="mat-tile" data-mat="Acrylic" aria-pressed="false">
-                    <div class="mat-thumb mat-thumb-acrylic"></div>
-                    Acrylic
-                  </button>
-                  <button class="mat-tile" data-mat="Mica" aria-pressed="false">
-                    <div class="mat-thumb mat-thumb-mica"></div>
-                    Mica
-                  </button>
-                </div>
-                <div class="field-row" id="opacity-field">
-                  <div class="field-label">Tint opacity</div>
-                  <div class="range-wrap">
-                    <input id="opacity" type="range" min="24" max="255" value="180">
-                    <output id="opacity-value">71%</output>
-                  </div>
-                </div>
-                <div class="field-row" id="tint-field">
-                  <div class="field-label">Tint color</div>
-                  <input id="tint" type="color" value="#263f56">
-                </div>
-                <select id="style" style="display:none" aria-hidden="true" tabindex="-1">
-                  <option value="Clear">Clear</option>
-                  <option value="Blur">Blur</option>
-                  <option value="Acrylic">Acrylic</option>
-                  <option value="Mica">Mica</option>
-                  <option value="Default">Windows</option>
-                </select>
+            <div class="card" style="margin-bottom:18px">
+              <div class="card-title">Preview</div>
+              <div class="island-stage" id="island-stage">
+                <div class="island-wallpaper"></div>
+                <svg id="island-svg" viewBox="0 0 720 44" preserveAspectRatio="xMidYMid meet" overflow="visible">
+                  <defs>
+                    <linearGradient id="island-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="rgba(255,255,255,0.14)"/>
+                      <stop offset="100%" stop-color="rgba(255,255,255,0.02)"/>
+                    </linearGradient>
+                  </defs>
+                  <rect id="island-rect" x="0" y="3" width="720" height="38" rx="16" ry="16"
+                    fill="rgba(19,21,29,0.88)" stroke="rgba(255,255,255,0.16)" stroke-width="1"/>
+                  <rect id="island-gloss" x="0" y="3" width="720" height="17" rx="16" ry="16" fill="url(#island-grad)" opacity="0.6"/>
+                  <g id="island-start">
+                    <rect id="island-start-box" x="14" y="9" width="26" height="26" rx="6" fill="rgba(255,255,255,0.08)"/>
+                    <path id="island-start-icon" d="M19 15h5v5h-5zM26 15h5v5h-5zM19 22h5v5h-5zM26 22h5v5h-5z" fill="#4aa4ff"/>
+                  </g>
+                  <g id="island-apps-group" transform="translate(360, 0)">
+                    <rect x="-115" y="10" width="24" height="24" rx="5" fill="#2d6cdf"/>
+                    <rect x="-83" y="10" width="24" height="24" rx="5" fill="#38a3a5"/>
+                    <rect x="-51" y="10" width="24" height="24" rx="5" fill="#f07167"/>
+                    <rect x="-19" y="10" width="24" height="24" rx="5" fill="#ab47bc"/>
+                    <rect x="13" y="10" width="24" height="24" rx="5" fill="#5c6bc0"/>
+                    <rect x="45" y="10" width="24" height="24" rx="5" fill="#26a69a"/>
+                    <rect x="77" y="10" width="24" height="24" rx="5" fill="#ffa726"/>
+                  </g>
+                  <g id="island-tray-group" transform="translate(646, 0)">
+                    <text id="island-svg-clock" x="62" y="26" font-size="9" font-weight="600" fill="rgba(255,255,255,0.85)" text-anchor="end" font-family="'Segoe UI Variable','Segoe UI',sans-serif">12:48</text>
+                  </g>
+                </svg>
               </div>
-
-              <div class="card">
-                <div class="card-title">Geometry</div>
-                <div class="island-configurator">
-                  <div class="island-stage" id="island-stage">
-                    <div class="island-wallpaper"></div>
-                    <svg id="island-svg" viewBox="0 0 720 44" preserveAspectRatio="xMidYMid meet" overflow="visible">
-                      <defs>
-                        <linearGradient id="island-grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stop-color="rgba(255,255,255,0.14)"/>
-                          <stop offset="100%" stop-color="rgba(255,255,255,0.02)"/>
-                        </linearGradient>
-                      </defs>
-                      <rect id="island-rect" x="0" y="3" width="720" height="38" rx="16" ry="16"
-                        fill="rgba(19,21,29,0.88)" stroke="rgba(255,255,255,0.16)" stroke-width="1"/>
-                      <rect id="island-gloss" x="0" y="3" width="720" height="17" rx="16" ry="16" fill="url(#island-grad)" opacity="0.6"/>
-                      <g id="island-start">
-                        <rect id="island-start-box" x="14" y="9" width="26" height="26" rx="6" fill="rgba(255,255,255,0.08)"/>
-                        <path id="island-start-icon" d="M19 15h5v5h-5zM26 15h5v5h-5zM19 22h5v5h-5zM26 22h5v5h-5z" fill="#4aa4ff"/>
-                      </g>
-                      <g id="island-apps-group" transform="translate(360, 0)">
-                        <rect x="-115" y="10" width="24" height="24" rx="5" fill="#2d6cdf"/>
-                        <rect x="-83" y="10" width="24" height="24" rx="5" fill="#38a3a5"/>
-                        <rect x="-51" y="10" width="24" height="24" rx="5" fill="#f07167"/>
-                        <rect x="-19" y="10" width="24" height="24" rx="5" fill="#ab47bc"/>
-                        <rect x="13" y="10" width="24" height="24" rx="5" fill="#5c6bc0"/>
-                        <rect x="45" y="10" width="24" height="24" rx="5" fill="#26a69a"/>
-                        <rect x="77" y="10" width="24" height="24" rx="5" fill="#ffa726"/>
-                      </g>
-                      <g id="island-tray-group" transform="translate(646, 0)">
-                        <text id="island-svg-clock" x="62" y="26" font-size="9" font-weight="600" fill="rgba(255,255,255,0.85)" text-anchor="end" font-family="'Segoe UI Variable','Segoe UI',sans-serif">12:48</text>
-                      </g>
-                    </svg>
-                  </div>
-                  <div class="island-controls">
-                    <div class="island-ctrl-row">
-                      <div style="display:flex;align-items:center;gap:9px;flex:1">
-                        <label class="island-ctrl-label" for="dock">Floating dock</label>
-                        <input class="switch" id="dock" type="checkbox" checked>
-                      </div>
-                    </div>
-                    <div class="island-ctrl-row" id="gap-field">
-                      <label class="island-ctrl-label" for="gap">Elevation</label>
-                      <input id="gap" type="range" min="0" max="6" step="1" value="4" style="flex:1">
-                      <div class="island-ctrl-val" id="gap-value">4 px</div>
-                    </div>
-                    <div class="island-ctrl-row" id="margin-field">
-                      <label class="island-ctrl-label" for="margin">Side inset</label>
-                      <input id="margin" type="range" min="0" max="600" step="10" value="220" style="flex:1">
-                      <div class="island-ctrl-val" id="margin-value">220 px</div>
-                    </div>
-                    <div class="island-ctrl-row" id="radius-field">
-                      <label class="island-ctrl-label" for="radius">Corner radius</label>
-                      <input id="radius" type="range" min="0" max="32" step="1" value="18" style="flex:1">
-                      <div class="island-ctrl-val" id="radius-value">18 px</div>
-                    </div>
-                    <div class="island-ctrl-row">
-                      <div style="display:flex;align-items:center;gap:9px;flex:1">
-                        <label class="island-ctrl-label" for="hide-border" style="width:auto">Hide top border</label>
-                        <input class="switch" id="hide-border" type="checkbox" checked>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-
             </div>
 
+            <div class="card" style="margin-bottom:18px">
+              <div class="card-title">Taskbar style</div>
+              <div class="material-tiles" id="material-tiles">
+                <button class="mat-tile" data-mat="Default" aria-pressed="false">
+                  <div class="mat-thumb mat-thumb-default"></div>
+                  Windows
+                </button>
+                <button class="mat-tile" data-mat="Clear" aria-pressed="false">
+                  <div class="mat-thumb mat-thumb-clear"></div>
+                  Clear
+                </button>
+                <button class="mat-tile" data-mat="Blur" aria-pressed="false">
+                  <div class="mat-thumb mat-thumb-blur"></div>
+                  Blur
+                </button>
+                <button class="mat-tile" data-mat="Acrylic" aria-pressed="false">
+                  <div class="mat-thumb mat-thumb-acrylic"></div>
+                  Acrylic
+                </button>
+                <button class="mat-tile" data-mat="Mica" aria-pressed="false">
+                  <div class="mat-thumb mat-thumb-mica"></div>
+                  Mica
+                </button>
+              </div>
+              <div class="field-row" id="opacity-field">
+                <div class="field-label">Tint opacity</div>
+                <div class="range-wrap">
+                  <input id="opacity" type="range" min="24" max="255" value="180">
+                  <output id="opacity-value">71%</output>
+                </div>
+              </div>
+              <div class="field-row" id="tint-field">
+                <div class="field-label">Tint color</div>
+                <input id="tint" type="color" value="#263f56">
+              </div>
+              <select id="style" style="display:none" aria-hidden="true" tabindex="-1">
+                <option value="Clear">Clear</option>
+                <option value="Blur">Blur</option>
+                <option value="Acrylic">Acrylic</option>
+                <option value="Mica">Mica</option>
+                <option value="Default">Windows</option>
+              </select>
+            </div>
 
+            <div class="card" style="margin-bottom:18px" id="native-taskbar-appearance">
+              <div class="card-title">Taskbar</div>
+              <p id="native-taskbar-status" hidden style="padding:14px 18px;color:var(--muted);font-size:12px"></p>
+              <div class="dd-controls">
+                <label class="dd-field">Taskbar position<select id="native-position" class="inline-select"><option value="-1">Default (Bottom)</option><option value="3">Bottom</option><option value="1">Top</option><option value="0" disabled>Left (Not supported in Win 11)</option><option value="2" disabled>Right (Not supported in Win 11)</option></select></label>
+                <label class="dd-field">Icon size<select id="native-icon-size" class="inline-select"><option value="0">Default</option><option value="16">16 px</option><option value="20">20 px</option><option value="24">24 px</option><option value="28">28 px</option><option value="32">32 px</option><option value="40">40 px</option><option value="48">48 px</option><option value="64">64 px</option></select></label>
+                <label class="dd-field">Button width<select id="native-button-width" class="inline-select"><option value="0">Default</option><option value="24">24 px</option><option value="28">28 px</option><option value="32">32 px</option><option value="36">36 px</option><option value="40">40 px</option><option value="44">44 px</option><option value="48">48 px</option><option value="56">56 px</option><option value="64">64 px</option><option value="72">72 px</option><option value="96">96 px</option><option value="120">120 px</option></select></label>
+                <label class="dd-field">Button corners<span class="dd-range"><input id="native-button-radius" type="range" min="-1" max="24"><output></output></span></label>
+                <label class="dd-field">Inactive app opacity<span class="dd-range"><input id="native-inactive-opacity" type="range" min="30" max="100" step="5"><output></output></span></label>
+                <label class="dd-field">Running indicator<select id="native-running-indicator" class="inline-select"><option value="0">Default</option><option value="1">Dot</option><option value="2">Line</option><option value="3">Hidden</option></select></label>
+                <label class="dd-field">Hover size<span class="dd-range"><input id="native-hover-scale" type="range" min="100" max="150" step="5"><output></output></span></label>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:18px">
+              <div class="card-title">Geometry</div>
+              <div class="island-controls">
+                <div class="island-ctrl-row">
+                  <label class="island-ctrl-label" for="dock">Floating dock</label>
+                  <input class="switch" id="dock" type="checkbox" checked>
+                </div>
+                <div class="island-ctrl-row" id="gap-field">
+                  <label class="island-ctrl-label" for="gap">Elevation</label>
+                  <span class="range-wrap">
+                    <input id="gap" type="range" min="0" max="6" step="1" value="4">
+                    <output id="gap-value">4 px</output>
+                  </span>
+                </div>
+                <div class="island-ctrl-row" id="margin-field">
+                  <label class="island-ctrl-label" for="margin">Side inset</label>
+                  <span class="range-wrap">
+                    <input id="margin" type="range" min="0" max="600" step="10" value="220">
+                    <output id="margin-value">220 px</output>
+                  </span>
+                </div>
+                <div class="island-ctrl-row" id="radius-field">
+                  <label class="island-ctrl-label" for="radius">Corner radius</label>
+                  <span class="range-wrap">
+                    <input id="radius" type="range" min="0" max="32" step="1" value="18">
+                    <output id="radius-value">18 px</output>
+                  </span>
+                </div>
+                <div class="island-ctrl-row">
+                  <label class="island-ctrl-label" for="hide-border">Hide top border</label>
+                  <input class="switch" id="hide-border" type="checkbox" checked>
+                </div>
+              </div>
+            </div>
           </div>
-
-        </div>
         </section>
 
         <section class="tab" id="custom-taskbar">
           <header class="audio-head"><h2>Custom Taskbar</h2><label class="audio-toggle"><span class="switch-state" aria-hidden="true"></span><input id="dd-enabled" class="switch" type="checkbox" aria-label="Enable custom taskbar"></label></header>
           <div class="card dock-preview-card" style="margin-bottom:18px"><div class="card-title">Preview</div><div id="dock-preview-stage" class="dock-preview-stage" aria-label="Custom taskbar preview"><iframe id="dock-preview" class="dock-preview-frame" title="Custom taskbar preview" src="dock.html?preview=1" tabindex="-1"></iframe></div></div>
-          <div class="card" id="desktop-dock-settings" style="margin-bottom:18px">
-            <div class="card-title">Taskbar</div>
-            <div class="dd-controls">
-              <label class="dd-field">Screen edge<select id="dd-position" class="inline-select"><option value="bottom">Bottom</option><option value="top">Top</option><option value="left">Left</option><option value="right">Right</option></select></label>
-              <label class="dd-field">Alignment<select id="dd-alignment" class="inline-select"><option value="start">Start</option><option value="center">Center</option><option value="end">End</option></select></label>
-              <label class="dd-field">Icon size<span class="dd-range"><input id="dd-icon_size" type="range" min="20" max="96"><output></output></span></label>
-              <label class="dd-field">Hover magnification<span class="dd-range"><input id="dd-magnification" type="range" min="100" max="180" step="5"><output></output></span></label>
+          <div class="card dock-style-card"><div class="card-title">Dock style</div><div class="dock-style-options" role="group" aria-label="Dock style"><button type="button" class="dock-style-option" data-dock-style="black" aria-pressed="false"><span class="dock-style-swatch" style="--swatch:#000000"><i></i><i></i><i></i></span><span>Black</span></button><button type="button" class="dock-style-option" data-dock-style="white" aria-pressed="false"><span class="dock-style-swatch" style="--swatch:#f5f5f7"><i></i><i></i><i></i></span><span>White</span></button><button type="button" class="dock-style-option" data-dock-style="liquid" aria-pressed="false"><span class="dock-style-swatch" style="--swatch:linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.45);box-shadow:inset 0 1px 1px rgba(255,255,255,.8)"><i></i><i></i><i></i></span><span>Liquid</span></button><button type="button" class="dock-style-option" data-dock-style="ios" aria-pressed="false"><span class="dock-style-swatch" style="--swatch:linear-gradient(135deg,rgba(255,255,255,.45),rgba(190,220,255,.2));border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1px 1px rgba(255,255,255,.9)"><i></i><i></i><i></i></span><span>iOS</span></button><button type="button" class="dock-style-option" data-dock-style="midnight" aria-pressed="false"><span class="dock-style-swatch" style="--swatch:#171c29"><i></i><i></i><i></i></span><span>Midnight</span></button></div></div>
+          <div class="card dock-colors" style="margin-bottom:18px"><div class="card-title">Colour &amp; material</div><div class="dd-controls"><label class="dd-field">Material<select id="dd-material" class="inline-select"><option value="solid">Solid</option><option value="liquid">Liquid glass</option><option value="ios">Frosted glass</option></select></label><label class="dd-field">Tint<input id="dd-tint" type="color" aria-label="Dock tint"></label></div><div class="dock-color-options" role="group" aria-label="Tint colours"><button type="button" data-dock-color="#000000" aria-label="Tint #000000" style="background:#000000"></button><button type="button" data-dock-color="#ffffff" aria-label="Tint #ffffff" style="background:#ffffff"></button><button type="button" data-dock-color="#b4c9e7" aria-label="Tint #b4c9e7" style="background:#b4c9e7"></button><button type="button" data-dock-color="#619bf1" aria-label="Tint #619bf1" style="background:#619bf1"></button><button type="button" data-dock-color="#9374e8" aria-label="Tint #9374e8" style="background:#9374e8"></button><button type="button" data-dock-color="#eb7497" aria-label="Tint #eb7497" style="background:#eb7497"></button><button type="button" data-dock-color="#ed9049" aria-label="Tint #ed9049" style="background:#ed9049"></button><button type="button" data-dock-color="#57bba3" aria-label="Tint #57bba3" style="background:#57bba3"></button></div></div>
+          <div id="desktop-dock-settings">
+            <div id="desktop-dock-details">
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">Position &amp; Layout</div>
+                <div class="dd-controls">
+                  <label class="dd-field">Screen edge<select id="dd-position" class="inline-select"><option value="bottom">Bottom</option><option value="top">Top</option><option value="left">Left</option><option value="right">Right</option></select></label>
+                  <label class="dd-field">Alignment<select id="dd-alignment" class="inline-select"><option value="start">Start</option><option value="center">Center</option><option value="end">End</option></select></label>
+                  <label class="dd-field">Display<select id="dd-monitor" class="inline-select"><option value="0">Display 1</option></select></label>
+                  <label class="dd-field">Distance from edge<span class="dd-range"><input id="dd-edge_gap" type="range" min="0" max="100"><output></output></span></label>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">Size &amp; Spacing</div>
+                <div class="dd-controls">
+                  <label class="dd-field">Full width taskbar<input id="dd-full_width" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Custom dock width<span class="dd-range"><input id="dd-dock_width" type="range" min="0" max="2000" step="20"><output></output></span></label>
+                  <label class="dd-field">Icon size<span class="dd-range"><input id="dd-icon_size" type="range" min="20" max="96"><output></output></span></label>
+                  <label class="dd-field">Corner radius<span class="dd-range"><input id="dd-radius" type="range" min="0" max="48"><output></output></span></label>
+                  <label class="dd-field">Dock padding<span class="dd-range"><input id="dd-padding" type="range" min="4" max="28"><output></output></span></label>
+                  <label class="dd-field">Icon spacing<span class="dd-range"><input id="dd-spacing" type="range" min="0" max="24"><output></output></span></label>
+                  <label class="dd-field">Dock opacity<span class="dd-range"><input id="dd-opacity" type="range" min="10" max="100"><output></output></span></label>
+                  <label class="dd-field">Inactive icon opacity<span class="dd-range"><input id="dd-inactive_opacity" type="range" min="20" max="100"><output></output></span></label>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">Icons &amp; Hover Effects</div>
+                <div class="dd-controls">
+                  <label class="dd-field">Hover magnification<span class="dd-range"><input id="dd-magnification" type="range" min="100" max="180" step="5"><output></output></span></label>
+                  <label class="dd-field">Icon appearance<select id="dd-icon_style" class="inline-select"><option value="original">Original</option><option value="rounded">Rounded tiles</option><option value="monochrome">Monochrome</option></select></label>
+                  <label class="dd-field">Highlight active app<input id="dd-active_background" class="switch" type="checkbox"></label>
+                  <label class="dd-field">App names on hover<input id="dd-show_labels" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Launch animation<input id="dd-launch_animation" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show running apps<input id="dd-show_running" class="switch" type="checkbox"></label>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">Running Indicators</div>
+                <div class="dd-controls">
+                  <label class="dd-field">Running indicator<select id="dd-indicator" class="inline-select"><option value="dot">Dot</option><option value="line">Line</option><option value="none">Hidden</option></select></label>
+                  <label class="dd-field">Indicator color<input id="dd-indicator_color" type="color"></label>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">System Buttons &amp; Quick Tools</div>
+                <div class="dd-controls">
+                  <label class="dd-field">Show Windows Start<input id="dd-show_start" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show Windows Search<input id="dd-show_search" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show Atelier button<input id="dd-show_studio" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show clock<input id="dd-show_clock" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show hidden tray icons<input id="dd-show_tray" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show input language<input id="dd-show_language" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show network<input id="dd-show_network" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Show volume<input id="dd-show_volume" class="switch" type="checkbox"></label>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">Window Behavior &amp; Auto-hide</div>
+                <div class="dd-controls">
+                  <label class="dd-field">Auto-fit windows to dock<input id="dd-auto_adjust_workarea" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Space below maximized apps<span class="dd-range"><input id="dd-maximized_bottom_gap" type="range" min="0" max="200" step="1"><output></output></span></label>
+                  <label class="dd-field">Automatically hide<input id="dd-auto_hide" class="switch" type="checkbox"></label>
+                  <label class="dd-field">Hide delay<span class="dd-range"><input id="dd-hide_delay" type="range" min="200" max="3000" step="100"><output></output></span></label>
+                  <label class="dd-field" style="grid-column:1 / -1;border-right:0">Open apps maximized<input id="dd-maximize_on_open" class="switch" type="checkbox"></label>
+                </div>
+              </div>
+
+              <div class="card" style="margin-bottom:18px">
+                <div class="card-title">Apps in the OS</div>
+                <div style="padding:14px 18px">
+                  <div id="dd-apps" class="dd-apps"></div>
+                </div>
+                <div style="padding:0 18px 14px">
+                  <span id="dd-status" class="dock-status" role="status"></span>
+                </div>
+              </div>
             </div>
-            <details id="desktop-dock-details" open>
-              <summary class="dock-details-summary" aria-label="Toggle taskbar settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 9 7 7 7-7"/></svg></summary>
-            <div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn" id="dd-preset-mac" type="button">macOS layout</button>
-              <button class="btn" id="dd-preset-compact" type="button">Compact</button>
-              <button class="btn" id="dd-preset-sidebar" type="button">Side dock</button>
-            </div>
-            <div class="dd-controls">
-              <label class="dd-field">Display<select id="dd-monitor" class="inline-select"><option value="0">Display 1</option></select></label>
-              <label class="dd-field">Icon appearance<select id="dd-icon_style" class="inline-select"><option value="original">Original</option><option value="rounded">Rounded tiles</option><option value="monochrome">Monochrome</option></select></label>
-              <label class="dd-field">Icon spacing<span class="dd-range"><input id="dd-spacing" type="range" min="0" max="24"><output></output></span></label>
-              <label class="dd-field">Inactive icon opacity<span class="dd-range"><input id="dd-inactive_opacity" type="range" min="20" max="100"><output></output></span></label>
-              <label class="dd-field">Dock padding<span class="dd-range"><input id="dd-padding" type="range" min="4" max="28"><output></output></span></label>
-              <label class="dd-field">Distance from edge<span class="dd-range"><input id="dd-edge_gap" type="range" min="0" max="100"><output></output></span></label>
-              <label class="dd-field">Corner radius<span class="dd-range"><input id="dd-radius" type="range" min="0" max="48"><output></output></span></label>
-              <label class="dd-field">Dock opacity<span class="dd-range"><input id="dd-opacity" type="range" min="10" max="100"><output></output></span></label>
-              <label class="dd-field">Dock tint<input id="dd-tint" type="color"></label>
-              <label class="dd-field">Running indicator<select id="dd-indicator" class="inline-select"><option value="dot">Dot</option><option value="line">Line</option><option value="none">Hidden</option></select></label>
-              <label class="dd-field">Indicator color<input id="dd-indicator_color" type="color"></label>
-              <label class="dd-field">Highlight active app<input id="dd-active_background" class="switch" type="checkbox"></label>
-              <label class="dd-field">App names on hover<input id="dd-show_labels" class="switch" type="checkbox"></label>
-              <label class="dd-field">Show running apps<input id="dd-show_running" class="switch" type="checkbox"></label>
-              <label class="dd-field">Show clock<input id="dd-show_clock" class="switch" type="checkbox"></label><label class="dd-field">Show Windows Start<input id="dd-show_start" class="switch" type="checkbox"></label><label class="dd-field">Show Windows Search<input id="dd-show_search" class="switch" type="checkbox"></label><label class="dd-field">Show hidden tray icons<input id="dd-show_tray" class="switch" type="checkbox"></label><label class="dd-field">Show input language<input id="dd-show_language" class="switch" type="checkbox"></label><label class="dd-field">Show network<input id="dd-show_network" class="switch" type="checkbox"></label><label class="dd-field">Show volume<input id="dd-show_volume" class="switch" type="checkbox"></label><label class="dd-field">Show Atelier button<input id="dd-show_studio" class="switch" type="checkbox"></label><label class="dd-field">Launch animation<input id="dd-launch_animation" class="switch" type="checkbox"></label><label class="dd-field">Open apps maximized<input id="dd-maximize_on_open" class="switch" type="checkbox"></label>
-              <label class="dd-field">Automatically hide<input id="dd-auto_hide" class="switch" type="checkbox"></label>
-              <label class="dd-field">Hide delay<span class="dd-range"><input id="dd-hide_delay" type="range" min="200" max="3000" step="100"><output></output></span></label><label class="dd-field">Space below maximized apps<span class="dd-range"><input id="dd-maximized_bottom_gap" type="range" min="0" max="200" step="1"><output></output></span></label>
-            </div>
-            <div style="padding:14px 18px;border-top:1px solid var(--border)"><strong style="font-size:12px">Apps in the OS</strong><div id="dd-apps" class="dd-apps" style="margin-top:10px"></div></div>
-            </details>
-            <span id="dd-status" class="dock-status" role="status"></span>
           </div>
         </section>
 
@@ -1099,8 +1139,48 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
           </div><div class="card" style="margin-top:18px"><div class="card-title">Modules &amp; layout</div><p class="island-editor-help">Drag modules onto the grid. Move them by dragging and resize using the lower-right handle. Select a module for precise settings.</p><div class="island-editor-stage"><div id="island-editor-frame" class="island-editor-frame"><div id="island-editor-grid" class="island-editor-grid" aria-label="Island layout grid"></div></div></div><div id="island-layout-status" class="island-editor-help" role="status"></div><div id="island-selection" class="island-editor-selection" hidden></div><div class="island-editor-subtitle">Available modules</div><div id="island-palette" class="island-palette"></div><div class="island-editor-subtitle">Module settings</div><label class="field-row"><span class="field-label">Weather city</span><input class="island-module-input" type="text" maxlength="120" data-island="weather_city" placeholder="e.g. Kyiv"></label><label class="field-row"><span class="field-label">Weather in Fahrenheit</span><input class="switch" type="checkbox" data-island="weather_fahrenheit"></label><label class="field-row"><span class="field-label">Countdown title</span><input class="island-module-input" type="text" maxlength="120" data-island="countdown_title" placeholder="Event"></label><label class="field-row"><span class="field-label">Countdown date</span><input class="island-module-input" type="date" data-island="countdown_date"></label><label class="field-row"><span class="field-label">Note</span><textarea class="island-module-input" rows="3" maxlength="1000" data-island="note_text" placeholder="Write a note"></textarea></label><p class="island-editor-help">Weather: Open-Meteo. Module settings are saved locally.</p></div><div class="card" style="margin-top:18px"><div class="card-title">Audio reactivity</div><label class="field-row"><span class="field-label">React to system audio</span><input class="switch" type="checkbox" data-island="audio_reactive"></label><label class="field-row"><span class="field-label">Effect color</span><input type="color" data-island="audio_color"></label><label class="field-row"><span class="field-label">Effect strength (%)</span><input type="number" min="0" max="100" data-island="audio_strength"></label></div><p id="island-status" role="status" style="padding:12px;color:var(--muted)"></p>
         </section>
         <section class="tab" id="widgets">
-          <header class="audio-head"><h2>Widgets</h2></header>
-          <div id="widget-list" class="widget-gallery"></div><p id="widget-status" style="color:#9295a5;font-size:12px;margin-top:12px" role="status"></p>
+          <div class="widgets-layout" id="widgets-layout">
+            <div class="widgets-browser">
+              <header class="audio-head" style="margin-bottom:16px">
+                <div>
+                  <h2>Widgets</h2>
+                  <p>100 glanceable desktop widgets. Track AI limits, GitHub commits, Stripe revenue, crypto prices, system stats & habits.</p>
+                </div>
+                <div id="widgets-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></div>
+              </header>
+              <div class="widgets-search-box">
+                <svg class="widgets-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="search" id="widget-search" class="widgets-search-input" placeholder="Search 100 widgets (Claude, GitHub, Stripe, BTC, CPU, Pomodoro...)" aria-label="Search widgets">
+              </div>
+              <div id="widget-list"></div>
+              <p id="widget-status" style="color:#9295a5;font-size:12px;margin-top:12px" role="status"></p>
+            </div>
+            <aside id="widget-detail" class="widget-detail" aria-label="Widget settings" aria-hidden="true" inert>
+              <div id="widget-detail-content" hidden>
+                <div class="widget-detail-head">
+                  <span id="widget-detail-badge">WIDGET</span>
+                  <button type="button" id="widget-detail-close" aria-label="Close widget settings">×</button>
+                </div>
+                <div id="widget-detail-preview" class="widget-detail-preview"></div>
+                <div id="widget-detail-custom-section" class="widget-detail-section" style="border-top:none;margin-top:0;padding-top:0">
+                  <div class="widget-detail-section-title">Content & Configuration</div>
+                  <div id="widget-detail-custom-fields" class="widget-detail-fields"></div>
+                </div>
+                <div id="widget-detail-appearance-section" class="widget-detail-section">
+                  <div class="widget-detail-section-title">Appearance & Size</div>
+                  <div class="widget-color-presets-wrap">
+                    <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px">Style presets</span>
+                    <div class="widget-color-presets" id="widget-color-presets"></div>
+                  </div>
+                  <div id="widget-detail-appearance-fields" class="widget-detail-fields"></div>
+                </div>
+                <div id="widget-detail-actions-section" class="widget-detail-section" style="border-top:none;padding-top:0"></div>
+              </div>
+            </aside>
+          </div>
         </section>
         <section class="tab" id="settings">
           <div class="section-label">Preferences & System</div>
@@ -1556,8 +1636,9 @@ all('[data-tab]').forEach(b=>{
     const prevTab = document.querySelector('.tab.active')?.id;
     all('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));
     all('.tab').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));
-    document.querySelector('.scroll-area').classList.toggle('wallpaper-mode',b.dataset.tab==='wallpaper');
-    document.querySelector('.main-col').classList.toggle('wallpaper-shell',b.dataset.tab==='wallpaper');
+    const fullBleed = b.dataset.tab === 'wallpaper' || b.dataset.tab === 'widgets';
+    document.querySelector('.scroll-area').classList.toggle('wallpaper-mode', fullBleed);
+    document.querySelector('.main-col').classList.toggle('wallpaper-shell', fullBleed);
     if(b.dataset.tab==='taskbar')loadPreviewInfo();
     if(prevTab==='wallpaper' && b.dataset.tab!=='wallpaper'){
       document.querySelectorAll('#wallpaper video').forEach(v=>{ try{ v.pause(); v.currentTime=0; }catch(_){} });
@@ -1568,6 +1649,10 @@ all('[data-tab]').forEach(b=>{
   });
 });
 all('[data-go]').forEach(b=>b.addEventListener('click',()=>document.querySelector(`[data-tab="${b.dataset.go}"]`)?.click()));
+const initialActiveTab = document.querySelector('.tab.active')?.id;
+const initialFullBleed = initialActiveTab === 'wallpaper' || initialActiveTab === 'widgets';
+document.querySelector('.scroll-area')?.classList.toggle('wallpaper-mode', initialFullBleed);
+document.querySelector('.main-col')?.classList.toggle('wallpaper-shell', initialFullBleed);
 
 (async()=>{
   if(!invoke){
@@ -1587,4 +1672,4 @@ all('[data-go]').forEach(b=>b.addEventListener('click',()=>document.querySelecto
     toast('Could not read taskbar state: '+e,true);
   }
 })();
-</script><script src="scene-properties.js"></script><script src="studio-scene-settings.js"></script><script src="studio-wallpaper-settings.js"></script><script src="studio-wallpaper.js"></script><script src="studio-dock-preview.js"></script><script src="studio-dock.js"></script><script src="studio-widgets.js"></script><script src="island-layout.js"></script><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="studio-island.js"></script><script src="audio-visualizer.js"></script><script src="studio-audio.js"></script><script src="studio-dock-audio.js"></script><script src="studio-usage.js"></script><script src="studio-animations.js"></script><script src="studio-appearance.js"></script></body></html>
+</script><script src="scene-properties.js"></script><script src="studio-scene-settings.js"></script><script src="studio-wallpaper-settings.js"></script><script src="studio-wallpaper.js"></script><script src="studio-dock-preview.js"></script><script src="studio-dock.js"></script><script src="widget-icons.js"></script><script src="widgets-catalog.js"></script><script src="widget-metrics.js"></script><script src="studio-widgets.js"></script><script src="island-layout.js"></script><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="studio-island.js"></script><script src="audio-visualizer.js"></script><script src="studio-audio.js"></script><script src="studio-dock-audio.js"></script><script src="studio-usage.js"></script><script src="studio-animations.js"></script><script src="studio-appearance.js"></script></body></html>
