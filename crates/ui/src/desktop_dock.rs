@@ -1425,18 +1425,31 @@ fn placement(
     collapsed: bool,
 ) -> Placement {
     let vertical = c.position == "left" || c.position == "right";
-    let gap = ((c.edge_gap as f64 * scale).round() as i32)
+    let edge_gap = if c.full_width { 0 } else { c.edge_gap };
+    let gap = ((edge_gap as f64 * scale).round() as i32)
         .min(((size.0.min(size.1) as i32 - 1).max(0)) / 2);
-    let safe_w = (size.0 as i32 - 2 * gap).max(1) as u32;
-    let safe_h = (size.1 as i32 - 2 * gap).max(1) as u32;
+    let safe_w = if c.full_width && !vertical {
+        size.0
+    } else {
+        (size.0 as i32 - 2 * gap).max(1) as u32
+    };
+    let safe_h = if c.full_width && vertical {
+        size.1
+    } else {
+        (size.1 as i32 - 2 * gap).max(1) as u32
+    };
     let w = if collapsed && vertical {
         4
+    } else if c.full_width && !vertical {
+        size.0
     } else {
         (requested.0 * scale).ceil() as u32
     }
     .clamp(1, safe_w);
     let h = if collapsed && !vertical {
         4
+    } else if c.full_width && vertical {
+        size.1
     } else {
         (requested.1 * scale).ceil() as u32
     }
@@ -1448,19 +1461,19 @@ fn placement(
     };
     let (x, y) = match c.position.as_str() {
         "top" => (
-            align(size.0 as i32, w as i32),
+            if c.full_width { 0 } else { align(size.0 as i32, w as i32) },
             if collapsed { 0 } else { gap },
         ),
         "left" => (
             if collapsed { 0 } else { gap },
-            align(size.1 as i32, h as i32),
+            if c.full_width { 0 } else { align(size.1 as i32, h as i32) },
         ),
         "right" => (
             size.0 as i32 - w as i32 - if collapsed { 0 } else { gap },
-            align(size.1 as i32, h as i32),
+            if c.full_width { 0 } else { align(size.1 as i32, h as i32) },
         ),
         _ => (
-            align(size.0 as i32, w as i32),
+            if c.full_width { 0 } else { align(size.0 as i32, w as i32) },
             size.1 as i32 - h as i32 - if collapsed { 0 } else { gap },
         ),
     };
@@ -1518,6 +1531,7 @@ fn ensure_window(app: &tauri::AppHandle) -> Result<(), String> {
             tauri::WebviewUrl::App("dock.html".into()),
         )
         .title("Atelier Dock")
+        .background_color(tauri::window::Color(0, 0, 0, 0))
         .decorations(false)
         .transparent(true)
         .shadow(false)
