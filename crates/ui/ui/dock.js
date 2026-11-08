@@ -10,24 +10,29 @@ const dockAudio=isPreview?null:window.createDockAudio?.({element:$('dock'),invok
 document.addEventListener('contextmenu',event=>event.preventDefault());
 function error(e){$('error').textContent=String(e);$('error').hidden=false;clearTimeout(errorTimer);errorTimer=setTimeout(()=>$('error').hidden=true,5000)}
 function config(c){
-  cfg=c;dockAudio?.configure(c.audio,Boolean(c.enabled&&!collapsed&&!fullscreenHidden),c.position);document.body.className=[c.position,c.icon_style,c.indicator,collapsed?'collapsed':''].join(' ');
+  cfg=c;document.documentElement.dataset.material=c.material||'solid';const rgb=[1,3,5].map(i=>parseInt(c.tint.slice(i,i+2),16));document.documentElement.classList.toggle('light-dock',(c.material||'solid')==='solid'&&rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722>180);dockAudio?.configure(c.audio,Boolean(c.enabled&&!collapsed&&!fullscreenHidden),c.position);document.body.className=[c.position,c.icon_style,c.indicator,c.full_width?'full-width':'',collapsed?'collapsed':''].filter(Boolean).join(' ');
   const style=document.documentElement.style;
-  for(const [name,value]of Object.entries({'--icon':c.icon_size+'px','--gap':c.spacing+'px','--padding':c.padding+'px','--radius':c.radius+'px','--alpha':c.opacity/100,'--inactive':c.inactive_opacity/100,'--indicator':c.indicator_color,'--zoom':c.magnification/100,'--room':Math.max(32,Math.ceil(c.icon_size*(c.magnification/100-1))+28)+'px','--active-fill':c.active_background?'rgba(255,255,255,.12)':'transparent'}))style.setProperty(name,value);
+  const zoomExtra=c.magnification>100?Math.ceil(c.icon_size*(c.magnification/100-1)):0;
+  const roomSize=Math.max(34,zoomExtra+26);
+  for(const [name,value]of Object.entries({'--icon':c.icon_size+'px','--gap':c.spacing+'px','--padding':c.padding+'px','--radius':c.radius+'px','--alpha':c.opacity/100,'--inactive':c.inactive_opacity/100,'--indicator':c.indicator_color,'--zoom':c.magnification/100,'--room':roomSize+'px','--active-fill':c.active_background?'rgba(255,255,255,.12)':'transparent'}))style.setProperty(name,value);
   style.setProperty('--tint',[1,3,5].map(i=>parseInt(c.tint.slice(i,i+2),16)).join(','));
+  style.setProperty('--dock-width',(c.dock_width&&Number(c.dock_width)>0)?c.dock_width+'px':'auto');
   $('clock').hidden=!c.show_clock;for(const id of ['tray','language','network','volume'])$(id).hidden=!c['show_'+id];$('utilities').hidden=!c.show_clock&&!c.show_tray&&!c.show_language&&!c.show_network&&!c.show_volume;$('start').hidden=c.show_start===false;$('search').hidden=c.show_search===false;$('studio').hidden=c.show_studio===false;$('divider').hidden=$('utilities').hidden&&c.show_studio===false;
   if(!c.show_labels)$('label').hidden=true;
   if(!c.auto_hide&&collapsed){collapsed=false;document.body.classList.remove('collapsed');dockAudio?.configure(c.audio,Boolean(c.enabled&&!fullscreenHidden),c.position)}
+  renderDockWidgets();
+  for(const frame of document.querySelectorAll('.dock-widget-frame'))syncWidgetFrame(frame);
   scheduleMeasure();
 }
 async function refresh(){
   if(!invoke||refreshing||dragId||menuItem)return;refreshing=true;const revision=fullscreenRevision;
-  try{const snapshot=await invoke('get_dock_snapshot');if(revision===fullscreenRevision)fullscreenHidden=Boolean(snapshot.fullscreen_hidden);config(snapshot.config);items=snapshot.items;render();}
+  try{const snapshot=await invoke('get_dock_snapshot');if(dragId)return;if(revision===fullscreenRevision)fullscreenHidden=Boolean(snapshot.fullscreen_hidden);config(snapshot.config);items=snapshot.items;render();}
   catch(e){error(e)}finally{refreshing=false}
 }
 function render(){
   const visible=items.filter(i=>!i.hidden);const signature=JSON.stringify(visible.map(i=>[i.id,i.name,i.pinned,i.active,i.running,i.icon]));
-  if(signature===lastSignature)return;lastSignature=signature;
-  const current=new Map([...$('apps').children].map(e=>[e.dataset.id,e]));
+  if(signature===lastSignature){applyItemOrder();return;}lastSignature=signature;
+  const current=new Map([...$('apps').children].filter(e=>e.classList.contains('app')).map(e=>[e.dataset.id,e]));
   for(const [index,item] of visible.entries()){
     let button=current.get(item.id);if(!button){button=document.createElement('button');button.className='app';button.dataset.id=item.id;
       const image=document.createElement('img');image.alt='';image.draggable=false;
