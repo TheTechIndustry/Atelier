@@ -669,7 +669,9 @@ pub fn widget_move(window: tauri::Window, x: i32, y: i32) -> Result<(), String> 
     }
     window
         .set_position(tauri::PhysicalPosition::new(x, y))
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    pin_window_to_desktop(&window);
+    Ok(())
 }
 
 #[tauri::command]
@@ -681,6 +683,7 @@ pub fn widget_resize_focus(window: tauri::Window) -> Result<(), String> {
 }
 pub fn dismiss_resize(window: &tauri::Window) {
     if let Some(kind) = window.label().strip_prefix("widget-") {
+        pin_window_to_desktop(window);
         let _ = window
             .app_handle()
             .emit_to(window.label(), "widget-dismiss-resize", kind);
@@ -748,6 +751,7 @@ pub fn widget_resize(
         ))
         .map_err(|e| e.to_string())?;
     if commit {
+        pin_window_to_desktop(&window);
         let state = window.state::<Widgets>();
         let updated = {
             let mut configs = state.0.lock().map_err(|e| e.to_string())?;
