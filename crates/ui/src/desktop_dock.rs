@@ -267,7 +267,27 @@ pub struct DockState {
     fullscreen_hidden: AtomicBool,
     stopping: AtomicBool,
 }
+unsafe extern "system" fn hide_taskbar_child_proc(child: HWND, _: LPARAM) -> BOOL {
+    let _ = ShowWindow(child, SW_HIDE);
+    BOOL(1)
+}
+
+fn hide_taskbar_window(hwnd: HWND) {
+    unsafe {
+        let _ = EnumChildWindows(hwnd, Some(hide_taskbar_child_proc), LPARAM(0));
+        let _ = ShowWindow(hwnd, SW_HIDE);
+    }
+}
+
+unsafe extern "system" fn restore_taskbar_child_proc(child: HWND, _: LPARAM) -> BOOL {
+    let _ = ShowWindow(child, SW_SHOW);
+    BOOL(1)
+}
+
 impl DockState {
+    pub fn audio_widget_enabled(&self) -> bool {
+        self.config.lock().map(|c| c.enabled && c.widgets.iter().any(|id| id == "audio")).unwrap_or(false)
+    }
     pub fn audio_effects_enabled(&self) -> bool {
         !self.fullscreen_hidden.load(Ordering::Relaxed)
             && self
@@ -329,6 +349,7 @@ impl DockState {
                 };
                 unsafe {
                     SHAppBarMessage(ABM_REMOVE, &mut data);
+                    let _ = ShowWindow(hwnd(handle), SW_HIDE);
                 }
             }
         }
@@ -363,12 +384,13 @@ impl DockState {
                 }
                 hidden.push(handle);
             }
-            let _ = unsafe { ShowWindow(hwnd, SW_HIDE) };
+            hide_taskbar_window(hwnd);
         }
         Ok(())
     }
     pub fn shutdown(&self) {
         self.stopping.store(true, Ordering::Relaxed);
+        let _ = super::dock_glass::clear();
         self.restore_taskbar()
     }
 }
@@ -584,6 +606,8 @@ fn show_taskbar(handle: isize) {
     {
         let h = hwnd(handle);
         unsafe {
+            let _ = SetWindowRgn(h, HRGN::default(), true);
+            let _ = EnumChildWindows(h, Some(restore_taskbar_child_proc), LPARAM(0));
             let ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
             if ex & WS_EX_LAYERED.0 as isize != 0 {
                 SetWindowLongPtrW(h, GWL_EXSTYLE, ex & !(WS_EX_LAYERED.0 as isize));
