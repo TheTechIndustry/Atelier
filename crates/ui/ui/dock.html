@@ -31,17 +31,18 @@ button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:tra
 .app.launching .icon{animation:mac-bounce .55s cubic-bezier(.28,.84,.42,1) var(--bounce-count,2)}
 .app.launching.pulse .icon{animation:mac-pulse .45s ease-in-out var(--bounce-count,2)}
 .app.launching.press .icon{animation:mac-press .32s ease 1}
-.app.dragging{opacity:.35}.app.drop-target{outline:2px solid #dcd9d1}
+
 .indicator{display:none;position:absolute;bottom:-1px;width:4px;height:4px;border-radius:4px;background:var(--indicator);pointer-events:none}
 .app.running .indicator{display:block}.app.active .indicator{box-shadow:0 0 5px var(--indicator)}
 .line .indicator{width:14px;height:3px}.none .indicator{display:none!important}
 .left .indicator{bottom:auto;left:-4px}.right .indicator{bottom:auto;right:-4px}
 .left.line .indicator,.right.line .indicator{width:3px;height:14px}
 .studio{width:calc(var(--icon)*.65);color:#e6e3dd;opacity:.65}.studio:hover{opacity:1;background:#ffffff12}.studio svg{width:20px;height:20px}
-.system-button{width:var(--icon);color:#e6e3dd}.system-button:hover{background:#ffffff12}.system-button svg{width:100%;height:var(--icon)}.system-button[hidden],.studio[hidden],.divider[hidden]{display:none}.divider{width:1px;height:calc(var(--icon)*.65);background:#ffffff26;flex-shrink:0;margin:0 3px}
+.system-button,.studio{border:1px solid transparent}.system-button{width:var(--icon);color:#e6e3dd}.system-button:hover{background:#ffffff12}.system-button svg{width:100%;height:var(--icon)}.system-button[hidden],.studio[hidden],.divider[hidden]{display:none}.divider{width:1px;height:calc(var(--icon)*.65);background:#ffffff26;flex-shrink:0;margin:0 3px}
 .left .divider,.right .divider{width:calc(var(--icon)*.65);height:1px;margin:3px 0}
-.utility{display:flex;align-items:center;gap:4px}.left .utility,.right .utility{flex-direction:column}.utility-button,.clock{display:grid;place-items:center;border:0;background:transparent;border-radius:6px;min-width:24px;height:28px;color:inherit;font-size:11px;font-variant-numeric:tabular-nums;padding:0 4px;white-space:nowrap}.utility-button:hover,.clock:hover{background:#ffffff18}.utility-button svg{width:16px;height:16px}.utility-button[hidden],.clock[hidden],.utility[hidden]{display:none}
-#label,#error{position:fixed;z-index:10;pointer-events:none;padding:6px 10px;border:1px solid #ffffff20;border-radius:7px;background:#24252dec;color:#f5f3ee;box-shadow:0 4px 12px #0003;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.utility{display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid transparent}.left .utility,.right .utility{flex-direction:column}.utility-button,.clock{display:grid;place-items:center;border:0;background:transparent;border-radius:6px;min-width:24px;height:28px;color:inherit;font-size:11px;font-variant-numeric:tabular-nums;padding:0 4px;white-space:nowrap}.clock{font-weight:600;letter-spacing:.3px}.utility-button:hover,.clock:hover{background:#ffffff18}.utility-button svg{width:16px;height:16px}.utility-button[hidden],.clock[hidden],.utility[hidden]{display:none}
+#label{position:fixed;z-index:10;pointer-events:none;padding:4px 9px;border:1px solid rgba(255,255,255,.22);border-radius:7px;background:rgba(24,25,34,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#f5f3ee;font-size:11px;font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.35);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#error{position:fixed;z-index:10;pointer-events:none;padding:6px 10px;border:1px solid #ffffff20;border-radius:7px;background:#24252dec;color:#f5f3ee;box-shadow:0 4px 12px #0003;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #label[hidden],#error[hidden],#menu[hidden]{display:none}#error{left:12px;right:12px;top:4px;font-size:11px}
 #menu{position:fixed;z-index:20;inset:6px;overflow:auto;padding:5px;border:1px solid #ffffff22;border-radius:10px;background:#22242ff5;box-shadow:0 6px 16px #0006}
 #menu button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:7px 10px;border-radius:5px;white-space:nowrap}
