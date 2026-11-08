@@ -2776,6 +2776,97 @@ pub async fn dock_pin(app: tauri::AppHandle, id: String, pinned: bool) -> Result
         .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn dock_backdrop(
+    app: tauri::AppHandle,
+    _left: f64,
+    _top: f64,
+    _width: f64,
+    _height: f64,
+    _radius: f64,
+    _collapsed: bool,
+) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("dock-backdrop") {
+        let _ = app.run_on_main_thread(super::dock_glass::clear);
+        let _ = w.destroy();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn dock_menu_open(_app: tauri::AppHandle, _open: bool) -> Result<(), String> {
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn dock_widget_set(app: tauri::AppHandle, id: String, added: bool) -> Result<(), String> {
+    let state = app.state::<DockState>();
+    let _write = state.write.lock().map_err(|e| e.to_string())?;
+    let mut c = state.config.lock().map_err(|e| e.to_string())?.clone();
+    if id.is_empty() || id.len() > 128 { return Err("Invalid widget ID".into()); }
+    if added && !c.widgets.contains(&id) { c.widgets.push(id); }
+    else if !added { c.widgets.retain(|item| item != &id); c.item_order.retain(|item| item != &format!("widget:{id}")); }
+    persist(&c)?;
+    *state.config.lock().map_err(|e| e.to_string())? = c.clone();
+    app.emit("dock-config-changed", &c).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn validate_dock_item_order(ids: &[String], widgets: &[String]) -> Result<(), String> {
+    let listed_widgets: Vec<&str> = ids.iter().filter_map(|id| id.strip_prefix("widget:")).collect();
+    if ids.len() > 1024 || ids.iter().any(|id| id.len() > 32768 || !(id.starts_with("widget:") || id.starts_with("app:") || matches!(id.as_str(), "system:start" | "system:search" | "system:divider" | "system:tray" | "system:language" | "system:network" | "system:volume" | "system:clock" | "system:studio")))
+        || ids.iter().collect::<HashSet<_>>().len() != ids.len()
+        || listed_widgets.len() != widgets.len() || listed_widgets.iter().any(|id| !widgets.iter().any(|w| w == id)) {
+        return Err("Dock items changed; try reordering again".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn dock_items_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), String> {
+    let state = app.state::<DockState>();
+    let _write = state.write.lock().map_err(|e| e.to_string())?;
+    let mut c = state.config.lock().map_err(|e| e.to_string())?.clone();
+    validate_dock_item_order(&ids, &c.widgets)?;
+    let mut next = ids;
+    for (index, old) in c.item_order.iter().enumerate() {
+        if old.starts_with("app:") && !next.contains(old) {
+            let anchor = c.item_order[index + 1..].iter().find_map(|id| next.iter().position(|visible| visible == id)).unwrap_or(next.len());
+            next.insert(anchor, old.clone());
+        }
+    }
+    let sorted_pins: Vec<Pin> = next.iter().filter_map(|key| key.strip_prefix("app:"))
+        .filter_map(|id| c.pinned.iter().find(|pin| pin.path == id).cloned()).collect();
+    let mut sorted = sorted_pins.iter();
+    for pin in &mut c.pinned {
+        if sorted_pins.iter().any(|candidate| candidate.path == pin.path) {
+            *pin = sorted.next().expect("matching pinned order").clone();
+        }
+    }
+    c.item_order = next;
+    persist(&c)?;
+    *state.config.lock().map_err(|e| e.to_string())? = c.clone();
+    app.emit("dock-config-changed", &c).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn dock_widgets_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), String> {
+    let state = app.state::<DockState>();
+    let _write = state.write.lock().map_err(|e| e.to_string())?;
+    let mut c = state.config.lock().map_err(|e| e.to_string())?.clone();
+    if ids.len() != c.widgets.len() || ids.iter().collect::<HashSet<_>>().len() != ids.len()
+        || ids.iter().any(|id| !c.widgets.contains(id)) {
+        return Err("Dock widgets changed; try reordering again".into());
+    }
+    c.widgets = ids;
+    persist(&c)?;
+    *state.config.lock().map_err(|e| e.to_string())? = c.clone();
+    app.emit("dock-config-changed", &c).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn dock_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Result<(), String> {
     let state = app.state::<DockState>();
