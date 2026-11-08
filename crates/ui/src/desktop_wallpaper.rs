@@ -11,18 +11,19 @@ use std::{
 use tauri::{Emitter, Manager};
 use windows::core::w;
 use windows::Win32::{
-    Foundation::{COLORREF, HWND, POINT},
+    Foundation::{BOOL, COLORREF, HWND, LPARAM, POINT},
     Graphics::Gdi::ScreenToClient,
     UI::WindowsAndMessaging::{
-        FindWindowExW, GetAncestor, GetClassNameW, GetDesktopWindow, GetSystemMetrics, GetWindow,
-        GetWindowLongPtrW, GetWindowRect, IsWindow, SetLayeredWindowAttributes, SetParent,
-        SetWindowLongPtrW, SetWindowPos, ShowWindow, GA_PARENT, GWL_EXSTYLE, GWL_STYLE,
-        GW_HWNDPREV, HWND_TOP, LWA_ALPHA, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN,
-        SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
-        SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SW_SHOW, WS_BORDER, WS_CAPTION, WS_CHILD,
-        WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_DLGFRAME, WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME,
-        WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_STATICEDGE, WS_EX_TOOLWINDOW, WS_EX_WINDOWEDGE,
-        WS_HSCROLL, WS_POPUP, WS_THICKFRAME, WS_VISIBLE, WS_VSCROLL,
+        EnumChildWindows, EnumWindows, FindWindowExW, GetAncestor, GetClassNameW,
+        GetDesktopWindow, GetSystemMetrics, GetWindow, GetWindowLongPtrW, GetWindowRect, IsWindow,
+        SetLayeredWindowAttributes, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+        GA_PARENT, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_TOP, LWA_ALPHA, SM_CXVIRTUALSCREEN,
+        SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, SWP_FRAMECHANGED,
+        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SW_SHOW,
+        WS_BORDER, WS_CAPTION, WS_CHILD, WS_CLIPCHILDREN, WS_CLIPSIBLINGS, WS_DLGFRAME,
+        WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_STATICEDGE,
+        WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_EX_WINDOWEDGE, WS_HSCROLL, WS_POPUP,
+        WS_THICKFRAME, WS_VISIBLE, WS_VSCROLL,
     },
 };
 const MAX_VIDEO: u64 = 1024 * 1024 * 1024;
@@ -624,8 +625,14 @@ fn attach(w: &tauri::WebviewWindow, worker: HWND) -> Result<(), String> {
                 | WS_EX_CLIENTEDGE.0
                 | WS_EX_STATICEDGE.0
                 | WS_EX_WINDOWEDGE.0) as isize))
-            | (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) as isize;
+            | (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0 | WS_EX_TRANSPARENT.0) as isize;
         SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_ex_style);
+        unsafe extern "system" fn make_child_transparent(child: HWND, _: LPARAM) -> BOOL {
+            let ex = GetWindowLongPtrW(child, GWL_EXSTYLE);
+            SetWindowLongPtrW(child, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT.0 as isize);
+            BOOL(1)
+        }
+        let _ = EnumChildWindows(hwnd, Some(make_child_transparent), LPARAM(0));
         use windows::Win32::UI::WindowsAndMessaging::WS_EX_NOREDIRECTIONBITMAP;
         if GetWindowLongPtrW(worker, GWL_EXSTYLE) & WS_EX_NOREDIRECTIONBITMAP.0 as isize != 0 {
             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_ex_style | WS_EX_LAYERED.0 as isize);
@@ -728,12 +735,48 @@ fn attach(w: &tauri::WebviewWindow, worker: HWND) -> Result<(), String> {
     let _ = w.eval("window.dispatchEvent(new Event('resize'))");
     Ok(())
 }
+fn find_shelldll_host() -> Option<(HWND, HWND)> {
+    let mut found = None;
+    unsafe extern "system" fn enum_proc(w: HWND, lparam: LPARAM) -> BOOL {
+        let out = unsafe { &mut *(lparam.0 as *mut Option<(HWND, HWND)>) };
+        if let Ok(sh) = FindWindowExW(w, HWND::default(), w!("SHELLDLL_DefView"), None) {
+            if !sh.0.is_null() {
+                *out = Some((w, sh));
+                return BOOL(0);
+            }
+        }
+        BOOL(1)
+    }
+    let _ = unsafe { EnumWindows(Some(enum_proc), LPARAM(&mut found as *mut _ as isize)) };
+    found
+}
+
 fn repair_static_worker_order(parent: HWND, wallpaper: HWND) -> Result<(), String> {
-    if let Ok(shelldll) =
-        unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) }
-    {
-        if !shelldll.0.is_null() {
-            let _ = unsafe { ShowWindow(shelldll, SW_SHOW) };
+    if let Some((host, shelldll)) = find_shelldll_host() {
+        unsafe {
+            let _ = ShowWindow(host, SW_SHOW);
+            let _ = ShowWindow(shelldll, SW_SHOW);
+            if parent != host {
+                let _ = SetWindowPos(
+                    parent,
+                    host,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                );
+            } else {
+                let _ = SetWindowPos(
+                    wallpaper,
+                    shelldll,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                );
+            }
         }
     }
     let Ok(background) = (unsafe { FindWindowExW(parent, HWND::default(), w!("WorkerW"), None) })
@@ -812,14 +855,17 @@ fn ensure_window(app: &tauri::AppHandle) -> Result<(), String> {
     w.show().map_err(|e| e.to_string())?;
     let (send, receive) = std::sync::mpsc::sync_channel(1);
     let worker_value = worker.0 as isize;
+    let w_clone = w.clone();
     app.run_on_main_thread(move || {
-        let result = attach(&w, HWND(worker_value as *mut _));
+        let result = attach(&w_clone, HWND(worker_value as *mut _));
         let _ = send.send(result);
     })
     .map_err(|e| e.to_string())?;
     receive
         .recv_timeout(std::time::Duration::from_secs(5))
-        .map_err(|_| "Timed out attaching wallpaper to the desktop".to_string())?
+        .map_err(|_| "Timed out attaching wallpaper to the desktop".to_string())??;
+    let _ = w.set_ignore_cursor_events(true);
+    Ok(())
 }
 
 pub fn repair_after_workarea_change(app: tauri::AppHandle) {
@@ -875,16 +921,12 @@ pub fn repair_after_workarea_change(app: tauri::AppHandle) {
     });
 }
 fn restore_desktop_view(parent: HWND) {
-    if parent.0.is_null() || !unsafe { IsWindow(parent) }.as_bool() {
-        return;
-    }
-    if let Ok(view) =
-        unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) }
-    {
+    if let Some((host, shelldll)) = find_shelldll_host() {
         unsafe {
-            let _ = ShowWindow(view, SW_SHOW);
+            let _ = ShowWindow(host, SW_SHOW);
+            let _ = ShowWindow(shelldll, SW_SHOW);
             let _ = SetWindowPos(
-                view,
+                shelldll,
                 HWND_TOP,
                 0,
                 0,
@@ -892,6 +934,24 @@ fn restore_desktop_view(parent: HWND) {
                 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
             );
+        }
+    }
+    if !parent.0.is_null() && unsafe { IsWindow(parent) }.as_bool() {
+        if let Ok(view) =
+            unsafe { FindWindowExW(parent, HWND::default(), w!("SHELLDLL_DefView"), None) }
+        {
+            unsafe {
+                let _ = ShowWindow(view, SW_SHOW);
+                let _ = SetWindowPos(
+                    view,
+                    HWND_TOP,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                );
+            }
         }
     }
 }
