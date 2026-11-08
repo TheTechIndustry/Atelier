@@ -2,12 +2,62 @@
   'use strict';
   const $=id=>document.getElementById(id),invoke=window.__TAURI__?.core?.invoke;
   const root=$('desktop-dock-settings');
-  const fields=[$('dd-enabled'),...root.querySelectorAll('[id^="dd-"]')].filter(e=>['INPUT','SELECT'].includes(e.tagName));
+  const fields=[...document.querySelectorAll('#custom-taskbar [id^="dd-"]')].filter(e=>['INPUT','SELECT'].includes(e.tagName));
   let saved=null,items=[],previewLanguage=null,busy=false,queued=false,timer=null,refreshing=false,revision=0;
+  const presetGeometry = {padding:9,spacing:6,icon_size:38};
+  const stylePresets = {
+    black: {material:'solid',tint:'#000000',opacity:100,radius:14,...presetGeometry,indicator_color:'#f3f0ea'},
+    white: {material:'solid',tint:'#f5f5f7',opacity:96,radius:14,...presetGeometry,indicator_color:'#333847'},
+    liquid: {material:'liquid',tint:'#ffffff',opacity:14,radius:24,...presetGeometry,indicator_color:'#ffffff'},
+    ios: {material:'ios',tint:'#ffffff',opacity:20,radius:26,...presetGeometry,indicator_color:'#ffffff'},
+    midnight: {material:'solid',tint:'#171c29',opacity:90,radius:14,...presetGeometry,indicator_color:'#a6b9ef'}
+  };
+  function syncPreset(c){for(const button of document.querySelectorAll('[data-dock-style]'))button.setAttribute('aria-pressed',String(Object.entries(stylePresets[button.dataset.dockStyle]).every(([key,value])=>c[key]===value)));}
   const preview=window.createDockPreview?.($('dock-preview'));
-  function outputs(){for(const input of fields.filter(e=>e.type==='range')){const name=input.id.slice(3),suffix=['opacity','inactive_opacity','magnification'].includes(name)?'%':name==='hide_delay'?' ms':' px';input.nextElementSibling.textContent=input.value+suffix;}}
-  function paint(c){saved=c;for(const field of fields){const value=c[field.id.slice(3)];if(field.type==='checkbox')field.checked=!!value;else field.value=value;}outputs();preview?.render(c,items,previewLanguage);$('dd-status').textContent=c.enabled?'Desktop dock is on':'Desktop dock is off';}
-  function read(){const c={...saved};for(const field of fields){const name=field.id.slice(3);c[name]=field.type==='checkbox'?field.checked:['range','number'].includes(field.type)||name==='monitor'?Number(field.value):field.value;}c.hide_windows_taskbar=c.enabled;return c;}
+  function outputs(){
+    const autoWorkarea = $('dd-auto_adjust_workarea')?.checked;
+    const gapInput = $('dd-maximized_bottom_gap');
+    const isFull = $('dd-full_width')?.checked;
+    const widthInput = $('dd-dock_width');
+    const edgeInput = $('dd-edge_gap');
+    if (gapInput && autoWorkarea) {
+      const icon = Number($('dd-icon_size')?.value || 38);
+      const pad = Number($('dd-padding')?.value || 9);
+      const edge = isFull ? 0 : Number($('dd-edge_gap')?.value || 0);
+      const autoGap = Math.min(200, icon + 7 + pad * 2 + edge + 4);
+      gapInput.value = autoGap;
+      gapInput.disabled = true;
+      if (gapInput.nextElementSibling) gapInput.nextElementSibling.textContent = autoGap + ' px (Auto)';
+    } else if (gapInput) {
+      gapInput.disabled = false;
+    }
+    if (widthInput) {
+      widthInput.disabled = !!isFull;
+    }
+    if (edgeInput) {
+      edgeInput.disabled = !!isFull;
+    }
+    for(const input of fields.filter(e=>e.type==='range')){
+      if (input === gapInput && autoWorkarea) continue;
+      if (input === widthInput && isFull) {
+        if (input.nextElementSibling) input.nextElementSibling.textContent = '100% (Full)';
+        continue;
+      }
+      if (input === widthInput) {
+        const val = Number(input.value) || 0;
+        input.nextElementSibling.textContent = val === 0 ? 'Auto' : val + ' px';
+        continue;
+      }
+      if (input === edgeInput && isFull) {
+        if (input.nextElementSibling) input.nextElementSibling.textContent = '0 px (Docked)';
+        continue;
+      }
+      const name=input.id.slice(3),suffix=['opacity','inactive_opacity','magnification'].includes(name)?'%':name==='hide_delay'?' ms':' px';
+      input.nextElementSibling.textContent=input.value+suffix;
+    }
+  }
+  function paint(c){saved=c;syncPreset(c);for(const field of fields){const value=c[field.id.slice(3)];if(field.type==='checkbox')field.checked=!!value;else field.value=value;}outputs();preview?.render(c,items,previewLanguage);$('dd-status').textContent=c.enabled?'Desktop dock is on':'Desktop dock is off';}
+  function read(){const c={...saved};for(const field of fields){const name=field.id.slice(3);c[name]=field.type==='checkbox'?field.checked:['range','number'].includes(field.type)||name==='monitor'?Number(field.value):field.value;}c.full_width=Boolean(c.full_width);c.dock_width=Number(c.dock_width)||0;if(c.auto_adjust_workarea){const extra=c.full_width?0:(Number(c.edge_gap)||0);c.maximized_bottom_gap=Math.min(200,(Number(c.icon_size)||38)+7+(Number(c.padding)||9)*2+extra+4);}c.hide_windows_taskbar=c.enabled;return c;}
   async function refresh(){
     if(!invoke||refreshing||busy||timer)return;refreshing=true;const startRevision=revision;
     try{const data=await invoke('get_dock_snapshot');if(startRevision!==revision||busy||timer)return;const selected=data.config.monitor;$('dd-monitor').replaceChildren(...data.monitors.map((name,i)=>{const o=document.createElement('option');o.value=i;const match=name.match(/^\\\\\.\\DISPLAY(\d+)$/i);o.textContent=match?'Display '+match[1]:name;return o}));$('dd-monitor').value=selected;items=data.items;paint(data.config);renderApps();if(data.config.show_language){invoke('dock_input_language').then(language=>{previewLanguage=language;if(saved)preview?.render(read(),items,previewLanguage)}).catch(()=>{})}}
@@ -42,12 +92,27 @@
     catch(e){paint(saved);toast('Could not update dock: '+e,true)}
     finally{busy=false;if(queued){queued=false;save()}else refresh()}
   }
-  for(const field of fields){field.addEventListener('input',()=>{revision++;outputs();if(saved)preview?.render(read(),items,previewLanguage);if(field.type==='range'){clearTimeout(timer);timer=setTimeout(save,180)}});field.addEventListener('change',()=>{revision++;if(saved)preview?.render(read(),items);save()});}
+  for(const field of fields){
+    field.addEventListener('input',()=>{
+      if(field.id==='dd-material'){
+        const mat=field.value;
+        if(mat==='liquid'||mat==='ios'){
+          const opField=$('dd-opacity');
+          if(opField&&Number(opField.value)>30){opField.value=mat==='liquid'?14:20;}
+          const radField=$('dd-radius');
+          if(radField&&Number(radField.value)<20){radField.value=mat==='liquid'?24:26;}
+          const tintField=$('dd-tint');
+          if(tintField&&(tintField.value==='#000000'||tintField.value==='#171c29'||tintField.value==='#d3dbe8')){tintField.value='#ffffff';}
+        }
+      }
+      revision++;outputs();if(saved){syncPreset(read());preview?.render(read(),items,previewLanguage)}if(field.type==='range'||field.type==='color'){clearTimeout(timer);timer=setTimeout(save,180)}
+    });
+    field.addEventListener('change',()=>{revision++;if(saved)preview?.render(read(),items);save()});
+  }
+  document.querySelectorAll('[data-dock-color]').forEach(button=>button.addEventListener('click',()=>{if(!saved)return;$('dd-tint').value=button.dataset.dockColor;revision++;syncPreset(read());preview?.render(read(),items,previewLanguage);save()}));
   function preset(values){if(!saved)return;revision++;const previous=saved;paint({...read(),...values,enabled:true});saved=previous;save()}
-  $('dd-preset-mac').addEventListener('click',()=>preset({position:'bottom',alignment:'center',icon_size:44,spacing:6,padding:10,edge_gap:10,radius:18,opacity:72,tint:'#232532',magnification:140,icon_style:'original',inactive_opacity:90,active_background:false,indicator:'dot',indicator_color:'#f3f0ea',show_labels:true,show_running:true,show_clock:false}));
-  $('dd-preset-compact').addEventListener('click',()=>preset({icon_size:24,spacing:2,padding:5,edge_gap:5,radius:12,magnification:125,show_clock:false}));
-  $('dd-preset-sidebar').addEventListener('click',()=>preset({position:'left',alignment:'center',icon_size:36,spacing:5,padding:8,edge_gap:8,radius:16,magnification:125,show_clock:false}));
-  if(!invoke){fields.forEach(e=>e.disabled=true);root.querySelectorAll('button').forEach(e=>e.disabled=true);$('dd-status').textContent='Launch Atelier to use the desktop dock';return}
+  for(const button of document.querySelectorAll('[data-dock-style]'))button.addEventListener('click',()=>preset({...stylePresets[button.dataset.dockStyle],position:'bottom',alignment:'center',edge_gap:8,magnification:125,icon_style:'original',inactive_opacity:100,active_background:false,indicator:'dot',show_clock:true}));
+  if(!invoke){document.querySelectorAll('[data-dock-style],[data-dock-color]').forEach(e=>e.disabled=true);fields.forEach(e=>e.disabled=true);root.querySelectorAll('button').forEach(e=>e.disabled=true);$('dd-status').textContent='Launch Atelier to use the desktop dock';return}
   window.__TAURI__?.event?.listen('dock-config-changed',()=>{if(!busy&&!timer)refresh()});
-  refresh();setInterval(()=>{if(document.getElementById('custom-taskbar').classList.contains('active')&&$('desktop-dock-details').open)refresh()},4000);
+  refresh();setInterval(()=>{if(document.getElementById('custom-taskbar').classList.contains('active')&&($('desktop-dock-details')?.open??true))refresh()},4000);
 })();
