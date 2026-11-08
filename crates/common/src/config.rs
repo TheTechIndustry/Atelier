@@ -87,7 +87,7 @@ impl Default for TaskbarConfig {
             floating_margin: 0,
             corner_radius: 0,
             vertical_gap: 0,
-            hide_top_border: false,
+            hide_top_border: true,
             appearance: TaskbarAppearance::default(),
         }
     }
