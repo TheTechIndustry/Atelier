@@ -40,25 +40,103 @@ function render(){
       const fallback=document.createElement('span');fallback.className='fallback';
       const icon=document.createElement('span');icon.className='icon';icon.append(image,fallback);
       const indicator=document.createElement('span');indicator.className='indicator';button.append(icon,indicator);
-      button.addEventListener('click',()=>{button.blur();$('label').hidden=true;activate(button.dataset.id,false)});
+      button.addEventListener('click',e=>{if(Date.now()<suppressClickUntil){e.preventDefault();return}button.blur();$('label').hidden=true;activate(button.dataset.id,false)});
       button.addEventListener('pointerenter',()=>showLabel(button));button.addEventListener('pointerleave',()=>$('label').hidden=true);
       button.addEventListener('focus',()=>{if(button.matches(':focus-visible'))showLabel(button)});button.addEventListener('blur',()=>$('label').hidden=true);
       button.addEventListener('contextmenu',e=>{e.preventDefault();openMenu(button.dataset.id)});
-      button.addEventListener('dragstart',e=>{if(!button.draggable){e.preventDefault();return}dragId=button.dataset.id;button.classList.add('dragging');e.dataTransfer.setData('text/plain',dragId)});
-      button.addEventListener('dragend',()=>{dragId=null;button.classList.remove('dragging');document.querySelectorAll('.drop-target').forEach(e=>e.classList.remove('drop-target'))});
-      button.addEventListener('dragover',e=>{if(dragId&&button.draggable){e.preventDefault();button.classList.add('drop-target')}});
-      button.addEventListener('dragleave',()=>button.classList.remove('drop-target'));
-      button.addEventListener('drop',async e=>{e.preventDefault();button.classList.remove('drop-target');const ids=items.filter(i=>i.pinned).map(i=>i.id);const from=ids.indexOf(dragId),to=ids.indexOf(button.dataset.id);if(from<0||to<0||from===to)return;ids.splice(to,0,ids.splice(from,1)[0]);try{await invoke('dock_reorder',{ids});await refresh()}catch(e){error(e)}});
+      button.addEventListener('pointerdown',startReorder);
     }
-    button.draggable=item.pinned;button.setAttribute('aria-label',item.name+(item.active?', active':item.running?', running':''));
+    button.draggable=false;button.dataset.pinned=String(item.pinned);button.setAttribute('aria-label',item.name+(item.active?', active':item.running?', running':''));
     button.classList.toggle('active',item.active);button.classList.toggle('running',item.running);
     const image=button.querySelector('img');if(image.getAttribute('src')!==item.icon)image.src=item.icon;
     image.hidden=!item.icon;
     const fallback=button.querySelector('.fallback');fallback.hidden=!!item.icon;fallback.textContent=item.name[0]||'·';
-    if($('apps').children[index]!==button)$('apps').insertBefore(button,$('apps').children[index]||null);current.delete(item.id);
+    if(!button.parentNode)$('apps').append(button);current.delete(item.id);
   }
-  for(const button of current.values())button.remove();scheduleMeasure();
+  for(const button of current.values())button.remove();applyItemOrder();scheduleMeasure();
 }
+
+let reorder=null,suppressClickUntil=0;
+const itemMotion=new WeakMap();
+const systemOrderIds=['start','search','divider','tray','language','network','volume','clock','studio'];
+function orderElements(){
+  const apps=[...$('apps').children].filter(el=>el.classList.contains('app')||el.classList.contains('dock-capsule'));
+  apps.sort((a,b)=>Number(a.classList.contains('dock-capsule'))-Number(b.classList.contains('dock-capsule')));
+  for(const el of apps)el.dataset.orderKey=el.classList.contains('app')?'app:'+el.dataset.id:'widget:'+el.dataset.widgetId;
+  const system=systemOrderIds.map(id=>$(id));
+  for(const el of system)el.dataset.orderKey='system:'+el.id;
+  return [...system.slice(0,2),...apps,...system.slice(2)];
+}
+function orderedItems(){return orderElements().sort((a,b)=>Number(a.style.order)-Number(b.style.order));}
+function isOrderVisible(el){return !el.hidden&&!el.parentElement?.hidden;}
+function applyItemOrder(){
+  if(reorder)return;
+  const elements=orderElements(),byKey=new Map(elements.map(el=>[el.dataset.orderKey,el]));
+  const saved=cfg?.item_order||[],hasSystem=saved.some(key=>key.startsWith('system:'));
+  const ordered=[];
+  if(!hasSystem)for(const el of elements.slice(0,2)){ordered.push(el);byKey.delete(el.dataset.orderKey)}
+  for(const key of saved){const el=byKey.get(key);if(el){ordered.push(el);byKey.delete(key)}}
+  for(const el of elements)if(byKey.has(el.dataset.orderKey)){ordered.push(el);byKey.delete(el.dataset.orderKey)}
+  ordered.forEach((el,index)=>el.style.order=String(index));
+}
+function startReorder(event,element){
+  const button=element||event.currentTarget;
+  if(!invoke||event.button!==0||dragId)return;
+  const rect=button.getBoundingClientRect();
+  button.blur?.();reorder={button,pointerId:event.pointerId,x:event.clientX,y:event.clientY,grabX:event.clientX-rect.left,grabY:event.clientY-rect.top,moved:false,dx:0,dy:0,original:orderedItems().map(el=>el.dataset.orderKey)};
+  dragId=button.dataset.orderKey;
+  if(!element)button.setPointerCapture(event.pointerId);
+  clearTimeout(hideTimer);
+}
+function moveReorder(event){
+  const state=reorder;if(!state||event.pointerId!==state.pointerId)return;
+  if(!state.moved&&Math.hypot(event.clientX-state.x,event.clientY-state.y)<6)return;
+  state.moved=true;event.preventDefault?.();$('label').hidden=true;
+  document.body.classList.add('reordering');state.button.classList.add('dragging');
+  const vertical=['left','right'].includes(cfg.position),pos=vertical?event.clientY:event.clientX;
+  const container=$('dock'),bounds=container.getBoundingClientRect(),start=vertical?bounds.top:bounds.left,end=vertical?bounds.bottom:bounds.right;
+  const beforeScroll=vertical?container.scrollTop:container.scrollLeft;
+  if(vertical)container.scrollTop+=pos<start+28?-14:pos>end-28?14:0;else container.scrollLeft+=pos<start+28?-14:pos>end-28?14:0;
+  const afterScroll=vertical?container.scrollTop:container.scrollLeft;
+  state.scrollPoint={pointerId:event.pointerId,clientX:event.clientX,clientY:event.clientY};
+  if(afterScroll!==beforeScroll&&!state.scrollFrame&&window.requestAnimationFrame){
+    state.scrollFrame=window.requestAnimationFrame(()=>{state.scrollFrame=0;if(reorder===state)moveReorder(state.scrollPoint)});
+  }
+  const all=orderedItems(),visible=all.filter(isOrderVisible),siblings=visible.filter(el=>el!==state.button);
+  let index=siblings.findIndex(el=>{const r=el.getBoundingClientRect();return pos<(vertical?r.top+r.height/2:r.left+r.width/2)});
+  if(index<0)index=siblings.length;siblings.splice(index,0,state.button);
+  const changed=visible.some((el,i)=>el!==siblings[i]);
+  if(changed){
+    const before=new Map(siblings.filter(el=>el!==state.button).map(el=>[el,el.getBoundingClientRect()]));
+    for(const el of siblings)if(el!==state.button)itemMotion.get(el)?.cancel();
+    let i=0;for(const el of all)if(isOrderVisible(el))siblings[i++].style.order=String(all.indexOf(el));
+    if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)for(const el of siblings){
+      if(el===state.button||!el.animate)continue;const old=before.get(el),now=el.getBoundingClientRect(),dx=old.left-now.left,dy=old.top-now.top;
+      if(dx||dy)itemMotion.set(el,el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'translate(0,0)'}],{duration:180,easing:'cubic-bezier(.2,.8,.2,1)'}));
+    }
+  }
+  const rect=state.button.getBoundingClientRect();
+  state.dx=event.clientX-state.grabX-(rect.left-state.dx);state.dy=event.clientY-state.grabY-(rect.top-state.dy);
+  state.button.style.translate=state.dx+'px '+state.dy+'px';
+}
+async function finishReorder(event,cancel=false){
+  const state=reorder;if(!state||event.pointerId!==state.pointerId)return;
+  reorder=null;if(state.scrollFrame)window.cancelAnimationFrame?.(state.scrollFrame);document.body.classList.remove('reordering');state.button.classList.remove('dragging');
+  const offset=state.button.style.translate;state.button.style.translate='';
+  if(state.moved&&!cancel&&state.button.animate&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)state.button.animate([{translate:offset},{translate:'0px 0px'}],{duration:160,easing:'cubic-bezier(.2,.8,.2,1)'});
+  if(state.button.hasPointerCapture?.(state.pointerId))state.button.releasePointerCapture(state.pointerId);
+  const ids=orderedItems().map(el=>el.dataset.orderKey);
+  if(!state.moved){dragId=null;return;}
+  suppressClickUntil=Date.now()+400;
+  try{if(!cancel&&ids.join('\0')!==state.original.join('\0')){await invoke('dock_items_reorder',{ids});cfg.item_order=ids;}}
+  catch(e){error(e)}finally{dragId=null;if(cancel)applyItemOrder();await refresh();}
+}
+document.addEventListener('pointermove',moveReorder);
+document.addEventListener('pointerup',event=>finishReorder(event));
+document.addEventListener('pointercancel',event=>finishReorder(event,true));
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&reorder)finishReorder({pointerId:reorder.pointerId},true)});
+window.addEventListener('blur',()=>{if(reorder)finishReorder({pointerId:reorder.pointerId},true)});
+
 async function activate(id,newInstance){
   const button=[...$('apps').children].find(b=>b.dataset.id===id),item=items.find(i=>i.id===id);
   const feedback=animCfg?.dock_click_feedback||'bounce';
