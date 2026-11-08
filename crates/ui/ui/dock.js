@@ -156,10 +156,10 @@ async function activate(id,newInstance){
 
 }
 function showLabel(button){
-  if(!cfg?.show_labels||menuItem||(!button.matches(':hover')&&!button.matches(':focus-visible')))return;const item=items.find(i=>i.id===button.dataset.id);if(!item)return;
+  if(dragId||!cfg?.show_labels||menuItem||(!button.matches(':hover')&&!button.matches(':focus-visible')))return;const item=items.find(i=>i.id===button.dataset.id);if(!item)return;
   const label=$('label');label.textContent=item.name+(item.windows>1?' · '+item.windows+' windows':'');label.hidden=false;
   const r=button.getBoundingClientRect(),l=label.getBoundingClientRect();
-  let x=r.x+(r.width-l.width)/2,y=r.y-l.height-8;
+  let x=r.x+(r.width-l.width)/2,y=r.y-l.height-5;
   if(cfg.position==='top')y=r.bottom+8;
   if(cfg.position==='left'){x=r.right+8;y=r.y+(r.height-l.height)/2}
   if(cfg.position==='right'){x=r.x-l.width-8;y=r.y+(r.height-l.height)/2}
