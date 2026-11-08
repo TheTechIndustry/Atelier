@@ -1549,13 +1549,14 @@ fn ensure_window(app: &tauri::AppHandle) -> Result<(), String> {
 }
 fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String> {
     let state = app.state::<DockState>();
-    if !c.enabled || c.maximized_bottom_gap == 0 || super::dock_test_mode() {
+    let gap_val = c.effective_bottom_gap();
+    if !c.enabled || gap_val == 0 || super::dock_test_mode() {
         state.remove_gap_appbar();
         return Ok(());
     }
     let previous = *state.gap_appbar.lock().map_err(|e| e.to_string())?;
     if previous
-        .is_some_and(|(_, monitor, gap)| monitor == c.monitor && gap == c.maximized_bottom_gap)
+        .is_some_and(|(_, monitor, gap)| monitor == c.monitor && gap == gap_val)
     {
         return Ok(());
     }
@@ -1565,7 +1566,11 @@ fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String
             "dock-gap",
             tauri::WebviewUrl::App("dock-gap.html".into()),
         )
+        .title("Atelier Work Area")
+        .background_color(tauri::window::Color(0, 0, 0, 0))
         .decorations(false)
+        .transparent(true)
+        .shadow(false)
         .skip_taskbar(true)
         .visible(false)
         .focused(false)
@@ -1576,7 +1581,11 @@ fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String
     let window = app
         .get_webview_window("dock-gap")
         .ok_or("Work area window unavailable")?;
+    let _ = window.set_ignore_cursor_events(true);
     let handle = window.hwnd().map_err(|e| e.to_string())?;
+    unsafe {
+        let _ = ShowWindow(HWND(handle.0 as _), SW_HIDE);
+    }
     let monitors = app.available_monitors().map_err(|e| e.to_string())?;
     let monitor = monitors
         .get(c.monitor)
@@ -1584,7 +1593,7 @@ fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String
         .ok_or("No monitor available")?;
     let pos = monitor.position();
     let size = monitor.size();
-    let height = ((c.maximized_bottom_gap as f64 * monitor.scale_factor()).round() as i32)
+    let height = ((gap_val as f64 * monitor.scale_factor()).round() as i32)
         .min(size.height as i32 - 1)
         .max(1);
     let mut data = APPBARDATA {
@@ -1618,7 +1627,7 @@ fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String
         return Err("Windows could not set the dock work area".into());
     }
     *state.gap_appbar.lock().map_err(|e| e.to_string())? =
-        Some((handle.0 as isize, c.monitor, c.maximized_bottom_gap));
+        Some((handle.0 as isize, c.monitor, gap_val));
     Ok(())
 }
 fn fullscreen_on_dock_monitor(app: &tauri::AppHandle, c: &DockConfig) -> bool {
@@ -1681,6 +1690,15 @@ fn sync_dock_visibility(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), St
         return Ok(());
     };
     let fullscreen = fullscreen_on_dock_monitor(app, c);
+    if let Some(backdrop) = app.get_webview_window("dock-backdrop") {
+        if !c.enabled || c.material == "solid" {
+            let _ = app.run_on_main_thread(super::dock_glass::clear);
+            let _ = backdrop.destroy();
+        } else if fullscreen {
+            let _ = app.run_on_main_thread(super::dock_glass::clear);
+            let _ = backdrop.hide();
+        }
+    }
     if let Some(should_show) = dock_visibility_action(
         c.enabled,
         fullscreen,
@@ -1716,8 +1734,9 @@ fn workarea_changed(old: &DockConfig, new: &DockConfig) -> bool {
     old.enabled != new.enabled
         || (old.enabled
             && new.enabled
-            && (old.maximized_bottom_gap != new.maximized_bottom_gap
-                || (new.maximized_bottom_gap != 0 && old.monitor != new.monitor)))
+            && (old.effective_bottom_gap() != new.effective_bottom_gap()
+                || old.full_width != new.full_width
+                || (new.effective_bottom_gap() != 0 && old.monitor != new.monitor)))
 }
 pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     if !super::dock_test_mode() {
