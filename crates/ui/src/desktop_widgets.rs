@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
 const RESIZE_MARGIN: u32 = 18;
-const KINDS: [&str; 10] = [
+pub const KINDS: [&str; 107] = [
     "clock",
     "calendar",
     "system",
@@ -14,6 +14,103 @@ const KINDS: [&str; 10] = [
     "photo",
     "countdown",
     "audio",
+    "ai_claude",
+    "ai_claude_plan",
+    "ai_chatgpt",
+    "ai_gemini",
+    "ai_deepseek",
+    "ai_grok",
+    "ai_glm",
+    "ai_perplexity",
+    "ai_cursor",
+    "ai_copilot",
+    "ai_ollama",
+    "ai_opencode",
+    "ai_openai_balance",
+    "ai_anthropic_balance",
+    "dev_github_contrib",
+    "dev_github_prs",
+    "dev_github_issues",
+    "dev_github_stars",
+    "dev_github_notif",
+    "dev_gitlab_ci",
+    "dev_leetcode",
+    "dev_wakatime",
+    "dev_npm_downloads",
+    "dev_crates_downloads",
+    "dev_pypi_downloads",
+    "dev_docker",
+    "dev_vercel",
+    "dev_stackoverflow",
+    "rev_stripe_mrr",
+    "rev_stripe_today",
+    "rev_stripe_net",
+    "rev_polar",
+    "rev_lemonsqueezy",
+    "rev_dodo",
+    "rev_datafast",
+    "rev_google_analytics",
+    "rev_shopify",
+    "rev_paddle",
+    "rev_appstore",
+    "rev_playstore",
+    "fin_btc",
+    "fin_eth",
+    "fin_sol",
+    "fin_crypto_list",
+    "fin_sp500",
+    "fin_nasdaq",
+    "fin_stock_aapl",
+    "fin_stock_nvda",
+    "fin_stock_tsla",
+    "fin_forex_usdeur",
+    "fin_forex_usduah",
+    "fin_gold",
+    "prod_day_timeline",
+    "prod_screentime",
+    "prod_pomodoro",
+    "prod_timer",
+    "prod_stopwatch",
+    "prod_todos",
+    "prod_notes_memo",
+    "prod_calendar_event",
+    "prod_currency_calc",
+    "prod_minimal_clock",
+    "prod_world_clock",
+    "prod_habits",
+    "prod_water",
+    "prod_standup",
+    "prod_quote",
+    "prod_year_progress",
+    "prod_gcal",
+    "prod_todo_list",
+    "prod_todoist",
+    "prod_calculator",
+    "prod_clipboard",
+    "sys_cpu",
+    "sys_ram",
+    "sys_gpu",
+    "sys_thermals",
+    "sys_disk_c",
+    "sys_disk_d",
+    "sys_network_speed",
+    "sys_ping",
+    "sys_uptime",
+    "sys_processes",
+    "sys_fans",
+    "sys_wifi",
+    "sys_bluetooth",
+    "sys_vram",
+    "ctrl_volume",
+    "ctrl_mic_mute",
+    "ctrl_brightness",
+    "ctrl_audio_switch",
+    "ctrl_recycle_bin",
+    "util_hackernews",
+    "util_rss",
+    "util_nasa_apod",
+    "util_air_quality",
+    "util_sun_moon",
 ];
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -61,6 +158,8 @@ pub struct WidgetConfig {
     pub bar_count: u32,
     pub hide_when_silent: bool,
     pub pause_fullscreen: bool,
+    #[serde(default)]
+    pub custom: serde_json::Value,
 }
 impl Default for WidgetConfig {
     fn default() -> Self {
@@ -108,6 +207,7 @@ impl Default for WidgetConfig {
             bar_count: 32,
             hide_when_silent: false,
             pause_fullscreen: false,
+            custom: serde_json::Value::Null,
         }
     }
 }
@@ -140,15 +240,15 @@ fn normalize(c: &mut WidgetConfig) -> Result<(), String> {
             "media" => "#7651bb",
             "weather" => "#447cb7",
             "notes" => "#fff1a6",
-            _ => "#f8f9fc",
+            _ => "#161720",
         }
         .into();
     }
     if c.foreground.is_empty() {
-        c.foreground = if ["clock", "media", "weather", "audio"].contains(&c.kind.as_str()) {
-            "#ffffff"
-        } else {
+        c.foreground = if c.kind == "notes" {
             "#202332"
+        } else {
+            "#ffffff"
         }
         .into();
     }
