@@ -329,7 +329,7 @@ fn apply(app: &tauri::AppHandle, c: &WidgetConfig, index: usize) -> Result<(), S
     let label = format!("widget-{}", c.kind);
     if !c.enabled {
         if let Some(w) = app.get_webview_window(&label) {
-            w.hide().map_err(|e| e.to_string())?;
+            hide_widget_window(&w);
         }
         return Ok(());
     }
@@ -387,9 +387,87 @@ fn apply(app: &tauri::AppHandle, c: &WidgetConfig, index: usize) -> Result<(), S
         c.height + 2 * RESIZE_MARGIN,
     ))
     .map_err(|e| e.to_string())?;
-    w.show().map_err(|e| e.to_string())?;
+    #[cfg(windows)]
+    {
+        pin_to_desktop(&w);
+    }
+    #[cfg(not(windows))]
+    {
+        w.show().map_err(|e| e.to_string())?;
+    }
     let _ = app.emit_to(&label, "widget-config", c);
     Ok(())
+}
+
+pub fn hide_widget_window(w: &tauri::WebviewWindow) {
+    #[cfg(windows)]
+    {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
+        if let Ok(raw) = w.hwnd() {
+            let hwnd = HWND(raw.0 as _);
+            unsafe {
+                let _ = ShowWindow(hwnd, SW_HIDE);
+            }
+        }
+    }
+    let _ = w.hide();
+}
+
+pub fn pin_to_desktop(w: &tauri::WebviewWindow) {
+    #[cfg(windows)]
+    {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE,
+            HWND_BOTTOM, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+            WS_EX_NOACTIVATE,
+        };
+        if let Ok(raw) = w.hwnd() {
+            let hwnd = HWND(raw.0 as _);
+            unsafe {
+                let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | (WS_EX_NOACTIVATE.0 as isize));
+                let _ = SetWindowPos(
+                    hwnd,
+                    HWND_BOTTOM,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                );
+                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+            }
+        }
+    }
+}
+
+pub fn pin_window_to_desktop(w: &tauri::Window) {
+    #[cfg(windows)]
+    {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, HWND_BOTTOM,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, WS_EX_NOACTIVATE,
+        };
+        if let Ok(raw) = w.hwnd() {
+            let hwnd = HWND(raw.0 as _);
+            unsafe {
+                let ex = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex | (WS_EX_NOACTIVATE.0 as isize));
+                let _ = SetWindowPos(
+                    hwnd,
+                    HWND_BOTTOM,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                );
+            }
+        }
+    }
 }
 pub fn start(app: &tauri::AppHandle) -> Result<(), String> {
     let configs = app
