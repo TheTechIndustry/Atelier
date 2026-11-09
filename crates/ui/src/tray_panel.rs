@@ -1,5 +1,36 @@
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
 
+pub fn app_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let version = tauri::menu::MenuItem::with_id(
+        app,
+        "atelier-version",
+        format!("Atelier {}", app.package_info().version),
+        false,
+        None::<&str>,
+    )?;
+    tauri::menu::MenuBuilder::new(app)
+        .item(&version)
+        .separator()
+        .text("atelier-show", "Open Atelier")
+        .separator()
+        .text("atelier-quit", "Quit Atelier")
+        .build()
+}
+
+pub fn handle_menu_event(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
+    let action = match event.id().as_ref() {
+        "atelier-show" => "show",
+        "atelier-quit" => "quit",
+        _ => return,
+    };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = tray_action(app, action.into()).await {
+            tracing::error!(%error, "Could not perform Atelier tray action");
+        }
+    });
+}
+
 #[derive(Default)]
 pub struct TrayUsage(pub crate::app_usage::UsageMonitor);
 
@@ -20,7 +51,7 @@ pub fn create(app: &tauri::AppHandle) -> tauri::Result<()> {
         .visible(false)
         .focused(false)
         .disable_drag_drop_handler()
-        .inner_size(240., 228.)
+        .inner_size(220., 120.)
         .build()?;
     Ok(())
 }
@@ -48,8 +79,8 @@ pub fn show(app: &tauri::AppHandle, x: f64, y: f64) -> tauri::Result<()> {
     if let Some(monitor) = monitor {
         let area = monitor.work_area();
         let scale = monitor.scale_factor();
-        let width = (240. * scale).round() as i32;
-        let height = (228. * scale).round() as i32;
+        let width = (220. * scale).round() as i32;
+        let height = (120. * scale).round() as i32;
         let left = area.position.x;
         let top = area.position.y;
         let right = left + area.size.width as i32;
