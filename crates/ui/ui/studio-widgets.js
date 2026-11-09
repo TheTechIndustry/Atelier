@@ -15,8 +15,39 @@
   const customSection = document.getElementById('widget-detail-custom-section');
   const customFields = document.getElementById('widget-detail-custom-fields');
   const appearanceFields = document.getElementById('widget-detail-appearance-fields');
+  const dockAppearanceFields = document.getElementById('widget-detail-dock-fields');
   const colorPresetsWrap = document.getElementById('widget-color-presets');
   const actionsSection = document.getElementById('widget-detail-actions-section');
+  const previewModeSwitch = document.getElementById('widget-preview-mode-switch');
+  let currentPreviewMode = 'desktop';
+  let currentDrawerConfig = null, currentDrawerEntry = null;
+
+  function updateDrawerTabs(mode) {
+    currentPreviewMode = mode;
+    const desktopSection = document.getElementById('widget-detail-appearance-section');
+    const taskbarSection = document.getElementById('widget-detail-dock-section');
+    if (desktopSection) desktopSection.style.display = mode === 'desktop' ? 'block' : 'none';
+    if (taskbarSection) taskbarSection.style.display = mode === 'taskbar' ? 'block' : 'none';
+    if (previewModeSwitch) {
+      for (const b of previewModeSwitch.querySelectorAll('.widget-mode-tab')) {
+        const active = (b.dataset.mode || 'desktop') === mode;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', String(active));
+      }
+    }
+  }
+
+  if (previewModeSwitch) {
+    for (const btn of previewModeSwitch.querySelectorAll('.widget-mode-tab')) {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode || 'desktop';
+        updateDrawerTabs(mode);
+        if (currentDrawerConfig && currentDrawerEntry) {
+          renderDrawer(currentDrawerConfig, currentDrawerEntry);
+        }
+      });
+    }
+  }
 
   const catalog = window.WIDGETS_CATALOG || [];
   const categories = window.WIDGET_CATEGORIES || [
@@ -58,6 +89,8 @@
     photo: [],
     countdown: []
   };
+
+  const dockDisplayDefaults={show_date:true,show_seconds:false,hour_24:true,show_month:true,show_weekday:true,show_cpu:true,show_memory:true,show_gpu:false,show_network:false,show_disk:false,show_details:true,show_artist:true,show_album:false,show_status:true,show_artwork:true,show_forecast:true,fahrenheit:false};
 
   const stylePresets = [
     { id: 'dark', name: 'Dark Obsidian', bg: '#161720', fg: '#ffffff', border: '#2a2b36', borderWidth: 1, opacity: 95 },
@@ -149,17 +182,21 @@
   }
 
   function widgetAuthInfo(entry, c) {
+    if((['ai_openai_balance','ai_anthropic_balance'].includes(entry?.id)&&c.custom?.metric==='Prepaid balance')||(entry?.id==='rev_stripe_mrr'&&c.custom?.auth_mode==='Billing page')){
+      const connected=c.custom?.billing_verified===true;
+      return {required:true,authorized:connected,isAccountConnected:connected,provider:'billing',sourceProvider:entry.id==='ai_openai_balance'?'openai':entry.id==='rev_stripe_mrr'?'stripe_mrr':'anthropic',accountName:'Billing page',keyName:'Billing connection',fieldKey:''};
+    }
+    if(['ai_gemini','ai_claude','ai_claude_plan'].includes(entry?.id)){
+      const connected=c.custom?.auth_provider==='antigravity'&&c.custom?.account_verified===true;
+      return {required:true,authorized:connected,isAccountConnected:connected,provider:'antigravity',accountName:'Antigravity Account',keyName:'Antigravity account',fieldKey:''};
+    }
     if (!entry?.fields) return { required: false, authorized: true, keyName: '', fieldKey: '' };
-    const authField = entry.fields.find(f => 
-      f.type === 'password' || 
-      ['api_key', 'token', 'access_token', 'session_token', 'secret'].includes(f.key) ||
-      f.auth === true
-    );
+    const authField = entry.fields.find(f => (!f.when || (c.custom?.[f.when.key] ?? entry.fields.find(v=>v.key===f.when.key)?.default) === f.when.value) && !/\boptional\b/i.test(f.label || '') && (f.type === 'password' || ['api_key', 'token', 'access_token', 'session_token', 'secret'].includes(f.key) || f.auth === true));
     if (!authField) return { required: false, authorized: true, keyName: '', fieldKey: '' };
 
-    const val = c.custom?.[authField.key] || c[authField.key];
-    const isAccountConnected = c.custom?.auth_provider === 'antigravity' || c.custom?.auth_provider === 'codex' || c.custom?.auth_provider === 'account';
-    const authorized = isAccountConnected || (typeof val === 'string' && val.trim().length > 0 && !val.startsWith('session_auth_'));
+    const val = c.custom?.[authField.key] || c[authField.key] || authField.default;
+    const isAccountConnected = c.custom?.auth_provider === 'antigravity' && c.custom?.account_verified === true;
+    const authorized = isAccountConnected || (c.custom?.credential_verified === true && typeof val === 'string' && val.trim().length > 0 && !val.startsWith('session_auth_'));
     return {
       required: true,
       authorized,
@@ -186,9 +223,13 @@
       pending = pending
         .catch(() => {})
         .then(() => invoke('set_widget', { config: copy }))
-        .then(() => { status.textContent = ''; })
+        .then(() => {
+          status.textContent = '';
+          const dockPreview = document.getElementById('dock-preview');
+          try { dockPreview?.contentWindow?.postMessage({ widgetConfig: copy }, '*'); } catch {}
+        })
         .catch(e => { status.textContent = 'Could not update widget: ' + String(e); });
-    }, 180);
+    }, 100);
   }
 
   function setDetail(open) {
@@ -216,6 +257,10 @@
     wrap.replaceChildren();
     wrap.className = 'widget-preview';
     applyWidgetStyling(wrap, c, c.kind);
+    renderWidgetContent(wrap, c, entry);
+  }
+
+  function renderWidgetContent(wrap, c, entry) {
 
     if (c.livePreviewData) {
       const metric = c.livePreviewData;
@@ -496,6 +541,37 @@
       return;
     }
 
+    if (t === 'sys_tray' || c.kind === 'sys_tray') {
+      wrap.innerHTML = `
+        <div class="luma-row-card" style="display:flex;align-items:center;gap:12px;padding:12px;box-sizing:border-box;">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.08);display:grid;place-items:center;color:#9ca3af;flex:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg>
+          </div>
+          <div class="luma-main-content">
+            <div class="luma-title">${c.custom?.label || 'System Tray'}</div>
+            <div class="luma-sub">Click to open hidden tray icons</div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    if (t === 'app_folder' || c.kind === 'app_folder') {
+      wrap.innerHTML = `
+        <div class="luma-row-card" style="display:flex;align-items:center;gap:12px;padding:12px;box-sizing:border-box;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;padding:3px;box-sizing:border-box;flex:none;">
+            <div style="background:#38bdf8;border-radius:2.5px;"></div>
+            <div style="background:#10b981;border-radius:2.5px;"></div>
+            <div style="background:#f59e0b;border-radius:2.5px;"></div>
+            <div style="background:#ec4899;border-radius:2.5px;"></div>
+          </div>
+          <div class="luma-main-content">
+            <div class="luma-title">${c.custom?.folder_name || 'Apps'}</div>
+            <div class="luma-sub">App Group · Click to expand launcher</div>
+          </div>
+        </div>`;
+      return;
+    }
+
     if (c.kind === 'battery') {
       wrap.innerHTML = `
         <div class="luma-row-card">
@@ -510,7 +586,7 @@
 
     if (c.kind === 'weather') {
       const city = c.city || 'Texas';
-      wrap.className = 'widget-preview weather-preview';
+      wrap.classList.add('weather-preview');
       wrap.innerHTML = `
         <div class="luma-weather-card">
           <div class="luma-weather-left">
@@ -594,15 +670,97 @@
       </div>`;
   }
 
+  function renderTaskbarPreview(wrap, c, entry) {
+    wrap.replaceChildren();
+    wrap.className = 'widget-detail-preview widget-detail-preview-taskbar';
+    const appearance = c.custom?.dock_appearance || {};
+    const custom = appearance.custom_style === true;
+    const color = (value, fallback) => /^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback;
+    const textScale = Math.max(0.6, Math.min(1.6, (Number(appearance.text_scale) || 100) / 100));
+
+    const capsule = document.createElement('div');
+    capsule.className = 'widget-preview-capsule';
+    capsule.style.setProperty('--compact-scale', String(textScale));
+
+    const requested = Math.max(0, Math.min(800, Number(appearance.width) || 0));
+    if (requested > 0) {
+      capsule.style.width = Math.max(100, requested) + 'px';
+    } else {
+      capsule.style.width = 'auto';
+      capsule.style.minWidth = '140px';
+    }
+
+    if (custom) {
+      const hex = color(appearance.background, '#20212b');
+      const alpha = Math.max(0.1, Math.min(1, (Number(appearance.opacity) || 85) / 100));
+      const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+      capsule.style.background = `rgba(${rgb.join(',')},${alpha})`;
+      capsule.style.color = color(appearance.foreground, '#ffffff');
+      capsule.style.borderColor = 'rgba(255,255,255,0.18)';
+    } else {
+      capsule.style.background = 'rgba(255, 255, 255, 0.08)';
+      capsule.style.color = '#ffffff';
+      capsule.style.borderColor = 'rgba(255, 255, 255, 0.14)';
+    }
+
+    const iconSvg = icons[entry?.iconKey] || icons.generic || '';
+    const accentColor = custom ? color(appearance.accent, '#3b82f6') : '#3b82f6';
+    const opt = appearance.options || {};
+
+    if (c.kind === 'system') {
+      const showCpu = opt.show_cpu !== false;
+      const showMem = opt.show_memory !== false;
+      const showGpu = Boolean(opt.show_gpu);
+      const showDisk = Boolean(opt.show_disk);
+      const showNet = Boolean(opt.show_network);
+      const showDetails = Boolean(opt.show_details);
+
+      const items = [];
+      if (showCpu) items.push(['CPU', 32, '4.2 GHz']);
+      if (showMem) items.push(['RAM', 64, '10.2 GB']);
+      if (showGpu) items.push(['GPU', 23, '52 °C']);
+      if (showDisk) items.push(['Disk', 48, 'C:']);
+      if (showNet) items.push(['Net', 15, '12 MB/s']);
+
+      capsule.innerHTML = `
+        <div style="display:flex;align-items:center;gap:clamp(6px,2cqw,14px);width:100%;justify-content:space-around;">
+          ${items.map(([name, val, det]) => `
+            <div style="display:flex;align-items:center;gap:5px;flex:0 0 auto;">
+              <div style="position:relative;width:${Math.round(26 * textScale)}px;height:${Math.round(26 * textScale)}px;border-radius:50%;background:conic-gradient(#54c777 ${val}%, rgba(255,255,255,.15) 0);display:grid;place-items:center;">
+                <div style="position:absolute;width:72%;height:72%;border-radius:50%;background:#161720;"></div>
+                <b style="position:relative;font-size:${Math.round(8 * textScale)}px;font-weight:700;">${val}%</b>
+              </div>
+              <div style="display:flex;flex-direction:column;justify-content:center;line-height:1;">
+                <strong style="font-size:${Math.round(10 * textScale)}px;font-weight:600;">${name}</strong>
+                ${showDetails ? `<small style="font-size:${Math.round(8 * textScale)}px;opacity:.7;">${det}</small>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>`;
+    } else {
+      renderWidgetContent(capsule, c, entry);
+    }
+
+    wrap.append(capsule);
+  }
+
   function renderDrawer(c, entry) {
     if (!c) return;
+    currentDrawerConfig = c;
+    currentDrawerEntry = entry;
+    updateDrawerTabs(currentPreviewMode);
     const widgetName = entry?.name || legacyNames[c.kind] || c.kind;
     const categoryName = entry?.category?.toUpperCase() || (c.kind === 'system' ? 'SYSTEM' : 'PRODUCTIVITY');
 
     if (detailBadge) detailBadge.textContent = `${categoryName} · ${widgetName.toUpperCase()}`;
 
     function refreshDrawerPreview() {
-      if (detailPreview) renderWidgetPreview(detailPreview, c, entry);
+      if (detailPreview) {
+        if (currentPreviewMode === 'taskbar') {
+          renderTaskbarPreview(detailPreview, c, entry);
+        } else {
+          renderWidgetPreview(detailPreview, c, entry);
+        }
+      }
       if (previewUpdates[c.kind]) previewUpdates[c.kind]();
     }
     refreshDrawerPreview();
@@ -788,6 +946,37 @@
       }
     }
 
+    if (dockAppearanceFields) {
+      dockAppearanceFields.replaceChildren();
+      if (!c.custom || typeof c.custom !== 'object') c.custom = {};
+      if (!c.custom.dock_appearance || typeof c.custom.dock_appearance !== 'object') c.custom.dock_appearance = {};
+      const appearance=c.custom.dock_appearance;
+      const row=(label,input)=>{const wrap=document.createElement('label');wrap.className='widget-detail-row';const name=document.createElement('span');name.textContent=label;wrap.append(name,input);dockAppearanceFields.append(wrap)};
+      const match=document.createElement('input');match.type='checkbox';match.className='switch';match.checked=appearance.custom_style!==true;
+      match.onchange=()=>{appearance.custom_style=!match.checked;save(c);renderDrawer(c,entry)};
+      row('Follow taskbar style',match);
+      const width=document.createElement('input');width.type='number';width.min='0';width.max='800';width.step='10';width.value=appearance.width||0;
+      width.title='0 uses automatic width';width.onchange=()=>{appearance.width=Math.max(0,Math.min(800,Number(width.value)||0));if(appearance.width>0)appearance.width=Math.max(100,appearance.width);width.value=appearance.width;refreshDrawerPreview();save(c);};
+      row('Length (0 = auto)',width);
+      const scale=document.createElement('input');scale.type='number';scale.min='60';scale.max='160';scale.step='5';scale.value=appearance.text_scale||100;
+      scale.onchange=()=>{appearance.text_scale=Math.max(60,Math.min(160,Number(scale.value)||100));scale.value=appearance.text_scale;refreshDrawerPreview();save(c);};
+      row('Text size (%)',scale);
+      if(!appearance.options || typeof appearance.options!=='object')appearance.options={};
+      for(const [key,label] of legacyOptions[c.kind]||[]){
+        const input=document.createElement('input');input.type='checkbox';input.className='switch';
+        input.checked=typeof appearance.options[key]==='boolean'?appearance.options[key]:Boolean(dockDisplayDefaults[key]);
+        input.onchange=()=>{appearance.options[key]=input.checked;refreshDrawerPreview();save(c);};row(label,input);
+      }
+      if(appearance.custom_style){
+        for(const [key,label,fallback] of [['background','Background','#20212b'],['foreground','Text color','#ffffff'],['accent','Button color','#3b82f6']]){
+          const input=document.createElement('input');input.type='color';input.value=appearance[key]||fallback;
+          input.oninput=()=>{appearance[key]=input.value;refreshDrawerPreview();save(c);};row(label,input);
+        }
+        const opacity=document.createElement('input');opacity.type='number';opacity.min='10';opacity.max='100';opacity.value=appearance.opacity??85;
+        opacity.onchange=()=>{appearance.opacity=Math.max(10,Math.min(100,Number(opacity.value)||85));opacity.value=appearance.opacity;refreshDrawerPreview();save(c);};row('Opacity (%)',opacity);
+      }
+    }
+
     if (customFields && customSection) {
       customFields.replaceChildren();
 
@@ -808,56 +997,37 @@
         authCard.style.cssText = 'padding:14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border-strong);display:flex;flex-direction:column;gap:12px;margin-bottom:12px;';
         if (auth.authorized) {
           const isAgy = c.custom.auth_provider === 'antigravity';
+          const isBilling=auth.provider==='billing',billingProvider=auth.sourceProvider;
           authCard.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
               <div style="display:flex;align-items:center;gap:8px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 <div>
                   <div style="font-size:12px;font-weight:600;color:#22c55e">Connected: ${auth.accountName || 'Real Credentials'}</div>
-                  <div style="font-size:10px;color:var(--muted)">Signed-in application session (Live Quotas)</div>
+                  <div style="font-size:10px;color:var(--muted)">${isBilling?'Balance selected':'Credentials verified'}</div>
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
-                ${isAgy ? '<button type="button" class="auth-sync-btn" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 8px;cursor:pointer;">Sync Quotas</button>' : ''}
+                ${isAgy||isBilling ? '<button type="button" class="auth-sync-btn" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 8px;cursor:pointer;">'+(isBilling?'Open Billing':'Sync Quotas')+'</button>' : ''}
                 <button type="button" class="auth-disconnect-btn" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;text-decoration:underline;">Disconnect</button>
               </div>
             </div>`;
           const syncBtn = authCard.querySelector('.auth-sync-btn');
-          if (syncBtn) {
-            syncBtn.onclick = async () => {
-              syncBtn.disabled = true;
-              syncBtn.textContent = 'Syncing...';
-              try {
-                const live = await window.WidgetMetrics?.getLiveAntigravityQuota();
-                if (live) {
-                  if (c.kind === 'ai_gemini') {
-                    c.custom.five_hour_pct = live.gemini5h.pct;
-                    c.custom.five_hour_reset = live.gemini5h.reset;
-                    c.custom.weekly_pct = live.geminiWeekly.pct;
-                    c.custom.weekly_reset = live.geminiWeekly.reset;
-                  } else if (c.kind === 'ai_claude' || c.kind === 'ai_claude_plan') {
-                    c.custom.session_pct = live.claudeSession.pct;
-                    c.custom.weekly_pct = live.claudeWeekly.pct;
-                    c.custom.session_reset = live.claudeSession.reset;
-                  } else if (c.kind === 'ai_chatgpt') {
-                    c.custom.session_pct = live.claudeSession.pct;
-                    c.custom.weekly_pct = live.claudeWeekly.pct;
-                  }
-                  save(c);
-                  refreshDrawerPreview();
-                  renderDrawer(c, entry);
-                }
-              } catch (err) {
-                console.warn(err);
-              }
-            };
-          }
-          authCard.querySelector('.auth-disconnect-btn').onclick = () => {
+          if(syncBtn)syncBtn.onclick=async()=>{
+            if(isBilling){try{await invoke('widget_billing_open',{provider:billingProvider})}catch(error){syncBtn.title=String(error.message||error)}return}
+            syncBtn.disabled=true;syncBtn.textContent='Syncing…';
+            const live=await window.WidgetMetrics?.getLiveAntigravityQuota();
+            const available=c.kind==='ai_gemini'?live?.gemini5h||live?.geminiWeekly:live?.claudeSession||live?.claudeWeekly;
+            syncBtn.textContent=available?'Synced':'Unavailable';syncBtn.disabled=false;
+          };
+          authCard.querySelector('.auth-disconnect-btn').onclick = async () => {
+            if(isBilling){try{await invoke('widget_billing_disconnect',{provider:billingProvider});delete c.custom.billing_verified;syncCardAuth(c.kind);refreshDrawerPreview();renderDrawer(c,entry);save(c)}catch(error){authCard.title=String(error.message||error)}return;}
             const k = auth.fieldKey || 'api_key';
             delete c.custom[k];
             delete c.custom.auth_provider;
             delete c.custom.account_name;
-            c.enabled = false;
+            delete c.custom.account_verified;
+            delete c.custom.credential_verified;
             syncCardAuth(c.kind);
             refreshDrawerPreview();
             renderDrawer(c, entry);
@@ -867,78 +1037,63 @@
           authCard.innerHTML = `
             <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>Sign in with App Account</span>
+              <span>Service connection</span>
             </div>
-            <p style="font-size:11px;color:var(--muted);margin:0;line-height:1.4">Connect with your signed-in local app account (Antigravity or Codex) to automatically sync real limits without entering API keys.</p>
+            <p style="font-size:11px;color:var(--muted);margin:0;line-height:1.4">Enter and verify the credentials required by this service. Local Antigravity quotas are available only for supported models.</p>
 
             <div style="display:flex;flex-direction:column;gap:8px;">
               <button type="button" class="connect-antigravity-btn" style="width:100%;min-height:36px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;background:#2563eb;color:#ffffff;border:none;border-radius:8px;cursor:pointer;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 <span>Connect Antigravity Account</span>
               </button>
-
-              <button type="button" class="connect-codex-btn" style="width:100%;min-height:34px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--surface3);border:1px solid var(--border-strong);color:var(--text);border-radius:8px;cursor:pointer;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                <span>Connect OpenAI Codex App</span>
-              </button>
             </div>
 
             <div style="margin-top:4px;border-top:1px solid var(--border);padding-top:10px;">
-              <p style="font-size:11px;color:var(--muted);margin:0 0 8px 0;">Or verify with a custom API key from below:</p>
-              <button type="button" class="auth-verify-btn" style="width:100%;min-height:32px;font-size:11px;background:var(--surface);border:1px solid var(--border-strong);color:var(--text);border-radius:6px;cursor:pointer;">Verify Manual API Key</button>
+              <p style="font-size:11px;color:var(--muted);margin:0 0 8px 0;">Verify the credentials configured below:</p>
+              <button type="button" class="auth-verify-btn" style="width:100%;min-height:32px;font-size:11px;background:var(--surface);border:1px solid var(--border-strong);color:var(--text);border-radius:6px;cursor:pointer;">Verify Connection</button>
               <div class="auth-verify-status" style="font-size:11px;display:none;line-height:1.3;margin-top:6px;"></div>
             </div>`;
 
           const agyBtn = authCard.querySelector('.connect-antigravity-btn');
-          const codexBtn = authCard.querySelector('.connect-codex-btn');
           const verifyBtn = authCard.querySelector('.auth-verify-btn');
           const statusEl = authCard.querySelector('.auth-verify-status');
+          if(c.kind==='ai_chatgpt'){
+            authCard.querySelector('p').textContent='Sign in with ChatGPT in your installed Codex CLI, then verify this connection. Atelier reads plan quotas through Codex app-server.';
+            verifyBtn.previousElementSibling.textContent='Set the Codex executable path below, or use codex.exe from PATH:';
+          }
+          const billingConnection=auth.provider==='billing',billingProvider=auth.sourceProvider;
+          if(billingConnection){authCard.querySelector('p').textContent='Open the official Billing page, sign in, and select the USD '+(billingProvider==='stripe_mrr'?'MRR amount':'credit balance')+' to display. The widget tracks that amount and its update time.';verifyBtn.previousElementSibling.textContent='Your browser session stays in the dedicated Billing window.';verifyBtn.textContent='Connect Billing page';}
 
+          const supportsAntigravity=['ai_gemini','ai_claude','ai_claude_plan'].includes(c.kind);
+          if(!supportsAntigravity)agyBtn.style.display='none';
+          if(supportsAntigravity)verifyBtn.parentElement.remove();
           agyBtn.onclick = async () => {
-            agyBtn.disabled = true;
-            agyBtn.style.opacity = '0.7';
-            c.custom.auth_provider = 'antigravity';
-            c.custom.account_name = 'Antigravity Account';
+            agyBtn.disabled=true;statusEl.style.display='block';statusEl.style.color='var(--text)';statusEl.textContent='Checking local account…';
             try {
-              const live = await window.WidgetMetrics?.getLiveAntigravityQuota();
-              if (live) {
-                if (c.kind === 'ai_gemini') {
-                  c.custom.five_hour_pct = live.gemini5h.pct;
-                  c.custom.five_hour_reset = live.gemini5h.reset;
-                  c.custom.weekly_pct = live.geminiWeekly.pct;
-                  c.custom.weekly_reset = live.geminiWeekly.reset;
-                } else if (c.kind === 'ai_claude' || c.kind === 'ai_claude_plan') {
-                  c.custom.session_pct = live.claudeSession.pct;
-                  c.custom.weekly_pct = live.claudeWeekly.pct;
-                  c.custom.session_reset = live.claudeSession.reset;
-                } else if (c.kind === 'ai_chatgpt') {
-                  c.custom.session_pct = live.claudeSession.pct;
-                  c.custom.weekly_pct = live.claudeWeekly.pct;
-                }
-              }
-            } catch (err) {
-              console.warn('Could not sync live quota:', err);
-            }
-            c.enabled = true;
-            save(c);
-            syncCardAuth(c.kind);
-            renderDrawer(c, entry);
-          };
-
-          codexBtn.onclick = () => {
-            c.custom.auth_provider = 'codex';
-            c.custom.account_name = 'OpenAI Codex Desktop';
-            c.custom.session_pct = 100;
-            c.custom.weekly_pct = 100;
-            c.enabled = true;
-            save(c);
-            syncCardAuth(c.kind);
-            renderDrawer(c, entry);
+              const live=await window.WidgetMetrics?.getLiveAntigravityQuota();
+              const available=c.kind==='ai_gemini' ? live?.gemini5h||live?.geminiWeekly : live?.claudeSession||live?.claudeWeekly;
+              if(!available)throw Error('No matching quota was returned. Open Antigravity and sign in first.');
+              c.custom.auth_provider='antigravity';c.custom.account_name='Antigravity Account';c.custom.account_verified=true;
+              save(c);syncCardAuth(c.kind);renderDrawer(c,entry);
+            } catch(err) { statusEl.style.color='#ef4444';statusEl.textContent=String(err.message||err);agyBtn.disabled=false; }
           };
 
           verifyBtn.onclick = async () => {
+            if(billingConnection){
+              verifyBtn.disabled=true;statusEl.style.display='block';statusEl.style.color='var(--muted)';statusEl.textContent='Sign in and select the balance in the Billing window.';
+              try{
+                await invoke('widget_billing_open',{provider:billingProvider});
+                for(let attempt=0;attempt<300;attempt++){
+                  if(!verifyBtn.isConnected)return;
+                  try{const sample=await invoke('widget_billing_snapshot',{provider:billingProvider});if(sample?.amount&&!sample.stale){c.custom.billing_verified=true;save(c);syncCardAuth(c.kind);renderDrawer(c,entry);return}}catch{}
+                  await new Promise(resolve=>setTimeout(resolve,2000));
+                }
+                throw Error('Select the credit amount in the Billing window, then connect again');
+              }catch(error){if(verifyBtn.isConnected){verifyBtn.disabled=false;statusEl.style.color='#ef4444';statusEl.textContent=String(error.message||error)}}return;
+            }
             const k = auth.fieldKey || 'api_key';
-            const inputVal = (c.custom[k] || '').trim();
+            const defaultValue = entry.fields.find(f=>f.key===k)?.default || '';
+            const inputVal = String(c.custom[k] || defaultValue).trim();
             if (!inputVal) {
               statusEl.style.display = 'block';
               statusEl.style.color = '#ef4444';
@@ -951,16 +1106,39 @@
             verifyBtn.innerHTML = `<svg class="spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><span>Verifying with service…</span>`;
             statusEl.style.display = 'none';
             try {
+              const verificationScope = JSON.stringify(c.custom);
+              const verifiedHost = c.kind === 'dev_gitlab_ci' ? String(c.custom?.host || 'gitlab.com').trim() : null;
+              const verifiedTeam = c.kind === 'ai_grok' ? String(c.custom?.team_id || '').trim() : null;
+              const verifiedStore = c.kind === 'rev_lemonsqueezy' ? String(c.custom?.store_id || '').trim() : null;
+              const verifiedWebsite = c.kind === 'rev_datafast' ? String(c.custom?.project_id || '').trim() : null;
+              const verifiedOrganization = c.kind === 'rev_polar' ? String(c.custom?.organization || '').trim() : null;
+              const verifiedEnvironment = ['rev_paddle','rev_dodo'].includes(c.kind) ? String(c.custom?.environment || 'live') : null;
+              const verifiedDomain = c.kind === 'rev_shopify' ? String(c.custom?.shop_domain || '').trim().toLowerCase() : null;
+              const verifiedProperty = c.kind === 'rev_google_analytics' ? String(c.custom?.property_id || '').trim() : null;
               if (window.WidgetMetrics?.verifyServiceKey) {
-                await window.WidgetMetrics.verifyServiceKey(c.kind, inputVal);
+                await window.WidgetMetrics.verifyServiceKey(c.kind, inputVal, c.custom || {});
+              } else {
+                throw Error('Verification is unavailable for this service');
               }
-              c.enabled = true;
+              if (JSON.stringify(c.custom) !== verificationScope) throw Error('Settings changed during verification; try again');
+              if (String(c.custom[k] || defaultValue).trim() !== inputVal) throw Error('Credentials changed during verification; try again');
+              if (verifiedHost !== null && String(c.custom?.host || 'gitlab.com').trim() !== verifiedHost) throw Error('GitLab host changed during verification; try again');
+              if (verifiedTeam !== null && String(c.custom?.team_id || '').trim() !== verifiedTeam) throw Error('xAI team changed during verification; try again');
+              if (verifiedStore !== null && String(c.custom?.store_id || '').trim() !== verifiedStore) throw Error('Store changed during verification; try again');
+              if (verifiedWebsite !== null && String(c.custom?.project_id || '').trim() !== verifiedWebsite) throw Error('Website changed during verification; try again');
+              if (verifiedOrganization !== null && String(c.custom?.organization || '').trim() !== verifiedOrganization) throw Error('Organization changed during verification; try again');
+              if (verifiedEnvironment !== null && String(c.custom?.environment || 'live') !== verifiedEnvironment) throw Error('Environment changed during verification; try again');
+              if (verifiedDomain !== null && String(c.custom?.shop_domain || '').trim().toLowerCase() !== verifiedDomain) throw Error('Shop domain changed during verification; try again');
+              if (verifiedProperty !== null && String(c.custom?.property_id || '').trim() !== verifiedProperty) throw Error('Analytics property changed during verification; try again');
+              c.custom.credential_verified = true;
+              delete c.custom.auth_provider;
+              delete c.custom.account_verified;
               save(c);
               syncCardAuth(c.kind);
               renderDrawer(c, entry);
             } catch (err) {
               verifyBtn.disabled = false;
-              verifyBtn.innerHTML = `<span>Verify Manual API Key</span>`;
+              verifyBtn.innerHTML = `<span>Verify Connection</span>`;
               statusEl.style.display = 'block';
               statusEl.style.color = '#ef4444';
               statusEl.textContent = 'Verification error: ' + (err.message || 'Invalid key');
@@ -972,6 +1150,7 @@
 
       if (entry?.fields?.length) {
         for (const f of entry.fields) {
+          if(f.when && (c.custom[f.when.key] ?? entry.fields.find(v=>v.key===f.when.key)?.default) !== f.when.value)continue;
           if (f.type === 'switch') {
             const input = document.createElement('input');
             input.type = 'checkbox';
@@ -979,6 +1158,8 @@
             input.checked = c.custom[f.key] != null ? c.custom[f.key] : (f.default || false);
             input.onchange = () => {
               c.custom[f.key] = input.checked;
+              if(auth.required)c.custom.credential_verified=false;
+              syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
             };
@@ -994,8 +1175,11 @@
             }
             sel.onchange = () => {
               c.custom[f.key] = sel.value;
+              if(auth.required)c.custom.credential_verified=false;
+              syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
+              if(['auth_mode','metric'].includes(f.key))renderDrawer(c,entry);
             };
             addCustomRow(f.label, sel);
           } else if (f.type === 'password') {
@@ -1008,6 +1192,7 @@
             input.value = c.custom[f.key] || f.default || '';
             input.oninput = () => {
               c.custom[f.key] = input.value.trim();
+              if(auth.required)c.custom.credential_verified=false;
               syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
@@ -1038,6 +1223,7 @@
             input.value = c.custom[f.key] || f.default || '';
             input.oninput = () => {
               c.custom[f.key] = input.value.trim();
+              if(auth.required)c.custom.credential_verified=false;
               syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
@@ -1047,7 +1233,7 @@
         }
       }
 
-      if ((entry?.template === 'timer' || c.kind === 'prod_timer') && !entry?.fields?.some(f => f.key === 'duration_minutes')) {
+      if ((entry?.template === 'timer' || c.kind === 'prod_timer') && !entry?.fields?.some(f => ['duration_minutes','duration_mins'].includes(f.key))) {
         const durInput = document.createElement('input');
         durInput.type = 'number';
         durInput.min = 1;
@@ -1071,7 +1257,7 @@
         addCustomRow('Timer label', labelInput);
       }
 
-      if (entry?.template === 'pomodoro' || c.kind === 'prod_pomodoro') {
+      if ((entry?.template === 'pomodoro' || c.kind === 'prod_pomodoro') && !entry?.fields?.some(f => f.key === 'work_mins')) {
         const fInput = document.createElement('input');
         fInput.type = 'number';
         fInput.min = 5;
@@ -1266,7 +1452,7 @@
         'timer', 'stopwatch', 'pomodoro', 'prod_timer', 'prod_stopwatch', 'prod_pomodoro',
         'clock', 'calendar', 'notes', 'battery', 'system', 'system_cpu', 'system_ram', 'system_gpu',
         'system_disk', 'system_net', 'water', 'habits', 'todos', 'countdown', 'photo',
-        'ctrl_volume', 'ctrl_mic_mute', 'ctrl_brightness', 'ctrl_wifi', 'ctrl_bluetooth',
+        'ctrl_volume', 'ctrl_mic_mute', 'ctrl_brightness', 'ctrl_wifi', 'ctrl_bluetooth', 'sys_tray', 'app_folder',
         'screentime', 'timeline'
       ]);
 
@@ -1277,6 +1463,13 @@
         ['ai', 'revenue', 'dev', 'finance'].includes(entry?.category) ||
         ['weather', 'crypto_btc', 'crypto_eth', 'crypto_sol', 'stocks_nvda', 'stocks_aapl'].includes(c.kind)
       );
+
+      if (['prod_screentime','prod_day_timeline'].includes(c.kind)) {
+        const note=document.createElement('p');note.className='widget-help';note.textContent='Activity is recorded locally while either widget is enabled, including foreground app names. Up to seven days are kept.';
+        const clear=document.createElement('button');clear.type='button';clear.className='wallpaper-primary';clear.textContent='Clear activity history';
+        clear.onclick=async()=>{if(!window.confirm('Clear all recorded screen time and app activity?'))return;try{await invoke('widget_screen_time_clear');status.textContent='Activity history cleared'}catch(error){status.textContent='Could not clear history: '+String(error)}};
+        actionsSection.append(note,clear);
+      }
 
       if (isRemoteMetric) {
         const testBtn = document.createElement('button');
@@ -1296,6 +1489,7 @@
           try {
             if (!window.WidgetMetrics) throw Error('Widget metrics engine not loaded');
             const metric = await window.WidgetMetrics.resolveMetric(entry || { id: c.kind, template: c.kind }, c);
+            if (!metric || metric.error) throw Error(metric?.sub || 'Live data is not available for this widget');
             testStatus.style.color = '#22c55e';
             testStatus.textContent = `Connected! ${metric.title ? metric.title + ': ' : ''}${metric.value || metric.detail || 'Live data retrieved'}`;
             c.livePreviewData = metric;
@@ -1427,17 +1621,12 @@
         authOverlay.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Authorize</span>`;
         authOverlay.onclick = (e) => {
           e.stopPropagation();
-          selectWidget(c.kind);
-          setTimeout(() => {
-            const agyBtn = drawer.querySelector('.connect-antigravity-btn');
-            if (agyBtn) {
-              agyBtn.focus();
-              agyBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } else {
-              const passInput = drawer.querySelector('input[type="password"]');
-              if (passInput) passInput.focus();
-            }
-          }, 150);
+          if(selectedKind!==c.kind)selectWidget(c.kind);else setDetail(true);
+          setTimeout(()=>{
+            const button=detailPanel?.querySelector('.connect-antigravity-btn');
+            const target=button && button.style.display!=='none'?button:detailPanel?.querySelector('input[type="password"]');
+            target?.focus();
+          },150);
         };
         previewWrap.append(preview, authOverlay);
 
@@ -1462,14 +1651,13 @@
 
         const auth = widgetAuthInfo(entry, c);
         if (auth.required && !auth.authorized) {
-          c.enabled = false;
           row.classList.add('needs-auth');
           authOverlay.style.display = 'flex';
-          toggle.disabled = true;
-          toggle.checked = false;
-          toggleText.textContent = 'Add to desktop';
+          toggle.disabled = false;
+          toggle.checked = c.enabled;
+          toggleText.textContent = c.enabled ? 'On desktop' : 'Add to desktop';
           label.title = 'Click card or badge to Authorize';
-          label.style.opacity = '0.45';
+          label.style.opacity = '1';
         } else {
           row.classList.remove('needs-auth');
           authOverlay.style.display = 'none';
@@ -1482,13 +1670,6 @@
 
         toggle.onchange = (e) => {
           e.stopPropagation();
-          const currentAuth = widgetAuthInfo(entry, c);
-          if (currentAuth.required && !currentAuth.authorized) {
-            toggle.checked = false;
-            c.enabled = false;
-            selectWidget(c.kind);
-            return;
-          }
           c.enabled = toggle.checked;
           toggleText.textContent = c.enabled ? 'On desktop' : 'Add to desktop';
           if (countBadge) {
@@ -1548,16 +1729,15 @@
         overlay.style.display = 'flex';
         overlay.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Authorize</span>`;
       }
-      c.enabled = false;
       if (ct) {
-        ct.disabled = true;
-        ct.checked = false;
+        ct.disabled = false;
+        ct.checked = c.enabled;
       }
       if (ctt) {
-        ctt.textContent = 'Add to desktop';
+        ctt.textContent = c.enabled ? 'On desktop' : 'Add to desktop';
       }
       if (cl) {
-        cl.style.opacity = '0.45';
+        cl.style.opacity = '1';
         cl.title = 'Click card or badge to Authorize';
       }
     } else {
@@ -1587,6 +1767,22 @@
   async function init() {
     try {
       [configs, dockWidgets] = await Promise.all([invoke('get_widgets'), invoke('get_dock_snapshot').then(x => x.config.widgets || [])]);
+      const existingKinds = new Set(configs.map(c => c.kind));
+      for (const entry of catalog) {
+        if (!existingKinds.has(entry.id)) {
+          configs.push({
+            kind: entry.id,
+            enabled: false,
+            size: 'small',
+            width: 0,
+            height: 156,
+            radius: 22,
+            background: entry.defaultBg || '#161720',
+            foreground: entry.defaultFg || '#ffffff',
+            opacity: 94
+          });
+        }
+      }
       for (const c of configs) {
         if (c.background === '#f8f9fc' && c.kind !== 'notes') {
           c.background = '#161720';

@@ -345,7 +345,14 @@ details[open] > .dock-details-summary svg{transform:rotate(180deg)}
 .widget-detail-head{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.13em;color:var(--muted);font-weight:600;margin-bottom:18px;text-transform:uppercase}
 .widget-detail-head button{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;font-size:22px;line-height:1;color:var(--muted);background:none;border:none;cursor:pointer}
 .widget-detail-head button:hover{background:var(--surface3);color:var(--text)}
-.widget-detail-preview{width:100%;height:80px;border-radius:9px;background:#161720;border:1px solid rgba(255,255,255,.08);margin-bottom:18px;display:flex;align-items:center;padding:10px 14px;box-sizing:border-box}
+.widget-detail-preview{width:100%;min-height:48px;height:auto;border-radius:0;background:transparent;border:none;margin-bottom:16px;display:flex;align-items:center;justify-content:center;padding:0;box-sizing:border-box}
+.widget-detail-preview .widget-preview{box-shadow:0 4px 14px rgba(0,0,0,.3);border-radius:14px;width:100%;min-height:76px}
+.widget-preview-mode-switch{display:flex;background:var(--surface2);border:1px solid var(--border-strong);border-radius:8px;padding:3px;gap:3px;margin-bottom:14px}
+.widget-mode-tab{flex:1;display:flex;align-items:center;justify-content:center;padding:7px 12px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;transition:all .15s ease;letter-spacing:0}
+.widget-mode-tab:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.widget-mode-tab.active{background:var(--surface3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.widget-detail-preview-taskbar{display:flex;align-items:center;justify-content:center;padding:0;background:transparent;min-height:46px;height:auto;width:100%}
+.widget-preview-capsule{display:flex;align-items:center;min-height:44px;height:auto;border-radius:12px;padding:4px 12px;gap:8px;color:#fff;user-select:none;box-sizing:border-box;max-width:100%;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);box-shadow:0 4px 14px rgba(0,0,0,.35);transition:all .15s ease}.widget-preview-capsule .luma-card,.widget-preview-capsule .luma-row-card,.widget-preview-capsule .luma-weather-card{height:auto;min-height:0;width:100%}
 .widget-detail-info{margin-bottom:18px}
 .widget-detail-meta{font-size:10px;color:var(--muted);letter-spacing:.04em;margin-bottom:6px}
 .widget-detail h3{font-size:19px;font-weight:650;line-height:1.4;letter-spacing:-.3px;margin:0 0 6px}
@@ -1164,19 +1171,24 @@ input[data-island][type=number]{width:80px;background:var(--surface2);border:1px
                   <span id="widget-detail-badge">WIDGET</span>
                   <button type="button" id="widget-detail-close" aria-label="Close widget settings">×</button>
                 </div>
+                <div class="widget-preview-mode-switch" id="widget-preview-mode-switch" role="tablist" aria-label="Widget appearance mode">
+                  <button type="button" class="widget-mode-tab active" data-mode="desktop" role="tab" aria-selected="true" title="Desktop appearance">Desktop</button>
+                  <button type="button" class="widget-mode-tab" data-mode="taskbar" role="tab" aria-selected="false" title="Taskbar appearance">Taskbar</button>
+                </div>
                 <div id="widget-detail-preview" class="widget-detail-preview"></div>
                 <div id="widget-detail-custom-section" class="widget-detail-section" style="border-top:none;margin-top:0;padding-top:0">
                   <div class="widget-detail-section-title">Content & Configuration</div>
                   <div id="widget-detail-custom-fields" class="widget-detail-fields"></div>
                 </div>
                 <div id="widget-detail-appearance-section" class="widget-detail-section">
-                  <div class="widget-detail-section-title">Appearance & Size</div>
+                  <div class="widget-detail-section-title">Desktop appearance & size</div>
                   <div class="widget-color-presets-wrap">
                     <span style="font-size:11px;color:var(--muted);display:block;margin-bottom:8px">Style presets</span>
                     <div class="widget-color-presets" id="widget-color-presets"></div>
                   </div>
                   <div id="widget-detail-appearance-fields" class="widget-detail-fields"></div>
                 </div>
+                <div id="widget-detail-dock-section" class="widget-detail-section"><div class="widget-detail-section-title">Taskbar appearance</div><div id="widget-detail-dock-fields" class="widget-detail-fields"></div></div>
                 <div id="widget-detail-actions-section" class="widget-detail-section" style="border-top:none;padding-top:0"></div>
               </div>
             </aside>
@@ -1646,8 +1658,20 @@ all('[data-tab]').forEach(b=>{
         window.__TAURI__.core.invoke('trim_atelier_memory').catch(()=>{});
       }
     }
+    syncWidgetEditMode();
   });
 });
+
+function syncWidgetEditMode(){
+  const isWidgetsTab = document.querySelector('.tab.active')?.id === 'widgets';
+  const isVisible = document.visibilityState === 'visible' && !document.hidden;
+  const editMode = Boolean(isWidgetsTab && isVisible);
+  window.__TAURI__?.event?.emit('widget-edit-mode', editMode);
+}
+document.addEventListener('visibilitychange', syncWidgetEditMode);
+window.addEventListener('focus', syncWidgetEditMode);
+window.addEventListener('blur', syncWidgetEditMode);
+setTimeout(syncWidgetEditMode, 200);
 all('[data-go]').forEach(b=>b.addEventListener('click',()=>document.querySelector(`[data-tab="${b.dataset.go}"]`)?.click()));
 const initialActiveTab = document.querySelector('.tab.active')?.id;
 const initialFullBleed = initialActiveTab === 'wallpaper' || initialActiveTab === 'widgets';
@@ -1672,4 +1696,4 @@ document.querySelector('.main-col')?.classList.toggle('wallpaper-shell', initial
     toast('Could not read taskbar state: '+e,true);
   }
 })();
-</script><script src="scene-properties.js"></script><script src="studio-scene-settings.js"></script><script src="studio-wallpaper-settings.js"></script><script src="studio-wallpaper.js"></script><script src="studio-dock-preview.js"></script><script src="studio-dock.js"></script><script src="widget-icons.js"></script><script src="widgets-catalog.js"></script><script src="widget-metrics.js"></script><script src="studio-widgets.js"></script><script src="island-layout.js"></script><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="studio-island.js"></script><script src="audio-visualizer.js"></script><script src="studio-audio.js"></script><script src="studio-dock-audio.js"></script><script src="studio-usage.js"></script><script src="studio-animations.js"></script><script src="studio-appearance.js"></script></body></html>
+</script><script src="scene-properties.js"></script><script src="studio-scene-settings.js"></script><script src="studio-wallpaper-settings.js"></script><script src="studio-wallpaper.js"></script><script src="studio-dock-preview.js"></script><script src="studio-dock.js"></script><script src="widget-icons.js"></script><script src="widgets-catalog.js"></script><script src="vendor/ical.min.js"></script><script src="widget-calendar.js"></script><script src="widget-metrics.js"></script><script src="studio-widgets.js"></script><script src="island-layout.js"></script><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="studio-island.js"></script><script src="audio-visualizer.js"></script><script src="studio-audio.js"></script><script src="studio-dock-audio.js"></script><script src="studio-usage.js"></script><script src="studio-animations.js"></script><script src="studio-appearance.js"></script></body></html>
