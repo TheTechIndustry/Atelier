@@ -31,3 +31,16 @@ test('cancel restores saved order and clears visual translation',async()=>{const
 test('dragged icon follows the pointer and other items animate into place',async()=>{const f=fixture('bottom',false),el=f.elements['app:a'],r=el.getBoundingClientRect();f.context.startReorder(f.event(r.left+20,r.top+20,el));f.context.moveReorder(f.event(400,400,el));assert.notEqual(el.style.translate,'');assert.ok(f.animations.some(a=>a.key!=='app:a'));await f.context.finishReorder(f.event(400,400,el));assert.equal(el.style.translate,'');assert.ok(f.animations.some(a=>a.key==='app:a'&&a.options.duration===160))});
 
 test('edge scrolling follows the latest pointer position and stops on release',async()=>{const f=fixture(),el=f.elements['app:a'],r=el.getBoundingClientRect();let next,cancelled=false;f.context.window.requestAnimationFrame=cb=>{next=cb;return 1};f.context.window.cancelAnimationFrame=()=>{cancelled=true};f.context.startReorder(f.event(r.left+20,r.top+20,el));f.context.moveReorder(f.event(590,20,el));assert.equal(f.dock.scrollLeft,14);const pending=next;f.context.moveReorder(f.event(300,20,el));pending();assert.equal(f.dock.scrollLeft,14);await f.context.finishReorder(f.event(300,20,el));assert.equal(f.context.dragId,null)});
+
+test('dropping an app onto a folder saves it without unpinning',async()=>{
+ const f=fixture(), app=f.elements['app:a'], folder=f.elements['widget:timer'];
+ folder.dataset.widgetId='app_folder';
+ f.context.items=[{id:'a',pinned:true}];
+ f.context.document.querySelectorAll=()=>[];
+ f.context.document.elementFromPoint=()=>app.style.pointerEvents==='none'?{closest:()=>folder}:{closest:()=>null};
+ f.context.invoke=async(cmd,args)=>{f.calls.push({cmd,args});if(cmd==='get_widgets')return [{kind:'app_folder',custom:{folder_apps:[]}}]};
+ const r=app.getBoundingClientRect();f.context.startReorder(f.event(r.left+20,r.top+20,app));
+ f.context.moveReorder(f.event(300,100,app));await f.context.finishReorder(f.event(300,100,app));
+ const saved=f.calls.find(c=>c.cmd==='set_widget');assert.ok(saved);assert.deepEqual(Array.from(saved.args.config.custom.folder_apps),['a']);
+ assert.equal(f.calls.some(c=>c.cmd==='dock_pin'),false);
+});

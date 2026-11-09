@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Apps</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font: 12px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+      color: #f4f4f5;
+      user-select: none;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    body { padding: 4px; }
+
+    .panel {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      background: rgba(22, 24, 34, 0.94);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.2) inset;
+      overflow: hidden;
+      animation: slideUp 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+
+    html.light-dock .panel {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      color: #1c1d22;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.1) inset;
+    }
+    html.light-dock .title {
+      color: #111318;
+    }
+    html.light-dock .header {
+      border-bottom-color: rgba(0, 0, 0, 0.06);
+    }
+    html.light-dock .badge {
+      background: rgba(0, 0, 0, 0.06);
+      color: rgba(0, 0, 0, 0.65);
+    }
+    html.light-dock .action-btn {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #1c1d22;
+    }
+    html.light-dock .action-btn:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    html.light-dock .app-item:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+    html.light-dock .app-name {
+      color: #1c1d22;
+    }
+    html.light-dock .empty-title {
+      color: #1c1d22;
+    }
+    html.light-dock .empty-desc {
+      color: rgba(0, 0, 0, 0.55);
+    }
+    html.light-dock .empty-icon {
+      border-color: rgba(0, 0, 0, 0.2);
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 7px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      flex: none;
+    }
+    .title {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .badge {
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .action-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .content-area {
+      flex: 1;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      overflow: auto;
+    }
+
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+      height: 100%;
+      align-content: start;
+      grid-auto-rows: 54px;
+      justify-items: center;
+    }
+    .apps-grid.more-apps {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .apps-grid.many-apps {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .app-item {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 6px 4px;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.12s, transform 0.12s;
+    }
+    .app-item:hover {
+      background: rgba(255, 255, 255, 0.09);
+      transform: translateY(-2px);
+    }
+    .app-item:active {
+      transform: scale(0.92);
+    }
+    .app-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .app-icon .fallback {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .app-name {
+      font-size: 10px;
+      line-height: 1.15;
+      text-align: center;
+      max-width: 72px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0.9;
+    }
+
+    .remove-badge {
+      position: absolute;
+      top: 1px;
+      right: 5px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      cursor: pointer;
+      border: 0;
+      transition: transform 0.12s;
+    }
+    .remove-badge:hover {
+      transform: scale(1.15);
+      background: #dc2626;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      padding: 6px;
+    }
+    .empty-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1.5px dashed rgba(255, 255, 255, 0.25);
+      display: grid;
+      place-items: center;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    .empty-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .empty-desc {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.55);
+      line-height: 1.25;
+      max-width: 160px;
+    }
+    html .panel, html.light-dock .panel {background:rgba(var(--folder-tint,22,24,34),var(--folder-alpha,.94));}
+    html[data-material="liquid"] .panel {background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 40%,transparent),rgba(var(--folder-tint,22,24,34),calc(var(--folder-alpha,.9) * .14));border-color:rgba(255,255,255,.38);box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 0 16px rgba(255,255,255,.06),inset 0 -1px 2px rgba(0,0,0,.3)}
+    html[data-material="ios"] .panel {background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.05) 40%,rgba(255,255,255,.04)),rgba(var(--folder-tint,22,24,34),calc(var(--folder-alpha,.9) * .20));border-color:rgba(255,255,255,.45);box-shadow:inset 0 1px 1.5px rgba(255,255,255,.75),inset 0 -1px 2px rgba(0,0,0,.25)}
+    .header { display:none; }
+    .app-item { touch-action:none; }
+    .app-item.dragging { z-index:10; }
+    .app-item.dragging .app-icon { opacity:.85; filter:drop-shadow(0 4px 6px #0006); pointer-events:none; }
+    .app-item { justify-content:center; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="header">
+      <div class="title" id="folder-title">Apps</div>
+      <div class="header-actions">
+        <span class="badge" id="folder-badge" style="display:none;">0 apps</span>
+        <button class="action-btn" id="toggle-manage-btn" type="button" style="display:none;">Edit</button>
+      </div>
+    </div>
+    <div class="content-area" id="content-area"></div>
+  </div>
+  <script src="dock-folder.js"></script>
+</body>
+</html>

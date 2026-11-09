@@ -285,6 +285,9 @@ unsafe extern "system" fn restore_taskbar_child_proc(child: HWND, _: LPARAM) -> 
 }
 
 impl DockState {
+    pub fn widgets_enabled(&self, ids: &[&str]) -> bool {
+        self.config.lock().map(|c| c.enabled && c.widgets.iter().any(|id| ids.contains(&id.as_str()))).unwrap_or(false)
+    }
     pub fn audio_widget_enabled(&self) -> bool {
         self.config.lock().map(|c| c.enabled && c.widgets.iter().any(|id| id == "audio")).unwrap_or(false)
     }
@@ -416,7 +419,7 @@ fn is_primary_taskbar(handle: HWND) -> bool {
     let n = unsafe { GetClassNameW(handle, &mut class) };
     n > 0 && String::from_utf16_lossy(&class[..n as usize]) == "Shell_TrayWnd"
 }
-fn primary_taskbar() -> Option<HWND> {
+pub(crate) fn real_primary_taskbar() -> Option<HWND> {
     atelier_taskbar::discovery::find_all_taskbars()
         .into_iter()
         .find(|handle| is_primary_taskbar(*handle))
@@ -444,7 +447,7 @@ fn should_restore_appbar(original: u32, applied: u32, observed: u32) -> bool {
     original != applied && observed == applied
 }
 fn restore_appbar_if_owned(original: u32, applied: u32) {
-    if let Some(hwnd) = primary_taskbar() {
+    if let Some(hwnd) = real_primary_taskbar() {
         if should_restore_appbar(original, applied, appbar_state(hwnd)) {
             set_appbar_state(hwnd, original);
         }
@@ -2195,7 +2198,7 @@ fn native_flyout_candidate(
     false
 }
 
-fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> {
+fn open_native_flyout(action: &str, languages: &[String], anchor: Option<(i32, i32, i32, i32, i32, i32)>) -> Result<(), String> {
     use windows::Win32::UI::Accessibility::{
         CUIAutomation, IUIAutomation, IUIAutomationExpandCollapsePattern,
         IUIAutomationInvokePattern, IUIAutomationTogglePattern, TreeScope_Descendants,
@@ -2205,7 +2208,7 @@ fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> 
         SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_B,
         VK_LWIN, VK_RETURN, VK_SPACE,
     };
-    let taskbar = primary_taskbar().ok_or("Windows taskbar is unavailable")?;
+    let taskbar = real_primary_taskbar().ok_or("Windows taskbar is unavailable")?;
     let initialized = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }.is_ok();
     let result = (|| unsafe {
         let was_visible = IsWindowVisible(taskbar).as_bool();
@@ -2285,13 +2288,13 @@ fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> 
                 }
             }
         }
-        if !was_visible {
+        if !was_visible || anchor.is_some() {
             let action_str = action.to_string();
             let taskbar_val = taskbar.0 as isize;
             std::thread::spawn(move || {
                 let tb = HWND(taskbar_val as *mut _);
                 let flyout_classes: &[&str] = if action_str == "tray" {
-                    &["NotifyIconOverflowWindow"]
+                    &["TopLevelWindowForOverflowXamlIsland", "NotifyIconOverflowWindow"]
                 } else {
                     &[
                         "Xaml_WindowedPopupClass",
@@ -2320,13 +2323,25 @@ fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> 
                     }
                 }
                 if !found_flyout.0.is_null() {
-                    while IsWindowVisible(found_flyout).as_bool() {
+                    if let Some((x, y, left, top, right, bottom)) = anchor {
+                        let mut r = windows::Win32::Foundation::RECT::default();
+                        if GetWindowRect(found_flyout, &mut r).is_ok() {
+                            let width = r.right - r.left;
+                            let height = r.bottom - r.top;
+                            let px = (x - width / 2).clamp(left, (right - width).max(left));
+                            let py = (y - height - 8).clamp(top, (bottom - height).max(top));
+                            let _ = SetWindowPos(found_flyout, None, px, py, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+                        }
+                    }
+                    while !was_visible && IsWindowVisible(found_flyout).as_bool() {
                         std::thread::sleep(std::time::Duration::from_millis(80));
                     }
                 }
-                let _ = ShowWindow(tb, SW_HIDE);
-                SetWindowLongPtrW(tb, GWL_EXSTYLE, original_ex_style);
-                dismiss_stuck_input_hosts();
+                if !was_visible {
+                    let _ = ShowWindow(tb, SW_HIDE);
+                    SetWindowLongPtrW(tb, GWL_EXSTYLE, original_ex_style);
+                    dismiss_stuck_input_hosts();
+                }
             });
         }
         if invoked {
@@ -2403,8 +2418,8 @@ fn open_native_flyout(action: &str, languages: &[String]) -> Result<(), String> 
 
 #[tauri::command]
 pub async fn dock_open_system(window: tauri::Window, action: String) -> Result<(), String> {
-    if window.label() != "desktop-dock" {
-        return Err("Only the dock can open system menus".into());
+    if window.label() != "desktop-dock" && !window.label().starts_with("widget") && window.label() != "main" {
+        return Err("Only the dock and widgets can open system menus".into());
     }
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_A,
@@ -2437,7 +2452,7 @@ pub async fn dock_open_system(window: tauri::Window, action: String) -> Result<(
             .map(|list| list.into_iter().map(|l| l.name).collect::<Vec<_>>())
             .unwrap_or_default();
         return tauri::async_runtime::spawn_blocking(move || {
-            open_native_flyout(&action, &languages)
+            open_native_flyout(&action, &languages, None)
         })
         .await
         .map_err(|e| e.to_string())?;
@@ -2588,6 +2603,120 @@ pub async fn dock_open_language(
         .map_err(|e| e.to_string())?;
     popup.show().map_err(|e| e.to_string())?;
     popup.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn dock_open_folder(
+    window: tauri::Window,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    folder_name: Option<String>,
+    app_count: Option<usize>,
+    is_light: Option<bool>,
+) -> Result<(), String> {
+    if window.label() != "desktop-dock" && !window.label().starts_with("widget") && window.label() != "main" {
+        return Err("Only the dock and widgets can open folder menus".into());
+    }
+    let app = window.app_handle();
+    let popup = match app.get_webview_window("widget-folder-flyout") {
+        Some(popup) => popup,
+        None => tauri::WebviewWindowBuilder::new(
+            app,
+            "widget-folder-flyout",
+            tauri::WebviewUrl::App("dock-folder.html".into()),
+        )
+        .title("Apps")
+        .disable_drag_drop_handler()
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .resizable(false)
+        .visible(false)
+        .build()
+        .map_err(|e| e.to_string())?,
+    };
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let origin = window.outer_position().map_err(|e| e.to_string())?;
+    let monitor = window
+        .current_monitor()
+        .map_err(|e| e.to_string())?
+        .ok_or("No monitor available")?;
+    let position = window
+        .state::<DockState>()
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .position
+        .clone();
+    let count = app_count.unwrap_or(0);
+    let (target_w, target_h) = if count == 0 {
+        (210.0, 160.0)
+    } else if count <= 4 {
+        (210.0, 200.0)
+    } else if count <= 8 {
+        (260.0, 220.0)
+    } else {
+        (290.0, 270.0)
+    };
+    let pw = (target_w * scale).round() as i32;
+    let ph = (target_h * scale).round() as i32;
+    let ax = origin.x + (x * scale).round() as i32;
+    let ay = origin.y + (y * scale).round() as i32;
+    let aw = (width * scale).round() as i32;
+    let ah = (height * scale).round() as i32;
+    let gap = (8.0 * scale).round() as i32;
+    let (mut px, mut py) = match position.as_str() {
+        "top" => (ax + aw / 2 - pw / 2, ay + ah + gap),
+        "left" => (ax + aw + gap, ay + ah / 2 - ph / 2),
+        "right" => (ax - pw - gap, ay + ah / 2 - ph / 2),
+        _ => (ax + aw / 2 - pw / 2, ay - ph - gap),
+    };
+    let mp = monitor.position();
+    let ms = monitor.size();
+    px = px.clamp(mp.x, (mp.x + ms.width as i32 - pw).max(mp.x));
+    py = py.clamp(mp.y, (mp.y + ms.height as i32 - ph).max(mp.y));
+    popup
+        .set_size(tauri::PhysicalSize::new(pw as u32, ph as u32))
+        .map_err(|e| e.to_string())?;
+    popup
+        .set_position(tauri::PhysicalPosition::new(px, py))
+        .map_err(|e| e.to_string())?;
+    popup.show().map_err(|e| e.to_string())?;
+    popup.set_focus().map_err(|e| e.to_string())?;
+    let name = folder_name.unwrap_or_else(|| "Apps".into());
+    let light_dock = is_light.unwrap_or(false);
+    let _ = app.emit_to("widget-folder-flyout", "folder-config", serde_json::json!({
+        "name": name,
+        "is_light": light_dock,
+        "app_count": count
+    }));
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn dock_open_tray(
+    window: tauri::Window,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let _ = height;
+    if window.label() != "desktop-dock" && !window.label().starts_with("widget") && window.label() != "main" {
+        return Err("Only the dock and widgets can open tray menus".into());
+    }
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let origin = window.outer_position().map_err(|e| e.to_string())?;
+    let ax = origin.x as f64 + (x + width / 2.0) * scale;
+    let ay = origin.y as f64 + y * scale;
+    let app=window.app_handle();
+    app.state::<crate::tray_bridge::TrayBridge>().start(app.clone());
+    crate::tray_panel::show(app, ax, ay).map_err(|e|e.to_string())?;
     Ok(())
 }
 
@@ -2805,7 +2934,7 @@ pub async fn dock_widget_set(app: tauri::AppHandle, id: String, added: bool) -> 
     let _write = state.write.lock().map_err(|e| e.to_string())?;
     let mut c = state.config.lock().map_err(|e| e.to_string())?.clone();
     if id.is_empty() || id.len() > 128 { return Err("Invalid widget ID".into()); }
-    if added && !c.widgets.contains(&id) { c.widgets.push(id); }
+    if added && !c.widgets.contains(&id) { c.widgets.insert(0, id.clone()); if !c.item_order.is_empty() { let insert_pos = c.item_order.iter().position(|k| k.starts_with("widget:") || k.starts_with("app:")).unwrap_or(0); c.item_order.insert(insert_pos, format!("widget:{id}")); } }
     else if !added { c.widgets.retain(|item| item != &id); c.item_order.retain(|item| item != &format!("widget:{id}")); }
     persist(&c)?;
     *state.config.lock().map_err(|e| e.to_string())? = c.clone();
@@ -2970,6 +3099,8 @@ pub fn dock_native_test_probe(
 
 #[cfg(test)]
 mod tests {
+
+
     use super::*;
 
     #[test]
