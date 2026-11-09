@@ -14,9 +14,11 @@ name = "Atelier"
 path = "src/main.rs"
 
 [build-dependencies]
+cc = "1"
 tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
+url = "2"
 tauri = { version = "2.0", features = ["tray-icon"] }
 atelier-common.workspace = true
 atelier-taskbar.workspace = true
@@ -34,6 +36,9 @@ tracing-subscriber.workspace = true
 anyhow.workspace = true
 windows = { workspace = true, features = [
     "Foundation_Numerics",
+    "Foundation_Collections",
+    "Devices_Bluetooth",
+    "Devices_Enumeration",
     "System",
     "UI_Composition",
     "UI_Composition_Desktop",
@@ -44,25 +49,37 @@ windows = { workspace = true, features = [
     "Win32_Media_Audio",
     "Win32_Media_Audio_Endpoints",
     "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Diagnostics_Debug",
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Gdi",
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
     "Win32_UI_Controls",
     "Win32_UI_Accessibility",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_System_SystemInformation",
     "Win32_Networking_WinHttp",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_WiFi",
     "Win32_System_Threading",
     "Win32_System_ProcessStatus",
     "Win32_Security",
     "Win32_System_LibraryLoader",
     "Win32_System_Com",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
     "Win32_System_Com_StructuredStorage",
     "Win32_Storage_FileSystem",
     "Win32_System_Registry",
 ] }
 crossbeam-channel.workspace = true
 png = "0.18"
+winreg = "0.56"
 
 base64 = "0.23"
+jsonwebtoken = "9"
+flate2 = "1"
+csv = "1"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
