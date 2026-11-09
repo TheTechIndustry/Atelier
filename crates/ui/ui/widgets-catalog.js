@@ -165,6 +165,54 @@ window.WIDGETS_CATALOG = [
     ]
   },
   {
+    "id": "sys_tray",
+    "name": "System Tray",
+    "category": "system",
+    "desc": "Windows notification area & tray flyout with live status",
+    "iconKey": "tray",
+    "template": "sys_tray",
+    "defaultBg": "#1b2434",
+    "defaultFg": "#ffffff",
+    "fields": [
+      {
+        "key": "label",
+        "label": "Title",
+        "type": "text",
+        "default": "System Tray"
+      },
+      {
+        "key": "show_status",
+        "label": "Show status subtitle",
+        "type": "switch",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "app_folder",
+    "name": "App Group / Folder",
+    "category": "system",
+    "desc": "Group apps in a 2x2 mini grid. Click to expand full launcher.",
+    "iconKey": "folder",
+    "template": "app_folder",
+    "defaultBg": "#1e2230",
+    "defaultFg": "#ffffff",
+    "fields": [
+      {
+        "key": "folder_name",
+        "label": "Folder name",
+        "type": "text",
+        "default": "Apps"
+      },
+      {
+        "key": "preset_apps",
+        "label": "Included apps (comma separated or auto)",
+        "type": "text",
+        "default": "auto"
+      }
+    ]
+  },
+  {
     "id": "battery",
     "name": "Battery",
     "category": "system",
@@ -281,31 +329,7 @@ window.WIDGETS_CATALOG = [
     "value": "100%",
     "pct": 100,
     "accent": "#22c55e",
-    "fields": [
-      {
-        "key": "api_key",
-        "label": "Anthropic API Key",
-        "type": "password",
-        "placeholder": "sk-ant-api03-..."
-      },
-      {
-        "key": "model",
-        "label": "Model",
-        "type": "select",
-        "options": [
-          "claude-3-5-sonnet-latest",
-          "claude-3-opus-latest",
-          "claude-3-5-haiku-latest"
-        ],
-        "default": "claude-3-5-sonnet-latest"
-      },
-      {
-        "key": "session_limit",
-        "label": "Session Quota",
-        "type": "number",
-        "default": 100
-      }
-    ]
+    "fields": []
   },
   {
     "id": "ai_claude_plan",
@@ -327,36 +351,13 @@ window.WIDGETS_CATALOG = [
       }
     ],
     "footer": "Opus 3.5 · most used 31.0M",
-    "fields": [
-      {
-        "key": "api_key",
-        "label": "Anthropic API Key",
-        "type": "password",
-        "placeholder": "sk-ant-api03-..."
-      },
-      {
-        "key": "model",
-        "label": "Model",
-        "type": "select",
-        "options": [
-          "claude-3-5-sonnet-latest",
-          "claude-3-opus-latest"
-        ],
-        "default": "claude-3-5-sonnet-latest"
-      },
-      {
-        "key": "weekly_limit",
-        "label": "Weekly Limit",
-        "type": "number",
-        "default": 250
-      }
-    ]
+    "fields": []
   },
   {
     "id": "ai_chatgpt",
     "name": "ChatGPT Usage",
     "category": "ai",
-    "desc": "Your ChatGPT plan's Codex limits: the 5-hour and weekly windows",
+    "desc": "Live Codex plan quota windows through your installed Codex CLI; sign in to Codex with ChatGPT first",
     "iconKey": "chatgpt",
     "template": "ai_plan",
     "rows": [
@@ -373,28 +374,12 @@ window.WIDGETS_CATALOG = [
     ],
     "fields": [
       {
-        "key": "api_key",
-        "label": "OpenAI API Key",
-        "type": "password",
-        "placeholder": "sk-proj-..."
-      },
-      {
-        "key": "model",
-        "label": "Model",
-        "type": "select",
-        "options": [
-          "gpt-4o",
-          "gpt-4o-mini",
-          "o1-preview",
-          "o1-mini"
-        ],
-        "default": "gpt-4o"
-      },
-      {
-        "key": "quota_limit",
-        "label": "Monthly Allowance ($)",
-        "type": "number",
-        "default": 50
+        "key": "cli_path",
+        "label": "Codex CLI executable",
+        "type": "text",
+        "auth": true,
+        "default": "codex.exe",
+        "placeholder": "codex.exe or an absolute path"
       }
     ]
   },
@@ -417,44 +402,13 @@ window.WIDGETS_CATALOG = [
         "pct": 47
       }
     ],
-    "fields": [
-      {
-        "key": "api_key",
-        "label": "Gemini API Key",
-        "type": "password",
-        "placeholder": "AIzaSy..."
-      },
-      {
-        "key": "five_hour_pct",
-        "label": "5h Limit (% left)",
-        "type": "number",
-        "default": 59
-      },
-      {
-        "key": "five_hour_reset",
-        "label": "5h Reset time",
-        "type": "text",
-        "default": "15m"
-      },
-      {
-        "key": "weekly_pct",
-        "label": "Weekly Limit (% left)",
-        "type": "number",
-        "default": 49
-      },
-      {
-        "key": "weekly_reset",
-        "label": "Weekly Reset time",
-        "type": "text",
-        "default": "16h 13m"
-      }
-    ]
+    "fields": []
   },
   {
     "id": "ai_grok",
-    "name": "Grok Usage",
+    "name": "xAI API Balance",
     "category": "ai",
-    "desc": "SuperGrok credit use, from your own sign-in",
+    "desc": "Team prepaid API credit balance; requires an xAI management key",
     "iconKey": "grok",
     "template": "ai_single_bar",
     "title": "Credits",
@@ -464,9 +418,15 @@ window.WIDGETS_CATALOG = [
     "fields": [
       {
         "key": "api_key",
-        "label": "xAI Grok API Key",
+        "label": "xAI management key",
         "type": "password",
-        "placeholder": "xai-..."
+        "placeholder": "Management API key"
+      },
+      {
+        "key": "team_id",
+        "label": "xAI Team ID",
+        "type": "text",
+        "placeholder": "Team UUID"
       }
     ]
   },
@@ -504,7 +464,7 @@ window.WIDGETS_CATALOG = [
     "id": "ai_glm",
     "name": "GLM Usage",
     "category": "ai",
-    "desc": "Z.ai / Zhipu GLM Coding Plan limits",
+    "desc": "Live personal GLM Coding Plan quotas from Z.ai or BigModel; does not report pay-as-you-go credits",
     "iconKey": "glm",
     "template": "ai_plan",
     "rows": [
@@ -527,57 +487,57 @@ window.WIDGETS_CATALOG = [
     "fields": [
       {
         "key": "api_key",
-        "label": "Zhipu GLM API Key",
+        "label": "GLM Coding Plan API key",
         "type": "password",
         "placeholder": "API key"
-      }
+      },
+      {"key":"platform","label":"Account platform","type":"select","options":["Z.ai","BigModel"],"default":"Z.ai"}
     ]
   },
   {
     "id": "ai_opencode",
     "name": "OpenCode Usage",
     "category": "ai",
-    "desc": "OpenCode usage for the current session, from its local history",
+    "desc": "Latest assistant token usage from a running local OpenCode server; session ID required",
     "iconKey": "opencode",
     "template": "ai_stat",
     "title": "Session",
     "meta": "last 5h",
     "value": "182.4K",
     "fields": [
-      {
-        "key": "session_tokens_limit",
-        "label": "Token limit",
-        "type": "number",
-        "default": 200000
-      }
+      {"key":"server_port","label":"Local server port","type":"number","default":4096},
+      {"key":"session_id","label":"Session ID","type":"text"},
+      {"key":"api_version","label":"Server API","type":"select","options":["legacy","v2"],"default":"legacy"},
+      {"key":"server_password","label":"Server password (optional; username opencode)","type":"password"}
     ]
   },
   {
     "id": "ai_perplexity",
-    "name": "Perplexity Pro",
+    "name": "Perplexity Credits",
     "category": "ai",
-    "desc": "Daily Pro search queries remaining and model quota",
+    "desc": "Reported account credits and usage through a manually supplied Perplexity web-session token; separate from Pro search limits",
     "iconKey": "perplexity",
-    "template": "ai_usage",
-    "title": "Pro Searches",
-    "meta": "Renews 00:00",
-    "value": "264 / 300",
+    "template": "dev_stat",
+    "title": "Account credits",
+    "meta": "Web session",
+    "value": "—",
     "pct": 88,
     "accent": "#20b2aa",
     "fields": [
+      {"key":"cookie_name","label":"Session cookie name","type":"select","options":["__Secure-next-auth.session-token","__Secure-authjs.session-token","authjs.session-token","next-auth.session-token"],"default":"__Secure-next-auth.session-token"},
       {
-        "key": "api_key",
-        "label": "Perplexity API Key",
+        "key": "session_token",
+        "label": "Perplexity session-token value",
         "type": "password",
-        "placeholder": "pplx-..."
+        "placeholder": "Web session token; not a pplx API key"
       }
     ]
   },
   {
     "id": "ai_cursor",
-    "name": "Cursor Composer",
+    "name": "Cursor Team Usage",
     "category": "ai",
-    "desc": "Cursor fast request credits and premium model usage",
+    "desc": "Team Agent, Chat and Composer request counts today (UTC); requires Team Admin API access",
     "iconKey": "cursor",
     "template": "ai_single_bar",
     "title": "Fast Credits",
@@ -586,16 +546,10 @@ window.WIDGETS_CATALOG = [
     "accent": "#a855f7",
     "fields": [
       {
-        "key": "session_token",
-        "label": "Cursor Token",
+        "key": "api_key",
+        "label": "Cursor Team Admin API key",
         "type": "password",
-        "placeholder": "WorkosCursorSessionToken"
-      },
-      {
-        "key": "fast_credits",
-        "label": "Monthly Fast Credits",
-        "type": "number",
-        "default": 500
+        "placeholder": "Team admin API key"
       }
     ]
   },
@@ -603,7 +557,7 @@ window.WIDGETS_CATALOG = [
     "id": "ai_copilot",
     "name": "GitHub Copilot",
     "category": "ai",
-    "desc": "Copilot completions accepted and monthly chat queries",
+    "desc": "Latest daily organization usage from Copilot reports; requires organization metrics permission",
     "iconKey": "copilot",
     "template": "ai_usage",
     "title": "Chat Usage",
@@ -614,9 +568,14 @@ window.WIDGETS_CATALOG = [
     "fields": [
       {
         "key": "token",
-        "label": "GitHub PAT",
+        "label": "GitHub token (Organization Copilot metrics read)",
         "type": "password",
-        "placeholder": "ghp_..."
+        "placeholder": "GitHub token"
+      },
+      {
+        "key": "organization",
+        "label": "GitHub organization",
+        "type": "text"
       }
     ]
   },
@@ -808,7 +767,7 @@ window.WIDGETS_CATALOG = [
     "id": "dev_gitlab_ci",
     "name": "GitLab Pipeline",
     "category": "dev",
-    "desc": "Latest branch CI/CD pipeline build status & duration",
+    "desc": "Latest GitLab project pipeline status and branch",
     "iconKey": "gitlab",
     "template": "dev_stat",
     "title": "Pipeline",
@@ -965,7 +924,7 @@ window.WIDGETS_CATALOG = [
     "id": "dev_docker",
     "name": "Docker Containers",
     "category": "dev",
-    "desc": "Active container status, CPU usage and memory footprint",
+    "desc": "Local Docker container states and sampled CPU/RAM usage, with overview and per-container views",
     "iconKey": "docker",
     "template": "key_value_list",
     "items": [
@@ -982,15 +941,7 @@ window.WIDGETS_CATALOG = [
         "value": "1.4 GB"
       }
     ],
-    "fields": [
-      {
-        "key": "username",
-        "label": "Docker Hub Username",
-        "type": "text",
-        "placeholder": "e.g. library",
-        "default": "library"
-      }
-    ]
+    "fields": [{"key":"metric","label":"Display","type":"select","options":["Overview","CPU","Memory","Containers"],"default":"Overview"},{"key":"top_count","label":"Visible containers","type":"number","default":5}]
   },
   {
     "id": "dev_vercel",
@@ -1015,6 +966,12 @@ window.WIDGETS_CATALOG = [
         "label": "Project ID / Name",
         "type": "text",
         "placeholder": "prj_..."
+      },
+      {
+        "key": "team_id",
+        "label": "Team ID (optional)",
+        "type": "text",
+        "placeholder": "team_..."
       }
     ]
   },
@@ -1043,7 +1000,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_stripe_mrr",
     "name": "Stripe MRR",
     "category": "revenue",
-    "desc": "Monthly Recurring Revenue and net churn rate",
+    "desc": "Estimated fixed-price MRR by currency; unsupported discounts, trials and tiered prices require Stripe Billing Analytics",
     "iconKey": "stripe",
     "template": "revenue_stat",
     "title": "Stripe MRR",
@@ -1052,8 +1009,10 @@ window.WIDGETS_CATALOG = [
     "sub": "184 active subscribers",
     "accent": "#635bff",
     "fields": [
+      {"key":"auth_mode","label":"Data source","type":"select","options":["API estimate","Billing page"],"default":"API estimate"},
       {
         "key": "api_key",
+        "when":{"key":"auth_mode","value":"API estimate"},
         "label": "Stripe Secret Key (rk_live.../sk_live...)",
         "type": "password",
         "placeholder": "rk_live_..."
@@ -1064,7 +1023,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_stripe_today",
     "name": "Stripe Today",
     "category": "revenue",
-    "desc": "Gross revenue and successful charges collected today",
+    "desc": "Gross captured amounts for successful charges created today, by currency, before refunds; local time",
     "iconKey": "stripe",
     "template": "revenue_stat",
     "title": "Today Revenue",
@@ -1085,7 +1044,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_stripe_net",
     "name": "Stripe Net Volume",
     "category": "revenue",
-    "desc": "Current month net volume after refunds and fees",
+    "desc": "This month's charges and refunds after their transaction fees, by settlement currency; local time",
     "iconKey": "stripe",
     "template": "revenue_stat",
     "title": "Net Volume",
@@ -1106,7 +1065,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_polar",
     "name": "Polar.sh Revenue",
     "category": "revenue",
-    "desc": "Open-source sponsorships, bounties and funding",
+    "desc": "Monthly recurring revenue and active subscriptions from Polar metrics",
     "iconKey": "polar",
     "template": "revenue_stat",
     "title": "Polar Funding",
@@ -1123,9 +1082,15 @@ window.WIDGETS_CATALOG = [
       },
       {
         "key": "organization",
-        "label": "Organization Slug",
+        "label": "Organization ID (optional for organization token)",
         "type": "text",
-        "placeholder": "e.g. my-org"
+        "placeholder": "Organization UUID"
+      },
+      {
+        "key": "currency",
+        "label": "Polar reporting currency",
+        "type": "text",
+        "default": "USD"
       }
     ]
   },
@@ -1133,7 +1098,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_lemonsqueezy",
     "name": "Lemon Squeezy",
     "category": "revenue",
-    "desc": "Digital product sales, tax calculation and payouts",
+    "desc": "Store order count and the most recent order status",
     "iconKey": "lemonsqueezy",
     "template": "revenue_stat",
     "title": "Lemon Squeezy",
@@ -1160,7 +1125,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_dodo",
     "name": "Dodo Payments",
     "category": "revenue",
-    "desc": "Global checkout conversions and multi-currency volume",
+    "desc": "Gross successful payments by currency and payment-record success rate, with UTC day/month reporting",
     "iconKey": "stripe",
     "template": "revenue_stat",
     "title": "Dodo Sales",
@@ -1170,10 +1135,41 @@ window.WIDGETS_CATALOG = [
     "accent": "#ff4d6d",
     "fields": [
       {
+        "key": "metric",
+        "label": "Metric",
+        "type": "select",
+        "options": [
+          "Gross sales",
+          "Payment success rate",
+          "Latest payment"
+        ],
+        "default": "Gross sales"
+      },
+      {
+        "key": "report_period",
+        "label": "Report period (UTC)",
+        "type": "select",
+        "options": [
+          "Today",
+          "Month to date"
+        ],
+        "default": "Today"
+      },
+      {
         "key": "api_key",
         "label": "Dodo Payments Key",
         "type": "password",
         "placeholder": "API key"
+      },
+      {
+        "key": "environment",
+        "label": "Environment",
+        "type": "select",
+        "options": [
+          "live",
+          "test"
+        ],
+        "default": "live"
       }
     ]
   },
@@ -1181,7 +1177,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_datafast",
     "name": "DataFast Live",
     "category": "revenue",
-    "desc": "Real-time live visitor pulse and top referral sources",
+    "desc": "Visitors active in the last 10 minutes",
     "iconKey": "datafast",
     "template": "revenue_stat",
     "title": "Live Visitors",
@@ -1198,7 +1194,7 @@ window.WIDGETS_CATALOG = [
       },
       {
         "key": "project_id",
-        "label": "Project ID",
+        "label": "Website ID (required for account token)",
         "type": "text",
         "placeholder": "prj_..."
       }
@@ -1208,7 +1204,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_google_analytics",
     "name": "Google Analytics",
     "category": "revenue",
-    "desc": "Real-time GA4 active users and pageview rate",
+    "desc": "GA4 users and views in the last 30 minutes; use a service-account JSON key with property Viewer access for automatic authentication",
     "iconKey": "googleanalytics",
     "template": "revenue_stat",
     "title": "GA4 Realtime",
@@ -1217,6 +1213,7 @@ window.WIDGETS_CATALOG = [
     "sub": "Active in past 30 min",
     "accent": "#f59e0b",
     "fields": [
+      {"key":"auth_mode","label":"Authentication","type":"select","options":["OAuth access token","Service account"],"default":"OAuth access token"},
       {
         "key": "property_id",
         "label": "GA4 Property ID",
@@ -1224,18 +1221,20 @@ window.WIDGETS_CATALOG = [
         "placeholder": "e.g. 123456789"
       },
       {
-        "key": "api_secret",
-        "label": "API Secret",
+        "key": "access_token",
+        "label": "Google OAuth access token (analytics.readonly)",
+        "when":{"key":"auth_mode","value":"OAuth access token"},
         "type": "password",
-        "placeholder": "Secret"
-      }
+        "placeholder": "OAuth access token; renew when expired"
+      },
+      {"key":"key_path","label":"Service-account JSON key path","type":"text","auth":true,"when":{"key":"auth_mode","value":"Service account"},"placeholder":"C:/keys/analytics.json"}
     ]
   },
   {
     "id": "rev_shopify",
     "name": "Shopify Store",
     "category": "revenue",
-    "desc": "Today e-commerce orders, fulfilled status and cart size",
+    "desc": "Orders, net payments, average active order value and unfulfilled orders; requires read_orders",
     "iconKey": "shopify",
     "template": "revenue_stat",
     "title": "Shopify Sales",
@@ -1244,6 +1243,29 @@ window.WIDGETS_CATALOG = [
     "sub": "Avg cart $61.60",
     "accent": "#96bf48",
     "fields": [
+      {
+        "key": "metric",
+        "label": "Metric",
+        "type": "select",
+        "options": [
+          "Sales overview",
+          "Net payments",
+          "Average order value",
+          "Unfulfilled orders",
+          "Order count"
+        ],
+        "default": "Sales overview"
+      },
+      {
+        "key": "report_period",
+        "label": "Report period (local time)",
+        "type": "select",
+        "options": [
+          "Today",
+          "Month to date"
+        ],
+        "default": "Today"
+      },
       {
         "key": "shop_domain",
         "label": "Shop Domain",
@@ -1262,7 +1284,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_paddle",
     "name": "Paddle Billing",
     "category": "revenue",
-    "desc": "B2B subscription tiers, renewals and active seats",
+    "desc": "Official Paddle MRR, annualized MRR, revenue and checkout conversion metrics; requires metrics.read",
     "iconKey": "stripe",
     "template": "revenue_stat",
     "title": "Paddle ARR",
@@ -1272,16 +1294,39 @@ window.WIDGETS_CATALOG = [
     "accent": "#00cca3",
     "fields": [
       {
+        "key": "metric",
+        "label": "Metric",
+        "type": "select",
+        "options": [
+          "MRR",
+          "Annualized MRR",
+          "Net revenue",
+          "Checkout conversion",
+          "Active subscriptions"
+        ],
+        "default": "MRR"
+      },
+      {
+        "key": "report_days",
+        "label": "Completed UTC days",
+        "type": "number",
+        "default": 30
+      },
+      {
         "key": "api_key",
         "label": "Paddle API Key",
         "type": "password",
         "placeholder": "API key"
       },
       {
-        "key": "vendor_id",
-        "label": "Vendor ID",
-        "type": "text",
-        "placeholder": "e.g. 12345"
+        "key": "environment",
+        "label": "Environment",
+        "type": "select",
+        "options": [
+          "live",
+          "sandbox"
+        ],
+        "default": "live"
       }
     ]
   },
@@ -1289,7 +1334,7 @@ window.WIDGETS_CATALOG = [
     "id": "rev_appstore",
     "name": "App Store Stats",
     "category": "revenue",
-    "desc": "iOS app units downloaded, rating and in-app revenue",
+    "desc": "Daily sales-report net units and estimated proceeds by currency; optional SKU filter",
     "iconKey": "apple",
     "template": "revenue_stat",
     "title": "App Store iOS",
@@ -1309,14 +1354,18 @@ window.WIDGETS_CATALOG = [
         "label": "Key ID",
         "type": "text",
         "placeholder": "Key ID"
-      }
+      },
+      {"key":"key_path","label":"Local .p8 signing-key path","type":"text","auth":true},
+      {"key":"vendor_number","label":"Apple vendor number","type":"text"},
+      {"key":"report_date","label":"Report date YYYY-MM-DD (blank: yesterday)","type":"text"},
+      {"key":"sku","label":"SKU filter (optional)","type":"text"}
     ]
   },
   {
     "id": "rev_playstore",
     "name": "Google Play",
     "category": "revenue",
-    "desc": "Android installs, active devices and crash rate",
+    "desc": "Latest daily installs and active devices from monthly Play Console reports; data is delayed",
     "iconKey": "generic",
     "template": "revenue_stat",
     "title": "Google Play",
@@ -1330,7 +1379,10 @@ window.WIDGETS_CATALOG = [
         "label": "Package Name",
         "type": "text",
         "placeholder": "com.example.app"
-      }
+      },
+      {"key":"key_path","label":"Local service-account JSON key path","type":"text","auth":true},
+      {"key":"report_bucket","label":"Play Console report bucket","type":"text","placeholder":"pubsite_prod_rev_..."},
+      {"key":"report_month","label":"Report month YYYYMM (blank: current UTC month)","type":"text"}
     ]
   },
   {
@@ -1460,10 +1512,9 @@ window.WIDGETS_CATALOG = [
     "sub": "Market Open",
     "fields": [
       {
-        "key": "symbol",
-        "label": "Index Symbol",
-        "type": "text",
-        "default": "^GSPC"
+        "key": "api_key",
+        "label": "FMP API key (index quotes access)",
+        "type": "password"
       }
     ]
   },
@@ -1480,10 +1531,9 @@ window.WIDGETS_CATALOG = [
     "sub": "Tech momentum",
     "fields": [
       {
-        "key": "symbol",
-        "label": "Index Symbol",
-        "type": "text",
-        "default": "^IXIC"
+        "key": "api_key",
+        "label": "FMP API key (index quotes access)",
+        "type": "password"
       }
     ]
   },
@@ -1504,7 +1554,8 @@ window.WIDGETS_CATALOG = [
         "label": "Stock Symbol",
         "type": "text",
         "default": "AAPL"
-      }
+      },
+      { "key": "api_key", "label": "Alpha Vantage API key", "type": "password" }
     ]
   },
   {
@@ -1524,7 +1575,8 @@ window.WIDGETS_CATALOG = [
         "label": "Stock Symbol",
         "type": "text",
         "default": "NVDA"
-      }
+      },
+      { "key": "api_key", "label": "Alpha Vantage API key", "type": "password" }
     ]
   },
   {
@@ -1544,7 +1596,8 @@ window.WIDGETS_CATALOG = [
         "label": "Stock Symbol",
         "type": "text",
         "default": "TSLA"
-      }
+      },
+      { "key": "api_key", "label": "Alpha Vantage API key", "type": "password" }
     ]
   },
   {
@@ -1610,10 +1663,9 @@ window.WIDGETS_CATALOG = [
     ],
     "fields": [
       {
-        "key": "symbol",
-        "label": "Symbol",
-        "type": "text",
-        "default": "GC=F"
+        "key": "api_key",
+        "label": "Twelve Data API key (metals access)",
+        "type": "password"
       }
     ]
   },
@@ -1621,7 +1673,7 @@ window.WIDGETS_CATALOG = [
     "id": "prod_day_timeline",
     "name": "Day Timeline",
     "category": "productivity",
-    "desc": "Your whole day on one line: hours by kind of app, focus rounds, meetings, sunrise and sunset",
+    "desc": "Active computer use by hour, recorded locally while this widget or Screen Time is enabled",
     "iconKey": "timer",
     "template": "timeline",
     "fields": [
@@ -1637,7 +1689,7 @@ window.WIDGETS_CATALOG = [
     "id": "prod_screentime",
     "name": "Screen Time",
     "category": "productivity",
-    "desc": "Today's time in front of the PC, hour by hour - and every app's, by day and by week",
+    "desc": "Active computer use and foreground apps, recorded locally for up to seven days while enabled",
     "iconKey": "screentime_watch",
     "template": "screentime",
     "fields": [
@@ -1691,7 +1743,7 @@ window.WIDGETS_CATALOG = [
     "id": "prod_stopwatch",
     "name": "Stopwatch",
     "category": "productivity",
-    "desc": "Start, pause and lap from the bar; the card keeps every lap",
+    "desc": "Start, pause and record up to 100 laps; shared across desktop and taskbar and restored after restart",
     "iconKey": "stopwatch",
     "template": "stopwatch",
     "fields": [
@@ -1700,7 +1752,8 @@ window.WIDGETS_CATALOG = [
         "label": "Show milliseconds",
         "type": "switch",
         "default": false
-      }
+      },
+      {"key":"show_laps","label":"Show lap history on desktop","type":"switch","default":true}
     ]
   },
   {
@@ -1870,7 +1923,7 @@ window.WIDGETS_CATALOG = [
     "id": "prod_standup",
     "name": "Break Reminder",
     "category": "productivity",
-    "desc": "Reminds you to look away from screen and stretch",
+    "desc": "A visible and audible break reminder while the widget is open",
     "iconKey": "timer",
     "template": "break_reminder",
     "fields": [
@@ -1886,7 +1939,7 @@ window.WIDGETS_CATALOG = [
     "id": "prod_quote",
     "name": "Daily Quote",
     "category": "productivity",
-    "desc": "Curated daily philosophy, stoicism and wisdom snippet",
+    "desc": "A daily reflection prompt for your chosen category",
     "iconKey": "notes_pad",
     "template": "quote",
     "fields": [
@@ -2121,29 +2174,22 @@ window.WIDGETS_CATALOG = [
   },
   {
     "id": "sys_fans",
-    "name": "Fan Speed RPM",
+    "name": "GPU Fan Speed",
     "category": "system",
-    "desc": "Chassis and CPU cooler RPM tachometer",
+    "desc": "NVIDIA GPU fan speed when exposed by the driver",
     "iconKey": "cpu",
     "template": "dev_stat",
     "title": "Cooling Fans",
     "meta": "Case Fans 980 RPM",
     "value": "1,120 RPM",
     "accent": "#0ea5e9",
-    "fields": [
-      {
-        "key": "unit",
-        "label": "Unit",
-        "type": "text",
-        "default": "RPM"
-      }
-    ]
+    "fields": []
   },
   {
     "id": "sys_wifi",
     "name": "Wi-Fi Signal",
     "category": "system",
-    "desc": "Connected Wi-Fi network SSID, frequency and dBm strength",
+    "desc": "Connected Wi-Fi network and Windows signal quality",
     "iconKey": "network",
     "template": "dev_stat",
     "title": "Wi-Fi 6",
@@ -2153,9 +2199,9 @@ window.WIDGETS_CATALOG = [
     "fields": [
       {
         "key": "adapter",
-        "label": "Adapter",
+        "label": "Adapter name contains (optional)",
         "type": "text",
-        "default": "Wi-Fi"
+        "default": ""
       }
     ]
   },
@@ -2163,7 +2209,7 @@ window.WIDGETS_CATALOG = [
     "id": "sys_bluetooth",
     "name": "Bluetooth Link",
     "category": "system",
-    "desc": "Connected wireless headphones, mice & peripherals",
+    "desc": "Connected Bluetooth devices reported by Windows",
     "iconKey": "volume",
     "template": "key_value_list",
     "items": [
@@ -2189,7 +2235,7 @@ window.WIDGETS_CATALOG = [
     "id": "sys_vram",
     "name": "VRAM Usage",
     "category": "system",
-    "desc": "Dedicated video memory buffer for gaming and AI models",
+    "desc": "NVIDIA GPU dedicated memory used and total",
     "iconKey": "gpu",
     "template": "hardware_stat",
     "metric": "gpu",
@@ -2222,17 +2268,10 @@ window.WIDGETS_CATALOG = [
     "id": "ctrl_mic_mute",
     "name": "Mic Mute Switch",
     "category": "controls",
-    "desc": "Microphone activity indicator and global mute button",
+    "desc": "Mute or unmute the default microphone",
     "iconKey": "mic",
     "template": "control_mic",
-    "fields": [
-      {
-        "key": "push_to_talk",
-        "label": "Push to talk mode",
-        "type": "switch",
-        "default": false
-      }
-    ]
+    "fields": []
   },
   {
     "id": "ctrl_brightness",
@@ -2241,30 +2280,16 @@ window.WIDGETS_CATALOG = [
     "desc": "Monitor display brightness level control",
     "iconKey": "weather_sun",
     "template": "control_brightness",
-    "fields": [
-      {
-        "key": "step",
-        "label": "Brightness step (%)",
-        "type": "number",
-        "default": 10
-      }
-    ]
+    "fields": []
   },
   {
     "id": "ctrl_audio_switch",
     "name": "Audio Switcher",
     "category": "controls",
-    "desc": "One-click switcher between Speakers and Headphones",
+    "desc": "Select the default Windows audio output directly from the widget",
     "iconKey": "volume",
     "template": "control_switcher",
-    "fields": [
-      {
-        "key": "auto_switch",
-        "label": "Auto detect headphones",
-        "type": "switch",
-        "default": true
-      }
-    ]
+    "fields": [{"key":"also_communications","label":"Also switch the communications output","type":"switch","default":false}]
   },
   {
     "id": "ctrl_recycle_bin",
@@ -2273,14 +2298,7 @@ window.WIDGETS_CATALOG = [
     "desc": "Windows recycle bin item count, size and 1-click clean",
     "iconKey": "recycle",
     "template": "control_recycle",
-    "fields": [
-      {
-        "key": "confirm_empty",
-        "label": "Confirm before emptying",
-        "type": "switch",
-        "default": true
-      }
-    ]
+    "fields": []
   },
   {
     "id": "util_hackernews",
@@ -2401,9 +2419,9 @@ window.WIDGETS_CATALOG = [
   },
   {
     "id": "ai_openai_balance",
-    "name": "OpenAI Balance",
+    "name": "OpenAI Balance & Spend",
     "category": "ai",
-    "desc": "API credit balance, daily spend and rate limit tier",
+    "desc": "API spend with an Admin key, or a selected prepaid credit amount from your signed-in Billing page.",
     "iconKey": "openai_balance",
     "template": "dev_stat",
     "title": "OpenAI API",
@@ -2413,17 +2431,20 @@ window.WIDGETS_CATALOG = [
     "fields": [
       {
         "key": "api_key",
-        "label": "OpenAI Secret Key",
+        "when":{"key":"metric","value":"API spend"},
+        "label": "OpenAI organization Admin key",
         "type": "password",
-        "placeholder": "sk-..."
-      }
+        "placeholder": "sk-admin-..."
+      },
+      {"key":"metric","label":"Metric","type":"select","options":["API spend","Prepaid balance"],"default":"API spend"},
+      {"key":"period","when":{"key":"metric","value":"API spend"},"label":"Spend period","type":"select","options":["Month to date (UTC)","Today (UTC)"],"default":"Month to date (UTC)"}
     ]
   },
   {
     "id": "ai_anthropic_balance",
-    "name": "Anthropic Balance",
+    "name": "Anthropic Balance & Spend",
     "category": "ai",
-    "desc": "Claude API prepaid credits and organization consumption",
+    "desc": "API spend with an Admin key, or a selected USD credit amount from your signed-in Billing page. API cost reports can lag up to 24 hours.",
     "iconKey": "anthropic_balance",
     "template": "dev_stat",
     "title": "Anthropic API",
@@ -2433,10 +2454,13 @@ window.WIDGETS_CATALOG = [
     "fields": [
       {
         "key": "api_key",
-        "label": "Anthropic Key",
+        "when":{"key":"metric","value":"API spend"},
+        "label": "Anthropic organization Admin key",
         "type": "password",
-        "placeholder": "sk-ant-..."
-      }
+        "placeholder": "sk-ant-admin01-..."
+      },
+      {"key":"metric","label":"Metric","type":"select","options":["API spend","Prepaid balance"],"default":"API spend"},
+      {"key":"period","when":{"key":"metric","value":"API spend"},"label":"Spend period","type":"select","options":["Month to date (UTC)","Today (UTC)"],"default":"Month to date (UTC)"}
     ]
   },
   {
@@ -2498,7 +2522,7 @@ window.WIDGETS_CATALOG = [
     "id": "prod_calculator",
     "name": "Quick Calculator",
     "category": "productivity",
-    "desc": "Instant desktop calculator, math expressions and unit conversion",
+    "desc": "Calculate arithmetic expressions with adjustable decimal precision",
     "iconKey": "calculator",
     "template": "dev_stat",
     "title": "Calculator",
@@ -2518,13 +2542,13 @@ window.WIDGETS_CATALOG = [
     "id": "prod_clipboard",
     "name": "Clipboard History",
     "category": "productivity",
-    "desc": "Recent clipboard text snippets, code blocks and one-click copy",
+    "desc": "Recent text copied while this widget is open; history clears when Atelier exits",
     "iconKey": "clipboard",
     "template": "dev_stat",
     "title": "Clipboard",
-    "meta": "32 items",
-    "value": "git commit -m \"feat:...\"",
-    "sub": "Copied 2m ago · Text snippet",
+    "meta": "Recent items",
+    "value": "Copied text appears here",
+    "sub": "Select an item to copy",
     "fields": [
       {
         "key": "max_items",
