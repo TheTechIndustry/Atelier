@@ -1,0 +1,10 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'../crates/ui');
+const esbuild=require(path.join(root,'node_modules/esbuild'));
+const pkg=path.join(root,'node_modules/ical.js');
+const out=path.join(root,'ui/vendor');
+fs.mkdirSync(out,{recursive:true});
+esbuild.buildSync({entryPoints:[path.join(pkg,'dist/ical.js')],bundle:true,format:'iife',globalName:'AtelierICAL',minify:true,legalComments:'none',outfile:path.join(out,'ical.min.js'),footer:{js:"(typeof window==='undefined'?globalThis:window).ICAL=AtelierICAL.default;"}});
+fs.copyFileSync(path.join(pkg,'LICENSE'),path.join(out,'ICAL-LICENSE.txt'));
+fs.writeFileSync(path.join(out,'ICAL-NOTICE.txt'),'ical.js 2.2.1\nPortions Copyright (C) Philipp Kewisch and contributors.\nThis Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.\nSource: https://github.com/kewisch/ical.js/tree/v2.2.1\nThe bundled file is generated without functional changes by scripts/vendor-calendar.cjs.\n');

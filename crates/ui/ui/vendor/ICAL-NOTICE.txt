@@ -1,0 +1,5 @@
+ical.js 2.2.1
+Portions Copyright (C) Philipp Kewisch and contributors.
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+Source: https://github.com/kewisch/ical.js/tree/v2.2.1
+The bundled file is generated without functional changes by scripts/vendor-calendar.cjs.
