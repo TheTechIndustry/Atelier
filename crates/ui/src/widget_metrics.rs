@@ -220,3 +220,80 @@ pub fn poll() -> (
 
     (freq, network, network_percent, disk, gpu_temperature())
 }
+
+#[repr(C)]
+#[derive(Default)]
+struct NvmlMemory {
+    total: u64,
+    free: u64,
+    used: u64,
+}
+#[derive(serde::Serialize)]
+pub struct GpuMemory {
+    total: u64,
+    used: u64,
+    fan_percent: Option<u32>,
+}
+fn gpu_memory() -> Result<GpuMemory, String> {
+    type Get = unsafe extern "C" fn(u32, *mut *mut c_void) -> i32;
+    type Memory = unsafe extern "C" fn(*mut c_void, *mut NvmlMemory) -> i32;
+    type Fan = unsafe extern "C" fn(*mut c_void, *mut u32) -> i32;
+    static NVML: OnceLock<Option<(Get, Memory, Option<Fan>)>> = OnceLock::new();
+    let (get, memory, fan) = *NVML
+        .get_or_init(|| unsafe {
+            let name: Vec<u16> = "nvml.dll".encode_utf16().chain(Some(0)).collect();
+            let lib = LoadLibraryExW(name.as_ptr(), 0, 0x800);
+            if lib == 0 {
+                return None;
+            }
+            let init = GetProcAddress(lib, b"nvmlInit_v2\0".as_ptr());
+            let get = GetProcAddress(lib, b"nvmlDeviceGetHandleByIndex_v2\0".as_ptr());
+            let memory = GetProcAddress(lib, b"nvmlDeviceGetMemoryInfo\0".as_ptr());
+            let fan = GetProcAddress(lib, b"nvmlDeviceGetFanSpeed\0".as_ptr());
+            if init.is_null() || get.is_null() || memory.is_null() {
+                return None;
+            }
+            let init: unsafe extern "C" fn() -> i32 = std::mem::transmute(init);
+            if init() != 0 {
+                return None;
+            }
+            Some((
+                std::mem::transmute::<_, Get>(get),
+                std::mem::transmute::<_, Memory>(memory),
+                if fan.is_null() {
+                    None
+                } else {
+                    Some(std::mem::transmute::<_, Fan>(fan))
+                },
+            ))
+        })
+        .as_ref()
+        .ok_or("NVIDIA GPU metrics are unavailable")?;
+    let mut device = std::ptr::null_mut();
+    let mut info = NvmlMemory::default();
+    if unsafe { get(0, &mut device) != 0 || memory(device, &mut info) != 0 } || info.total == 0 {
+        return Err("GPU memory sensor is unavailable".into());
+    }
+    let mut speed = 0;
+    let fan_percent = fan.and_then(|f| {
+        if unsafe { f(device, &mut speed) } == 0 && speed <= 100 {
+            Some(speed)
+        } else {
+            None
+        }
+    });
+    Ok(GpuMemory {
+        total: info.total,
+        used: info.used,
+        fan_percent,
+    })
+}
+#[tauri::command]
+pub async fn widget_gpu_memory(window: tauri::Window) -> Result<GpuMemory, String> {
+    if !["desktop-dock", "widget-sys_vram", "widget-sys_fans"].contains(&window.label()) {
+        return Err("GPU metrics unavailable to this window".into());
+    }
+    tauri::async_runtime::spawn_blocking(gpu_memory)
+        .await
+        .map_err(|_| "GPU request failed".to_string())?
+}

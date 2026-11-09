@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
 const RESIZE_MARGIN: u32 = 18;
-pub const KINDS: [&str; 107] = [
+pub const KINDS: [&str; 109] = [
     "clock",
     "calendar",
     "system",
@@ -111,6 +111,8 @@ pub const KINDS: [&str; 107] = [
     "util_nasa_apod",
     "util_air_quality",
     "util_sun_moon",
+    "sys_tray",
+    "app_folder",
 ];
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -494,12 +496,20 @@ pub async fn set_widget(
     normalize(&mut config)?;
     let (next, i) = {
         let mut configs = state.0.lock().map_err(|e| e.to_string())?;
-        let i = configs
-            .iter()
-            .position(|c| c.kind == config.kind)
-            .ok_or("Unknown widget")?;
-        config.x = configs[i].x;
-        config.y = configs[i].y;
+        let i = match configs.iter().position(|c| c.kind == config.kind) {
+            Some(i) => {
+                config.x = configs[i].x;
+                config.y = configs[i].y;
+                i
+            }
+            None => {
+                if !KINDS.contains(&config.kind.as_str()) {
+                    return Err("Unknown widget".into());
+                }
+                configs.push(config.clone());
+                configs.len() - 1
+            }
+        };
         let mut next = configs.clone();
         next[i] = config;
         persist(&next)?;
@@ -507,6 +517,7 @@ pub async fn set_widget(
         (next, i)
     };
     apply(&app, &next[i], i)?;
+    let _ = app.emit("widget-config", &next[i]);
     let _ = app.emit_to("main", "widget-updated", &next[i]);
     let _ = app.emit_to("desktop-dock", "widget-config", &next[i]);
     Ok(next)
@@ -582,8 +593,20 @@ pub async fn widget_stats(
     tauri::async_runtime::spawn_blocking(move || {
         let s=widget.poll_hardware_stats();
         let (frequency,network,network_percent,disk,gpu_temp)=super::widget_metrics::poll();
-        serde_json::json!({"cpu":s.cpu_percent,"memory":s.mem_percent,"used":s.mem_used_mb,"total":s.mem_total_mb,"gpu":super::widget_gpu::poll(),"frequency":frequency,"network":network,"network_percent":network_percent,"disk":disk,"gpu_temp":gpu_temp})
+        serde_json::json!({"cpu":s.cpu_percent,"memory":s.mem_percent,"used":s.mem_used_mb,"total":s.mem_total_mb,"gpu":super::widget_gpu::poll(),"frequency":frequency,"network":network,"network_percent":network_percent,"disk":disk,"gpu_temp":gpu_temp,"uptime_seconds":unsafe { windows::Win32::System::SystemInformation::GetTickCount64() / 1000 }})
     }).await.map_err(|e|e.to_string())
+}
+#[tauri::command]
+pub fn widget_drive_usage(window: tauri::Window, drive: String) -> Result<serde_json::Value, String> {
+    let label=window.label();
+    if label!="desktop-dock" && label!="widget-sys_disk_c" && label!="widget-sys_disk_d" { return Err("Drive data is unavailable to this window".into()); }
+    let letter=drive.trim().trim_end_matches(':');
+    if letter.len()!=1 || !letter.as_bytes()[0].is_ascii_alphabetic() { return Err("Enter a drive letter such as C:".into()); }
+    let path:Vec<u16>=format!("{}:\\",letter.to_ascii_uppercase()).encode_utf16().chain(Some(0)).collect();
+    let (mut total,mut free)=(0u64,0u64);
+    unsafe { windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW(windows::core::PCWSTR(path.as_ptr()),None,Some(&mut total),Some(&mut free)) }.map_err(|_|"Drive is unavailable".to_string())?;
+    if total==0 { return Err("Drive is unavailable".into()); }
+    Ok(serde_json::json!({"drive":letter.to_ascii_uppercase(),"total":total,"free":free,"percent":100.0*(total.saturating_sub(free)) as f64/total as f64}))
 }
 #[repr(C)]
 struct PowerStatus {

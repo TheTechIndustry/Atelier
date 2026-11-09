@@ -1,4 +1,5 @@
 mod dock_glass;
+mod folder_ghost;
 use atelier_audio::AudioManager;
 use atelier_common::config::{AtelierConfig, TaskbarConfig, TaskbarStyle};
 use atelier_common::presets::ThemePreset;
@@ -26,11 +27,28 @@ mod steam_workshop;
 mod system_animations;
 mod system_appearance;
 mod tray_panel;
+mod tray_bridge;
+#[allow(dead_code)]
+mod tray_protocol;
 mod wallpaper_performance;
 mod wallpaper_scene;
+mod widget_auth;
+mod widget_billing;
+mod widget_codex;
+mod widget_google;
+mod widget_appstore;
+mod widget_playstore;
+mod widget_clipboard;
+mod widget_controls;
+mod widget_audio_outputs;
+mod widget_docker;
 mod widget_gpu;
+mod widget_network;
+mod widget_reminder;
 mod widget_metrics;
 mod widget_photo;
+mod widget_screentime;
+mod widget_timers;
 pub fn watchdog_args() -> bool {
     atelier_taskbar::position::guardian_args() || desktop_dock::watchdog_args()
 }
@@ -744,14 +762,18 @@ pub fn run() {
         .manage(state)
         .manage(app_usage::UsageMonitor::default())
         .manage(tray_panel::TrayUsage::default())
+        .manage(tray_bridge::TrayBridge::default())
         .manage(desktop_dock::DockState::new())
         .manage(desktop_widgets::Widgets::new())
         .manage(desktop_island::IslandState::new())
         .manage(system_appearance::AppearanceState::new())
         .manage(system_animations::AnimationsState::new())
         .manage(widget_photo::PhotoUploads::default())
+        .manage(widget_clipboard::ClipboardHistory::default())
+        .manage(widget_screentime::ScreenTime::default())
         .manage(desktop_wallpaper::Wallpapers::new())
         .setup(|app| {
+            if !dock_test_mode() { widget_screentime::start(app.handle().clone()); widget_timers::start(); }
             let audio = app.state::<AppState>().audio.clone();
             tauri::async_runtime::spawn(async move {
                 loop {
@@ -790,23 +812,17 @@ pub fn run() {
                 }
             }
             tray_panel::create(app.handle())?;
+            if app.state::<desktop_dock::DockState>().widgets_enabled(&["sys_tray"]) {
+                app.state::<tray_bridge::TrayBridge>().start(app.handle().clone());
+            }
+            let menu = tray_panel::app_menu(app.handle())?;
+            app.on_menu_event(tray_panel::handle_menu_event);
             let _tray = TrayIconBuilder::new()
                 .tooltip("Atelier Desktop Engine")
                 .icon(icon)
+                .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
-                        button: MouseButton::Right,
-                        button_state: MouseButtonState::Up,
-                        position,
-                        ..
-                    } => {
-                        if let Err(error) =
-                            tray_panel::show(tray.app_handle(), position.x, position.y)
-                        {
-                            tracing::error!(%error, "Could not show tray panel");
-                        }
-                    }
                     TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
@@ -857,8 +873,14 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(|invoke| {
+            if invoke.message.webview_ref().label().starts_with("billing-") {
+                invoke.resolver.reject("Billing websites cannot invoke Atelier commands");
+                return true;
+            }
+            let handler:fn(tauri::ipc::Invoke<tauri::Wry>)->bool=tauri::generate_handler![
             app_usage::atelier_usage,
+            app_usage::widget_top_processes,
             app_usage::trim_atelier_memory,
             tray_panel::tray_usage,
             tray_panel::tray_action,
@@ -904,11 +926,37 @@ pub fn run() {
             desktop_island::island_monitors,
             desktop_island::island_expand,
             desktop_widgets::get_widgets,
+            widget_auth::widget_verify_service,
+            widget_auth::widget_service_data,
+            widget_appstore::widget_appstore_sales,
+            widget_codex::widget_codex_quota,
+            widget_billing::widget_billing_open,
+            widget_billing::widget_billing_snapshot,
+            widget_billing::widget_billing_disconnect,
+            widget_google::widget_ga4_service_report,
+            widget_playstore::widget_play_report,
+            widget_screentime::widget_screen_time,
+            widget_screentime::widget_screen_time_clear,
+            widget_controls::widget_audio_device,
+            widget_controls::widget_brightness,
+            widget_controls::widget_open_sound_settings,
+            widget_audio_outputs::widget_audio_outputs,
+            widget_controls::widget_recycle_bin,
+            widget_clipboard::widget_clipboard_snapshot,
+            widget_clipboard::widget_clipboard_copy,
             desktop_widgets::fetch_antigravity_quota,
             desktop_widgets::set_widget,
             desktop_widgets::audio_spectrum,
             desktop_widgets::audio_widget_fullscreen,
             desktop_widgets::widget_stats,
+            desktop_widgets::widget_drive_usage,
+            widget_network::widget_ping,
+            widget_docker::widget_docker,
+            widget_network::widget_wifi,
+            widget_network::widget_bluetooth,
+            widget_metrics::widget_gpu_memory,
+            widget_reminder::widget_break_reminder,
+            widget_timers::widget_timer,
             desktop_widgets::widget_media,
             desktop_widgets::widget_media_control,
             desktop_widgets::widget_media_seek,
@@ -946,6 +994,14 @@ pub fn run() {
             desktop_dock::dock_input_language,
             desktop_dock::dock_languages,
             desktop_dock::dock_open_language,
+            desktop_dock::dock_open_folder,
+            desktop_dock::dock_open_tray,
+            folder_ghost::folder_ghost_start,
+            folder_ghost::folder_ghost_move,
+            folder_ghost::folder_ghost_end,
+            folder_ghost::folder_ghost_icon,
+            tray_bridge::tray_icons,
+            tray_bridge::tray_icon_click,
             desktop_dock::dock_select_language,
             desktop_dock::dock_reorder,
             desktop_dock::dock_widget_set,
@@ -954,7 +1010,9 @@ pub fn run() {
             desktop_dock::dock_set_icon,
             desktop_dock::dock_open_studio,
             desktop_dock::dock_native_test_probe,
-        ])
+            ];
+            handler(invoke)
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(false) = event {
                 desktop_widgets::dismiss_resize(window);
