@@ -19,6 +19,9 @@ Thumbs.db
 
 *.log
 *.exe
+*.pdb
+*.d
+scratch/
 .env
 .env.*
 !.env.example
