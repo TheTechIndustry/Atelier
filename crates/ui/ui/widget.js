@@ -21,7 +21,7 @@ function getCapsuleAccent(k, a = 1) {
 function applyWidgetStyling(el, c, k) {
   if (!el || !c) return;
   const isCapsule = ['pomodoro','timer','stopwatch','prod_pomodoro','prod_timer','prod_stopwatch'].includes(k);
-  const opacity = c.custom?.opacity !== undefined ? Number(c.custom.opacity) : (c.opacity !== undefined ? Number(c.opacity) : 95);
+  const opacity = k === 'audio' ? Number(c.opacity ?? 95) : (c.custom?.opacity !== undefined ? Number(c.custom.opacity) : (c.opacity !== undefined ? Number(c.opacity) : 95));
   const alpha = Math.max(0, Math.min(100, opacity)) / 100;
   const radius = c.radius !== undefined ? Number(c.radius) : 22;
   const fg = c.foreground || '#ffffff';
@@ -40,6 +40,17 @@ function applyWidgetStyling(el, c, k) {
     el.style.setProperty('--widget-accent-color', c.custom.accent_color);
   } else {
     el.style.removeProperty('--widget-accent-color');
+  }
+
+  if (k === 'audio') {
+    const color = /^#[0-9a-f]{6}$/i.test(c.background || '') ? c.background : '#20212b';
+    const rgb = [1,3,5].map(i => parseInt(color.slice(i,i+2),16));
+    el.style.background = `rgba(${rgb.join(',')},${alpha})`;
+    el.style.border = alpha ? `1px solid rgba(255,255,255,${alpha * 0.1})` : 'none';
+    el.style.boxShadow = 'none';
+    el.style.backdropFilter = 'none';
+    el.style.webkitBackdropFilter = 'none';
+    return;
   }
 
   if (preset === 'light' || c.background === '#ffffff') {
@@ -130,14 +141,23 @@ function updateDockAppearance(){
   }catch{}
 }
 
+function widgetRemoveInset(radius){
+  return 21+Math.max(10,Math.ceil(Math.max(0,Number(radius)||0)*.3)+2);
+}
+
 function applyConfig(c){
   const oldCity=config.city,oldUnit=config.fahrenheit;
   savedWidgetConfig=c;
   config={...config,...c};
   if(compact){const options=c.custom?.dock_appearance?.options||{};for(const [key,value] of Object.entries(dockDisplayDefaults))config[key]=typeof options[key]==='boolean'?options[key]:value;}
+  const display=compact?(c.custom?.dock_appearance?.options||{}):(c.custom||{});
+  card.dataset.showIcon=String(display.show_icon!==false);
+  card.dataset.showTitle=String(display.show_title!==false);
+  for(const key of ['subtitle','value','progress','controls'])card.dataset['show'+key[0].toUpperCase()+key.slice(1)]=String(display['show_'+key]!==false);
   if(config.city!==oldCity||config.fahrenheit!==oldUnit)weatherCache=null;
   if(!preview&&!compact){
     applyWidgetStyling(card, config, kind);
+    document.documentElement.style.setProperty('--widget-remove-inset',widgetRemoveInset(config.radius)+'px');
     const handles=document.querySelector('.resize-handles');
     if(handles)handles.style.borderRadius=config.radius+'px';
     card.style.setProperty('--ring-bg',config.background||'#161720');
@@ -149,6 +169,7 @@ function applyConfig(c){
 window.applyConfig=applyConfig;
 window.updateDockAppearance=updateDockAppearance;
 window.refresh=refresh;
+if(kind==='ctrl_audio_switch')tauri?.event?.listen('widget-audio-output-changed',()=>refresh());
 window.addEventListener('message',e=>{if(e.data?.widgetConfig&&(!kind||e.data.widgetConfig.kind===kind))applyConfig(e.data.widgetConfig);});
 
 function setDesktopEditMode(enabled) {
@@ -166,8 +187,17 @@ function setDesktopEditMode(enabled) {
       btn.addEventListener('click', async e => {
         e.preventDefault();
         e.stopPropagation();
-        config.enabled = false;
-        await persistWidgetConfig();
+        if (btn.disabled) return;
+        btn.disabled = true;
+        try {
+          await invoke('dock_widget_set', {id:kind, added:false});
+          config.enabled = false;
+          await persistWidgetConfig();
+        } catch (error) {
+          config.enabled = true;
+          btn.title = 'Could not remove widget: ' + String(error.message || error);
+          btn.disabled = false;
+        }
       });
       btn.addEventListener('pointerdown', e => e.stopPropagation());
       document.body.append(btn);
@@ -196,7 +226,7 @@ card.addEventListener('pointercancel',()=>{drag=null;lastClick=null});
 if(!preview){
  const handles=document.createElement('div');handles.className='resize-handles';handles.setAttribute('aria-label','Resize widget');document.body.append(handles);
  let resizing=null,resizeQueue=Promise.resolve();
- function geometry(d){const b=d.bounds,scale=b.scale,dx=Math.round((d.x-d.startX)*scale),dy=Math.round((d.y-d.startY)*scale);let x=b.x,y=b.y,w=b.width,h=b.height;const clamp=(v,min,max)=>Math.max(Math.round(min*scale),Math.min(Math.round(max*scale),v));if(d.edge==='left'){w=clamp(b.width-dx,140,1200);x=b.x+b.width-w}else if(d.edge==='right')w=clamp(b.width+dx,140,1200);else if(d.edge==='top'){h=clamp(b.height-dy,120,900);y=b.y+b.height-h}else h=clamp(b.height+dy,120,900);return {x,y,width:w,height:h}}
+ function geometry(d){const b=d.bounds,scale=b.scale,dx=Math.round((d.x-d.startX)*scale),dy=Math.round((d.y-d.startY)*scale),maxWidth=kind==='audio'?16384:1200;let x=b.x,y=b.y,w=b.width,h=b.height;const clamp=(v,min,max)=>Math.max(Math.round(min*scale),Math.min(Math.round(max*scale),v));if(d.edge==='left'){w=clamp(b.width-dx,140,maxWidth);x=b.x+b.width-w}else if(d.edge==='right')w=clamp(b.width+dx,140,maxWidth);else if(d.edge==='top'){h=clamp(b.height-dy,120,900);y=b.y+b.height-h}else h=clamp(b.height+dy,120,900);return {x,y,width:w,height:h}}
  function update(d,commit){if(!d.bounds)return;const next=geometry(d);resizeQueue=resizeQueue.catch(()=>{}).then(()=>invoke('widget_resize',{...next,commit}));resizeQueue.catch(()=>{});}
  for(const [edge,symbol] of [['left','↔'],['right','↔'],['top','↕'],['bottom','↕']]){const h=document.createElement('button');h.type='button';h.className='resize-handle '+edge;h.textContent=symbol;h.setAttribute('aria-label','Resize '+edge+' edge');handles.append(h);
  h.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();h.setPointerCapture(e.pointerId);const d=resizing={id:e.pointerId,edge,startX:e.screenX,startY:e.screenY,x:e.screenX,y:e.screenY,bounds:null,ended:false};invoke('widget_bounds').then(bounds=>{d.bounds=bounds;update(d,d.ended)}).catch(()=>{if(resizing===d)resizing=null})});
@@ -205,7 +235,7 @@ if(!preview){
  h.addEventListener('pointercancel',()=>{if(resizing){resizing.ended=true;update(resizing,true)}resizing=null});}
  window.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('resizing')});tauri?.event?.listen('widget-dismiss-resize',e=>{if(e.payload===kind)document.body.classList.remove('resizing')});
 }
-function renderTime(){const d=new Date();card.replaceChildren();if(kind==='clock'){text('div','time',new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit',...(config.show_seconds?{second:'2-digit'}:{}),hour12:!config.hour_24}).format(d));if(config.show_date)text('div','date',new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(d))}else{const row=text('div','calrow',''),left=text('div','','',row);text('div','month',new Intl.DateTimeFormat(undefined,{month:'long'}).format(d),left);text('div','day',d.getDate(),left);if(config.show_weekday)text('div','weekday',new Intl.DateTimeFormat(undefined,{weekday:'long'}).format(d),left);if(config.show_month&&card.clientWidth>220){const grid=text('div','grid','',row);for(let i=0;i<7;i++)text('span','weekday',new Intl.DateTimeFormat(undefined,{weekday:'narrow'}).format(new Date(2024,0,1+i)),grid);for(let i=0;i<(new Date(d.getFullYear(),d.getMonth(),1).getDay()+6)%7;i++)text('span','','',grid);for(let n=1;n<=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();n++)text('span',n===d.getDate()?'today':'',n,grid)}}}
+function renderTime(){const d=new Date();card.replaceChildren();if(kind==='clock'){text('div','time',new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',...(config.show_seconds?{second:'2-digit'}:{}),hour12:!config.hour_24}).format(d));if(config.show_date)text('div','date',new Intl.DateTimeFormat('en-US',{weekday:'long',month:'long',day:'numeric'}).format(d))}else{const row=text('div','calrow',''),left=text('div','','',row);text('div','month',new Intl.DateTimeFormat('en-US',{month:'long'}).format(d),left);text('div','day',d.getDate(),left);if(config.show_weekday)text('div','weekday',new Intl.DateTimeFormat('en-US',{weekday:'long'}).format(d),left);if(config.show_month&&card.clientWidth>220){const grid=text('div','grid','',row);for(let i=0;i<7;i++)text('span','weekday',new Intl.DateTimeFormat('en-US',{weekday:'narrow'}).format(new Date(2024,0,1+i)),grid);for(let i=0;i<(new Date(d.getFullYear(),d.getMonth(),1).getDay()+6)%7;i++)text('span','','',grid);for(let n=1;n<=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();n++)text('span',n===d.getDate()?'today':'',n,grid)}}}
 function weatherSvg(type){if(type==='sun')return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';if(type==='rain')return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/><path d="M8 19v2M8 13v2M12 21v2M12 15v2M16 19v2M16 13v2"/></svg>';if(type==='snow')return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5f3fc" stroke-width="2"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14"/></svg>';if(type==='thunder')return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>'}
 function weatherDescription(code){if(code===0)return [weatherSvg('sun'),'Clear'];if(code<=3)return [weatherSvg('cloud'),'Cloudy'];if(code<=48)return [weatherSvg('cloud'),'Fog'];if(code<=67||code>=80&&code<=82)return [weatherSvg('rain'),'Rain'];if(code<=77||code<=86)return [weatherSvg('snow'),'Snow'];return [weatherSvg('thunder'),'Thunderstorm']}
 async function getWeather(){const city=config.city.trim(),unit=config.fahrenheit?'fahrenheit':'celsius',key=city+'|'+unit;if(!city)throw Error('Set a city in widget settings');if(weatherCache?.key===key&&Date.now()-weatherCache.at<900000)return weatherCache.value;if(weatherRequest?.key===key)return weatherRequest.promise;const promise=(async()=>{const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&format=json`);if(!r.ok)throw Error('Location lookup failed');const place=(await r.json()).results?.[0];if(!place)throw Error('City not found');const url=`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&temperature_unit=${unit}&timezone=auto`;const result=await fetch(url);if(!result.ok)throw Error('Weather unavailable');const response=await result.json(),data=response.current,daily=response.daily;if(!data||!Number.isFinite(data.temperature_2m))throw Error('Weather unavailable');const value={city:place.name,temp:data.temperature_2m,code:data.weather_code,wind:data.wind_speed_10m,unit:unit==='fahrenheit'?'°F':'°C',days:(daily?.time||[]).map((date,i)=>({date,code:daily.weather_code?.[i],high:daily.temperature_2m_max?.[i],low:daily.temperature_2m_min?.[i]}))};weatherCache={key,at:Date.now(),value};return value})();weatherRequest={key,promise};try{return await promise}finally{if(weatherRequest?.promise===promise)weatherRequest=null}}
@@ -736,10 +766,10 @@ function renderCatalogWidget(entry, stats){
   if (entry.template === 'minimal_clock') {
     const d = new Date();
     const wrap = text('div', 'luma-card', '');
-    text('div', 'luma-cap-digits', new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: config.custom?.hour_24 === false, ...(config.custom?.show_seconds ? { second: '2-digit' } : {}) }).format(d), wrap);
+    text('div', 'luma-cap-digits', new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: config.custom?.hour_24 === false, ...(config.custom?.show_seconds ? { second: '2-digit' } : {}) }).format(d), wrap);
     const meta = text('div', 'luma-top-meta', '', wrap);
-    text('span', 'luma-title', new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(d).toUpperCase(), meta);
-    text('span', 'luma-sub', new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(d), meta);
+    text('span', 'luma-title', new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(d).toUpperCase(), meta);
+    text('span', 'luma-sub', new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(d), meta);
     return;
   }
   if (entry.template === 'world_clock') {
@@ -752,7 +782,7 @@ function renderCatalogWidget(entry, stats){
     const cities=String(config.custom?.cities||'Kyiv, London, New York, Tokyo').split(',').map(x=>x.trim()).filter(Boolean).slice(0,12);
     for (const name of cities) {
       const r=text('div','luma-top-meta','',list);text('span','luma-sub',name,r);
-      try{text('span','luma-title',new Intl.DateTimeFormat(undefined,{timeZone:known[name]||name,hour:'2-digit',minute:'2-digit'}).format(d),r)}catch{text('span','luma-title','Unknown time zone',r)}
+      try{text('span','luma-title',new Intl.DateTimeFormat('en-US',{timeZone:known[name]||name,hour:'2-digit',minute:'2-digit'}).format(d),r)}catch{text('span','luma-title','Unknown time zone',r)}
     }
     return;
   }
@@ -960,7 +990,7 @@ async function refresh(){if(kind==='audio')return;const seq=++renderSeq;if(kind=
     textarea.value=config.notes||'';
   }
   return;
-}if(kind==='photo'){const src=config.photo?.startsWith('stored:')?'http://widget-photo.localhost/'+config.photo.slice(7):config.photo;if(src&&card.querySelector('.photo')?.getAttribute('src')===src)return;card.replaceChildren();if(src){const img=document.createElement('img');img.className='photo';img.src=src;img.alt='Selected photo';img.onerror=()=>{card.replaceChildren();text('div','empty','Could not load the photo; choose it again in settings')};card.append(img)}else text('div','empty','Choose a photo in settings');return}if(kind==='countdown'){card.replaceChildren();if(!config.countdown_date){text('div','empty','Choose a date in settings');return}const target=new Date(config.countdown_date+'T00:00:00'),today=new Date();today.setHours(0,0,0,0);const days=Math.round((target-today)/86400000);text('div','countdown-title',config.countdown_title||'Countdown');text('div','battery-value',String(Math.abs(days)));text('div','hint',days===0?'Today':days>0?'days to go':'days ago');return}if(kind==='weather'){if(!preview&&!config.city){card.replaceChildren();text('div','empty','Set a city in widget settings');return}try{const w=preview?{city:config.city||'Your city',temp:18,code:1,wind:12,unit:config.fahrenheit?'°F':'°C',days:Array.from({length:7},(_,i)=>({date:new Date(Date.now()+i*86400000).toISOString().slice(0,10),code:[1,0,3,61,2,0,3][i],high:18+i,low:10+i}))}:await getWeather();if(seq!==renderSeq)return;card.replaceChildren();const [icon,desc]=weatherDescription(w.code);text('div','weather-city',w.city);const wt=text('div','weather-temp','');wt.innerHTML=`${icon} <span>${Math.round(w.temp)}${w.unit}</span>`;text('div','hint',`${desc} · ${Math.round(w.wind)} km/h`);if(config.show_forecast&&w.days?.length){const week=text('div','forecast','');for(const day of w.days){const col=text('div','forecast-day','',week);const date=new Date(day.date+'T12:00:00');text('div','forecast-label',Number.isNaN(date.valueOf())?'—':new Intl.DateTimeFormat(undefined,{weekday:'short'}).format(date),col);const fi=text('div','forecast-icon','',col);fi.innerHTML=weatherDescription(day.code)[0];text('div','forecast-temp',Number.isFinite(day.high)?`${Math.round(day.high)}°`:'—',col)}}}catch(e){if(seq===renderSeq){card.replaceChildren();text('div','empty',String(e.message||e))}}return}
+}if(kind==='photo'){const src=config.photo?.startsWith('stored:')?'http://widget-photo.localhost/'+config.photo.slice(7):config.photo;if(src&&card.querySelector('.photo')?.getAttribute('src')===src)return;card.replaceChildren();if(src){const img=document.createElement('img');img.className='photo';img.src=src;img.alt='Selected photo';img.onerror=()=>{card.replaceChildren();text('div','empty','Could not load the photo; choose it again in settings')};card.append(img)}else text('div','empty','Choose a photo in settings');return}if(kind==='countdown'){card.replaceChildren();if(!config.countdown_date){text('div','empty','Choose a date in settings');return}const target=new Date(config.countdown_date+'T00:00:00'),today=new Date();today.setHours(0,0,0,0);const days=Math.round((target-today)/86400000);text('div','countdown-title',config.countdown_title||'Countdown');text('div','battery-value',String(Math.abs(days)));text('div','hint',days===0?'Today':days>0?'days to go':'days ago');return}if(kind==='weather'){if(!preview&&!config.city){card.replaceChildren();text('div','empty','Set a city in widget settings');return}try{const w=preview?{city:config.city||'Your city',temp:18,code:1,wind:12,unit:config.fahrenheit?'°F':'°C',days:Array.from({length:7},(_,i)=>({date:new Date(Date.now()+i*86400000).toISOString().slice(0,10),code:[1,0,3,61,2,0,3][i],high:18+i,low:10+i}))}:await getWeather();if(seq!==renderSeq)return;card.replaceChildren();const [icon,desc]=weatherDescription(w.code);text('div','weather-city',w.city);const wt=text('div','weather-temp','');wt.innerHTML=`${icon} <span>${Math.round(w.temp)}${w.unit}</span>`;text('div','hint',`${desc} · ${Math.round(w.wind)} km/h`);if(config.show_forecast&&w.days?.length){const week=text('div','forecast','');for(const day of w.days){const col=text('div','forecast-day','',week);const date=new Date(day.date+'T12:00:00');text('div','forecast-label',Number.isNaN(date.valueOf())?'—':new Intl.DateTimeFormat('en-US',{weekday:'short'}).format(date),col);const fi=text('div','forecast-icon','',col);fi.innerHTML=weatherDescription(day.code)[0];text('div','forecast-temp',Number.isFinite(day.high)?`${Math.round(day.high)}°`:'—',col)}}}catch(e){if(seq===renderSeq){card.replaceChildren();text('div','empty',String(e.message||e))}}return}
 if(kind==='prod_clipboard'){
   if(preview){card.replaceChildren();const row=text('div','luma-row-card','');const icon=text('div','luma-icon','',row);icon.innerHTML=window.WIDGET_ICONS?.clipboard||'';const content=text('div','luma-main-content','',row);text('div','luma-title','Clipboard',content);text('div','luma-sub','Copied text appears here',content);return}
   try{
@@ -1215,10 +1245,8 @@ if(catalogEntry&&!['clock','calendar','system','media','battery','notes','weathe
       const selected=devices.find(device=>device.selected),status=text('span','control-widget-value',selected?.name||'No default output',heading);
       const actions=text('div','control-widget-actions','',wrap);
       if(devices.length){
-        const select=text('select','audio-output-select','',actions);select.setAttribute('aria-label','Windows audio output');
-        for(const device of devices){const option=text('option','',device.name,select);option.value=device.id;option.selected=device.selected;}
-        if(!selected)select.selectedIndex=-1;
-        select.onchange=async e=>{e.stopPropagation();select.disabled=true;const actionSeq=++renderSeq;try{const next=await invoke('widget_audio_outputs',{deviceId:select.value,communications});if(actionSeq===renderSeq)draw(next)}catch(error){if(actionSeq===renderSeq){select.value=selected?.id||'';select.disabled=false;status.textContent='Switch failed';status.title=String(error.message||error)}}};
+        const select=text('button','audio-output-select',selected?.name||'Choose output',actions);select.type='button';select.setAttribute('aria-label','Choose audio output');
+        select.onclick=async e=>{e.stopPropagation();try{await invoke('widget_open_audio_outputs',{communications})}catch(error){status.textContent='Unavailable';status.title=String(error.message||error)}};
       }else status.textContent='No connected outputs';
       const button=text('button','control-widget-button','Settings',actions);button.type='button';button.onclick=async e=>{e.stopPropagation();try{await invoke('widget_open_sound_settings')}catch(error){status.textContent='Unavailable';status.title=String(error.message||error)}};
     };

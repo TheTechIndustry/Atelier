@@ -224,7 +224,7 @@ fn normalize(c: &mut WidgetConfig) -> Result<(), String> {
             156
         };
     }
-    c.width = c.width.clamp(140, 1200);
+    c.width = c.width.clamp(140, if c.kind == "audio" { 16384 } else { 1200 });
     c.height = c.height.clamp(120, 900);
     c.radius = c.radius.min(80);
     c.opacity = c.opacity.clamp(if c.kind == "audio" { 0 } else { 20 }, 100);
@@ -490,6 +490,7 @@ pub fn get_widgets(state: tauri::State<Widgets>) -> Result<Vec<WidgetConfig>, St
 #[tauri::command]
 pub async fn set_widget(
     app: tauri::AppHandle,
+    window: tauri::Window,
     state: tauri::State<'_, Widgets>,
     mut config: WidgetConfig,
 ) -> Result<Vec<WidgetConfig>, String> {
@@ -518,7 +519,7 @@ pub async fn set_widget(
     };
     apply(&app, &next[i], i)?;
     let _ = app.emit("widget-config", &next[i]);
-    let _ = app.emit_to("main", "widget-updated", &next[i]);
+    let _ = app.emit_to("main", "widget-updated", serde_json::json!({"config": &next[i], "source": window.label()}));
     let _ = app.emit_to("desktop-dock", "widget-config", &next[i]);
     Ok(next)
 }
@@ -552,7 +553,8 @@ pub async fn audio_spectrum(
     state: tauri::State<'_, super::AppState>,
 ) -> Result<serde_json::Value, String> {
     let label = window.label().to_string();
-    if label != "widget-audio"
+    if label != "main"
+        && label != "widget-audio"
         && label != "desktop-wallpaper"
         && label != "desktop-dock"
         && label != "dynamic-island"
@@ -563,7 +565,7 @@ pub async fn audio_spectrum(
     let app = window.app_handle().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let mut audio = audio.lock().map_err(|e| e.to_string())?;
-        let enabled = if label == "widget-audio" {
+        let enabled = if label == "main" { true } else if label == "widget-audio" {
             app.state::<Widgets>().0.lock().map_err(|e| e.to_string())?.iter().any(|c| c.kind == "audio" && c.enabled)
         } else if label == "desktop-dock" { app.state::<super::desktop_dock::DockState>().audio_effects_enabled() || app.state::<super::desktop_dock::DockState>().audio_widget_enabled() } else if label == "dynamic-island" { app.get_webview_window("dynamic-island").and_then(|w| w.is_visible().ok()).unwrap_or(false) && app.state::<super::desktop_island::IslandState>().audio_effects_enabled() } else { app.state::<super::desktop_wallpaper::Wallpapers>().audio_effects_enabled() };
         if !enabled { return Err("Audio reactivity is disabled".into()); }
@@ -759,7 +761,7 @@ pub fn widget_resize(
         return Err("Unknown widget".into());
     }
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
-    let logical_width = ((width as f64 / scale).round() as u32).clamp(140, 1200);
+    let logical_width = ((width as f64 / scale).round() as u32).clamp(140, if kind == "audio" { 16384 } else { 1200 });
     let logical_height = ((height as f64 / scale).round() as u32).clamp(120, 900);
     window
         .set_size(tauri::LogicalSize::new(
@@ -850,6 +852,12 @@ mod tests {
         };
         normalize(&mut c).unwrap();
         assert_eq!((c.width, c.height), (328, 156));
+        c.width = 3840;
+        normalize(&mut c).unwrap();
+        assert_eq!(c.width, 3840);
+        c.width = 20000;
+        normalize(&mut c).unwrap();
+        assert_eq!(c.width, 16384);
         assert!(!c.enabled);
         assert_eq!(c.visualizer_style, "bars");
         c.sensitivity = 1000;
