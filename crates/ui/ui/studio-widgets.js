@@ -51,7 +51,7 @@
 
   const catalog = window.WIDGETS_CATALOG || [];
   const categories = window.WIDGET_CATEGORIES || [
-    { id: 'ai', name: 'AI Limits', desc: 'How much of your AI plan is left, read from the tools you already use.' },
+    { id: 'ai', name: 'AI', desc: '' },
     { id: 'productivity', name: 'Productivity', desc: 'Screen time, focus timers, a stopwatch, tasks, notes and your next event.' },
     { id: 'dev', name: 'Dev Life', desc: 'GitHub commits, PRs, CI builds, Vercel deployments and package metrics.' },
     { id: 'revenue', name: 'Revenue & SaaS', desc: 'Stripe MRR, Lemon Squeezy sales, Shopify orders and churn rates.' },
@@ -213,16 +213,86 @@
   let pending = Promise.resolve();
   let timers = {};
   let previewUpdates = {};
+  let dockButtonUpdates = new Map();
+  let galleryScheduler = null;
   let searchQuery = '';
+  let selectedCategory = 'all';
+
+  function categoryForWidget(c, catalogEntries) {
+    const entry = catalogEntries.find(item => item.id === c.kind);
+    return entry?.category || (c.kind === 'system' ? 'system' : 'productivity');
+  }
+
+  function createGalleryPreviewScheduler(root) {
+    const records = new Map();
+    const observer = typeof IntersectionObserver === 'function' && root
+      ? new IntersectionObserver(entries => {
+          for (const entry of entries) records.get(entry.target)?.setVisible(entry.isIntersecting);
+        }, {root, rootMargin:'700px 0px'})
+      : null;
+    return {
+      watch(row, preview, draw) {
+        let visible = !observer, rendered = false, dirty = true;
+        const update = () => {
+          dirty = true;
+          if (visible) { draw(); rendered = true; dirty = false; }
+        };
+        records.set(row, {setVisible(value) {
+          visible = value;
+          if (visible && (dirty || !rendered)) update();
+          else if (!visible && rendered) { preview.replaceChildren(); rendered = false; dirty = true; }
+        }});
+        if (observer) observer.observe(row); else update();
+        return update;
+      },
+      disconnect() { observer?.disconnect(); records.clear(); }
+    };
+  }
+
+  function renderCategoryTabs() {
+    const tabs = document.getElementById('widget-category-tabs');
+    if (!tabs) return;
+    tabs.replaceChildren();
+    const entries = [{id:'all', name:'All'}, ...categories];
+    for (const [index, category] of entries.entries()) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'widget-category-tab';
+      button.textContent = category.name;
+      button.dataset.category = category.id;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', String(selectedCategory === category.id));
+      button.tabIndex = selectedCategory === category.id ? 0 : -1;
+      button.onclick = () => {
+        if (selectedCategory === category.id) return;
+        selectedCategory = category.id;
+        for (const tab of tabs.children) {
+          const active = tab.dataset.category === selectedCategory;
+          tab.setAttribute('aria-selected', String(active));
+          tab.tabIndex = active ? 0 : -1;
+        }
+        setDetail(false);
+        build();
+      };
+      button.onkeydown = event => {
+        if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? entries.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + entries.length) % entries.length;
+        tabs.children[next]?.click();
+        tabs.children[next]?.focus();
+      };
+      tabs.append(button);
+    }
+  }
 
   function save(c) {
     clearTimeout(timers[c.kind]);
     timers[c.kind] = setTimeout(() => {
-      const copy = structuredClone(c);
+      let copy;
       status.textContent = 'Saving…';
       pending = pending
         .catch(() => {})
-        .then(() => invoke('set_widget', { config: copy }))
+        .then(() => { copy = structuredClone(c); return invoke('set_widget', { config: copy }); })
         .then(() => {
           status.textContent = '';
           const dockPreview = document.getElementById('dock-preview');
@@ -253,10 +323,17 @@
     }
   }
 
-  function renderWidgetPreview(wrap, c, entry) {
+  function renderWidgetPreview(wrap, c, entry, gallery = false) {
     wrap.replaceChildren();
     wrap.className = 'widget-preview';
+    wrap.dataset.showIcon=String(c.custom?.show_icon!==false);
+    wrap.dataset.showTitle=String(c.custom?.show_title!==false);
+    for(const key of ['subtitle','value','progress','controls'])wrap.dataset['show'+key[0].toUpperCase()+key.slice(1)]=String(c.custom?.['show_'+key]!==false);
     applyWidgetStyling(wrap, c, c.kind);
+    if (gallery) {
+      wrap.style.backdropFilter = 'none';
+      wrap.style.webkitBackdropFilter = 'none';
+    }
     renderWidgetContent(wrap, c, entry);
   }
 
@@ -372,9 +449,9 @@
 
     if (t === 'calendar_event' || c.kind === 'calendar') {
       const now = new Date();
-      const mStr = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(now).toUpperCase();
+      const mStr = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(now).toUpperCase();
       const dNum = now.getDate();
-      const wStr = new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(now);
+      const wStr = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(now);
       if (t === 'calendar_event') {
         wrap.innerHTML = `
           <div class="luma-row-card">
@@ -492,8 +569,8 @@
 
     if (t === 'minimal_clock' || c.kind === 'clock') {
       const now = new Date();
-      const timeStr = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: c.show_seconds ? '2-digit' : undefined, hour12: !c.hour_24 }).format(now);
-      const dateStr = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(now);
+      const timeStr = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', second: c.show_seconds ? '2-digit' : undefined, hour12: !c.hour_24 }).format(now);
+      const dateStr = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(now);
       wrap.innerHTML = `
         <div class="luma-row-card" style="justify-content:space-between">
           <div>
@@ -671,76 +748,8 @@
   }
 
   function renderTaskbarPreview(wrap, c, entry) {
-    wrap.replaceChildren();
-    wrap.className = 'widget-detail-preview widget-detail-preview-taskbar';
-    const appearance = c.custom?.dock_appearance || {};
-    const custom = appearance.custom_style === true;
-    const color = (value, fallback) => /^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback;
-    const textScale = Math.max(0.6, Math.min(1.6, (Number(appearance.text_scale) || 100) / 100));
-
-    const capsule = document.createElement('div');
-    capsule.className = 'widget-preview-capsule';
-    capsule.style.setProperty('--compact-scale', String(textScale));
-
-    const requested = Math.max(0, Math.min(800, Number(appearance.width) || 0));
-    if (requested > 0) {
-      capsule.style.width = Math.max(100, requested) + 'px';
-    } else {
-      capsule.style.width = 'auto';
-      capsule.style.minWidth = '140px';
-    }
-
-    if (custom) {
-      const hex = color(appearance.background, '#20212b');
-      const alpha = Math.max(0.1, Math.min(1, (Number(appearance.opacity) || 85) / 100));
-      const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
-      capsule.style.background = `rgba(${rgb.join(',')},${alpha})`;
-      capsule.style.color = color(appearance.foreground, '#ffffff');
-      capsule.style.borderColor = 'rgba(255,255,255,0.18)';
-    } else {
-      capsule.style.background = 'rgba(255, 255, 255, 0.08)';
-      capsule.style.color = '#ffffff';
-      capsule.style.borderColor = 'rgba(255, 255, 255, 0.14)';
-    }
-
-    const iconSvg = icons[entry?.iconKey] || icons.generic || '';
-    const accentColor = custom ? color(appearance.accent, '#3b82f6') : '#3b82f6';
-    const opt = appearance.options || {};
-
-    if (c.kind === 'system') {
-      const showCpu = opt.show_cpu !== false;
-      const showMem = opt.show_memory !== false;
-      const showGpu = Boolean(opt.show_gpu);
-      const showDisk = Boolean(opt.show_disk);
-      const showNet = Boolean(opt.show_network);
-      const showDetails = Boolean(opt.show_details);
-
-      const items = [];
-      if (showCpu) items.push(['CPU', 32, '4.2 GHz']);
-      if (showMem) items.push(['RAM', 64, '10.2 GB']);
-      if (showGpu) items.push(['GPU', 23, '52 °C']);
-      if (showDisk) items.push(['Disk', 48, 'C:']);
-      if (showNet) items.push(['Net', 15, '12 MB/s']);
-
-      capsule.innerHTML = `
-        <div style="display:flex;align-items:center;gap:clamp(6px,2cqw,14px);width:100%;justify-content:space-around;">
-          ${items.map(([name, val, det]) => `
-            <div style="display:flex;align-items:center;gap:5px;flex:0 0 auto;">
-              <div style="position:relative;width:${Math.round(26 * textScale)}px;height:${Math.round(26 * textScale)}px;border-radius:50%;background:conic-gradient(#54c777 ${val}%, rgba(255,255,255,.15) 0);display:grid;place-items:center;">
-                <div style="position:absolute;width:72%;height:72%;border-radius:50%;background:#161720;"></div>
-                <b style="position:relative;font-size:${Math.round(8 * textScale)}px;font-weight:700;">${val}%</b>
-              </div>
-              <div style="display:flex;flex-direction:column;justify-content:center;line-height:1;">
-                <strong style="font-size:${Math.round(10 * textScale)}px;font-weight:600;">${name}</strong>
-                ${showDetails ? `<small style="font-size:${Math.round(8 * textScale)}px;opacity:.7;">${det}</small>` : ''}
-              </div>
-            </div>`).join('')}
-        </div>`;
-    } else {
-      renderWidgetContent(capsule, c, entry);
-    }
-
-    wrap.append(capsule);
+    const options=c.custom?.dock_appearance?.options||{};
+    renderWidgetPreview(wrap,{...c,custom:{...c.custom,show_icon:options.show_icon,show_title:options.show_title,show_subtitle:options.show_subtitle,show_value:options.show_value,show_progress:options.show_progress,show_controls:options.show_controls}},entry);
   }
 
   function renderDrawer(c, entry) {
@@ -822,6 +831,14 @@
         span.textContent = label;
         row.append(span, inputEl);
         appearanceFields.append(row);
+      }
+
+      if (entry && ['ai','dev','revenue','finance','system'].includes(entry.category) && !['sys_tray','app_folder'].includes(c.kind)) {
+        c.custom ||= {};
+        for (const [key,label] of [['show_icon','Show icon'],['show_title','Show title']]) {
+          const input=document.createElement('input');input.type='checkbox';input.className='switch';input.checked=c.custom[key]!==false;
+          input.onchange=()=>{c.custom[key]=input.checked;refreshDrawerPreview();save(c)};addRow(label,input);
+        }
       }
 
       for (const [key, label, min, max] of [
@@ -962,6 +979,16 @@
       scale.onchange=()=>{appearance.text_scale=Math.max(60,Math.min(160,Number(scale.value)||100));scale.value=appearance.text_scale;refreshDrawerPreview();save(c);};
       row('Text size (%)',scale);
       if(!appearance.options || typeof appearance.options!=='object')appearance.options={};
+      const metricDisplay=entry && ['ai','dev','revenue','finance','system'].includes(entry.category) && !['sys_tray','app_folder'].includes(c.kind);
+      const timerDisplay=['timer','stopwatch','pomodoro','prod_timer','prod_stopwatch','prod_pomodoro'].includes(c.kind);
+      const controlDisplay=['ctrl_volume','ctrl_mic_mute','ctrl_brightness','ctrl_audio_switch','ctrl_recycle_bin','prod_break_reminder'].includes(c.kind);
+      const displayOptions=metricDisplay?[['show_icon','Show icon'],['show_title','Show title'],['show_subtitle','Show details'],['show_value','Show value'],['show_progress','Show progress bars']]:timerDisplay?[['show_title','Show label'],['show_value','Show time'],['show_controls','Show controls']]:controlDisplay?[['show_title','Show title'],['show_value','Show value'],['show_controls','Show controls']]:[];
+      if(displayOptions.length){
+        for (const [key,label] of displayOptions) {
+          const input=document.createElement('input');input.type='checkbox';input.className='switch';input.checked=appearance.options[key]!==false;
+          input.onchange=()=>{appearance.options[key]=input.checked;refreshDrawerPreview();save(c)};row(label,input);
+        }
+      }
       for(const [key,label] of legacyOptions[c.kind]||[]){
         const input=document.createElement('input');input.type='checkbox';input.className='switch';
         input.checked=typeof appearance.options[key]==='boolean'?appearance.options[key]:Boolean(dockDisplayDefaults[key]);
@@ -992,33 +1019,29 @@
       if (!c.custom || typeof c.custom !== 'object') c.custom = {};
 
       const auth = widgetAuthInfo(entry, c);
+      const invalidateAuth = key => {
+        if (auth.required && (key === auth.fieldKey || ['auth_mode','host','team_id','store_id','project_id','organization','environment','shop_domain','property_id'].includes(key))) c.custom.credential_verified = false;
+      };
+      let authCard;
       if (auth.required) {
-        const authCard = document.createElement('div');
-        authCard.style.cssText = 'padding:14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border-strong);display:flex;flex-direction:column;gap:12px;margin-bottom:12px;';
+        authCard = document.createElement('div');
+        authCard.className = 'widget-auth-actions';
         if (auth.authorized) {
           const isAgy = c.custom.auth_provider === 'antigravity';
           const isBilling=auth.provider==='billing',billingProvider=auth.sourceProvider;
           authCard.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                <div>
-                  <div style="font-size:12px;font-weight:600;color:#22c55e">Connected: ${auth.accountName || 'Real Credentials'}</div>
-                  <div style="font-size:10px;color:var(--muted)">${isBilling?'Balance selected':'Credentials verified'}</div>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px;">
-                ${isAgy||isBilling ? '<button type="button" class="auth-sync-btn" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 8px;cursor:pointer;">'+(isBilling?'Open Billing':'Sync Quotas')+'</button>' : ''}
-                <button type="button" class="auth-disconnect-btn" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;text-decoration:underline;">Disconnect</button>
-              </div>
-            </div>`;
+            <button type="button" class="auth-sync-btn widget-fetch-button">Sync</button>
+            <button type="button" class="auth-disconnect-btn widget-fetch-button">Disconnect</button>
+            <div class="auth-sync-status widget-help" role="status"></div>`;
           const syncBtn = authCard.querySelector('.auth-sync-btn');
           if(syncBtn)syncBtn.onclick=async()=>{
-            if(isBilling){try{await invoke('widget_billing_open',{provider:billingProvider})}catch(error){syncBtn.title=String(error.message||error)}return}
             syncBtn.disabled=true;syncBtn.textContent='Syncing…';
-            const live=await window.WidgetMetrics?.getLiveAntigravityQuota();
-            const available=c.kind==='ai_gemini'?live?.gemini5h||live?.geminiWeekly:live?.claudeSession||live?.claudeWeekly;
-            syncBtn.textContent=available?'Synced':'Unavailable';syncBtn.disabled=false;
+            const syncStatus=authCard.querySelector('.auth-sync-status');
+            try {
+              if(isBilling){await invoke('widget_billing_open',{provider:billingProvider});syncStatus.textContent='Billing page opened';}
+              else if(isAgy){const live=await window.WidgetMetrics?.getLiveAntigravityQuota(true);const available=c.kind==='ai_gemini'?live?.gemini5h||live?.geminiWeekly:live?.claudeSession||live?.claudeWeekly;if(!available)throw Error('Quota unavailable');syncStatus.textContent='Synced';}
+              else {const metric=await window.WidgetMetrics.resolveMetric(entry,c);if(!metric||metric.error)throw Error(metric?.sub||'Data unavailable');c.livePreviewData=metric;refreshDrawerPreview();syncStatus.textContent='Synced';}
+            } catch(error){syncStatus.textContent=String(error.message||error)} finally{syncBtn.textContent='Sync';syncBtn.disabled=false;}
           };
           authCard.querySelector('.auth-disconnect-btn').onclick = async () => {
             if(isBilling){try{await invoke('widget_billing_disconnect',{provider:billingProvider});delete c.custom.billing_verified;syncCardAuth(c.kind);refreshDrawerPreview();renderDrawer(c,entry);save(c)}catch(error){authCard.title=String(error.message||error)}return;}
@@ -1066,7 +1089,13 @@
 
           const supportsAntigravity=['ai_gemini','ai_claude','ai_claude_plan'].includes(c.kind);
           if(!supportsAntigravity)agyBtn.style.display='none';
-          if(supportsAntigravity)verifyBtn.parentElement.remove();
+          if(supportsAntigravity)verifyBtn.style.display='none';
+          authCard.querySelectorAll('p').forEach(p=>p.hidden=true);
+          authCard.firstElementChild.hidden=true;
+          verifyBtn.parentElement.style.cssText='display:grid;gap:8px';
+          verifyBtn.className='auth-verify-btn widget-fetch-button';
+          agyBtn.className='connect-antigravity-btn widget-fetch-button';
+          if(supportsAntigravity)agyBtn.style.cssText='';
           agyBtn.onclick = async () => {
             agyBtn.disabled=true;statusEl.style.display='block';statusEl.style.color='var(--text)';statusEl.textContent='Checking local account…';
             try {
@@ -1145,11 +1174,11 @@
             }
           };
         }
-        customFields.append(authCard);
       }
 
       if (entry?.fields?.length) {
         for (const f of entry.fields) {
+          if(c.kind==='weather' && ['city','fahrenheit','show_forecast'].includes(f.key))continue;
           if(f.when && (c.custom[f.when.key] ?? entry.fields.find(v=>v.key===f.when.key)?.default) !== f.when.value)continue;
           if (f.type === 'switch') {
             const input = document.createElement('input');
@@ -1158,7 +1187,7 @@
             input.checked = c.custom[f.key] != null ? c.custom[f.key] : (f.default || false);
             input.onchange = () => {
               c.custom[f.key] = input.checked;
-              if(auth.required)c.custom.credential_verified=false;
+              invalidateAuth(f.key);
               syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
@@ -1175,7 +1204,7 @@
             }
             sel.onchange = () => {
               c.custom[f.key] = sel.value;
-              if(auth.required)c.custom.credential_verified=false;
+              invalidateAuth(f.key);
               syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
@@ -1184,23 +1213,21 @@
             addCustomRow(f.label, sel);
           } else if (f.type === 'password') {
             const container = document.createElement('div');
-            container.style.cssText = 'display:flex;align-items:center;position:relative;width:100%;max-width:210px;';
+            container.className = 'widget-password';
             const input = document.createElement('input');
             input.type = 'password';
-            input.style.cssText = 'flex:1;padding-right:32px;width:100%;';
             if (f.placeholder) input.placeholder = f.placeholder;
             input.value = c.custom[f.key] || f.default || '';
             input.oninput = () => {
               c.custom[f.key] = input.value.trim();
-              if(auth.required)c.custom.credential_verified=false;
+              invalidateAuth(f.key);
               syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
             };
             const toggleBtn = document.createElement('button');
             toggleBtn.type = 'button';
-            toggleBtn.style.cssText = 'position:absolute;right:6px;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;display:flex;align-items:center;';
-            toggleBtn.setAttribute('aria-label', 'Toggle visibility');
+            toggleBtn.setAttribute('aria-label', 'Show password');
             const eyeSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" r="3"/></svg>`;
             const eyeOffSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
             toggleBtn.innerHTML = eyeSvg;
@@ -1208,9 +1235,11 @@
               e.preventDefault();
               if (input.type === 'password') {
                 input.type = 'text';
+                toggleBtn.setAttribute('aria-label', 'Hide password');
                 toggleBtn.innerHTML = eyeOffSvg;
               } else {
                 input.type = 'password';
+                toggleBtn.setAttribute('aria-label', 'Show password');
                 toggleBtn.innerHTML = eyeSvg;
               }
             };
@@ -1223,7 +1252,7 @@
             input.value = c.custom[f.key] || f.default || '';
             input.oninput = () => {
               c.custom[f.key] = input.value.trim();
-              if(auth.required)c.custom.credential_verified=false;
+              invalidateAuth(f.key);
               syncCardAuth(c.kind);
               refreshDrawerPreview();
               save(c);
@@ -1363,7 +1392,7 @@
           refreshDrawerPreview();
           save(c);
         };
-        addCustomRow('Forecast city', input);
+        addCustomRow('City', input);
       }
 
       if (c.kind === 'countdown') {
@@ -1393,12 +1422,20 @@
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
         fileInput.setAttribute('aria-label', 'Upload photo or GIF');
+        fileInput.hidden = true;
+        const fileControl = document.createElement('div');
+        fileControl.className = 'widget-file-control';
+        const choose = document.createElement('button');choose.type='button';choose.className='widget-fetch-button';choose.textContent='Choose file';choose.onclick=()=>fileInput.click();
+        const fileName = document.createElement('span');fileName.textContent='No file selected';
+        fileControl.append(choose,fileName,fileInput);
         const prog = document.createElement('div');
         prog.className = 'widget-help';
         fileInput.onchange = async () => {
           const file = fileInput.files[0];
           if (!file) return;
+          fileName.textContent=file.name;
           fileInput.disabled = true;
+          choose.disabled = true;
           try {
             const signature = new Uint8Array(await file.slice(0, 6).arrayBuffer());
             const isGif = String.fromCharCode(...signature) === 'GIF87a' || String.fromCharCode(...signature) === 'GIF89a';
@@ -1437,12 +1474,14 @@
             prog.textContent = String(e);
           } finally {
             fileInput.disabled = false;
+            choose.disabled = false;
           }
         };
-        addCustomRow('Photo image', fileInput);
+        addCustomRow('Photo image', fileControl);
         customFields.append(prog);
       }
 
+      if(authCard)customFields.append(authCard);
       customSection.hidden = customFields.children.length === 0;
     }
 
@@ -1471,12 +1510,12 @@
         actionsSection.append(note,clear);
       }
 
-      if (isRemoteMetric) {
+      if (isRemoteMetric && !(auth.required && auth.authorized)) {
+        if(customSection)customSection.hidden=false;
         const testBtn = document.createElement('button');
         testBtn.type = 'button';
-        testBtn.className = 'wallpaper-primary';
-        testBtn.style.cssText = 'width:100%;min-height:38px;font-size:12px;margin-top:4px;';
-        testBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> <span>Test & Fetch Live Data</span>`;
+        testBtn.className = 'widget-fetch-button';
+        testBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> <span>Fetch data</span>`;
 
         const testStatus = document.createElement('div');
         testStatus.className = 'widget-help';
@@ -1524,7 +1563,7 @@
     detailClose.onclick = () => setDetail(false);
   }
   document.addEventListener('click', event => {
-    if (selectedKind && detailPanel && !detailPanel.contains(event.target) && !event.target.closest('.widget-option')) {
+    if (selectedKind && detailPanel && event.target.isConnected && !detailPanel.contains(event.target) && !event.target.closest('.widget-option')) {
       setDetail(false);
     }
   });
@@ -1533,8 +1572,12 @@
   });
 
   function build() {
+    galleryScheduler?.disconnect();
     list.replaceChildren();
-    let displayList = configs.slice();
+    previewUpdates = {};
+    dockButtonUpdates = new Map();
+    galleryScheduler = createGalleryPreviewScheduler(document.querySelector('.widgets-browser'));
+    let displayList = configs.filter(c => selectedCategory === 'all' || categoryForWidget(c, catalog) === selectedCategory);
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -1562,9 +1605,7 @@
 
     for (const cat of categories) {
       const catConfigs = displayList.filter(c => {
-        const entry = catalog.find(x => x.id === c.kind);
-        const categoryId = entry?.category || (c.kind === 'system' ? 'system' : 'productivity');
-        return categoryId === cat.id;
+        return categoryForWidget(c, catalog) === cat.id;
       });
 
       if (catConfigs.length === 0) continue;
@@ -1578,10 +1619,7 @@
       const title = document.createElement('h3');
       title.className = 'widget-cat-title';
       title.textContent = cat.name;
-      const desc = document.createElement('p');
-      desc.className = 'widget-cat-desc';
-      desc.textContent = cat.desc;
-      header.append(title, desc);
+      header.append(title);
       section.append(header);
 
       const gallery = document.createElement('div');
@@ -1607,13 +1645,6 @@
 
         const preview = document.createElement('div');
         preview.className = 'widget-preview';
-
-        function updatePreview() {
-          renderWidgetPreview(preview, c, entry);
-        }
-
-        previewUpdates[c.kind] = updatePreview;
-        updatePreview();
 
         const authOverlay = document.createElement('div');
         authOverlay.className = 'widget-auth-overlay';
@@ -1674,7 +1705,7 @@
           toggleText.textContent = c.enabled ? 'On desktop' : 'Add to desktop';
           if (countBadge) {
             const activeCount = configs.filter(x => x.enabled).length;
-            countBadge.textContent = `${activeCount} active on desktop · Showing ${displayList.length} of ${configs.filter(x => x.kind !== 'audio').length}`;
+            countBadge.textContent = `${activeCount} active on desktop · Showing ${displayList.length} of ${configs.length}`;
           }
           save(c);
         };
@@ -1690,6 +1721,7 @@
           dockButton.setAttribute('aria-pressed', String(added));
         };
         paintDockButton();
+        dockButtonUpdates.set(c.kind, paintDockButton);
         dockButton.onclick = async e => {
           e.stopPropagation();
           dockButton.disabled = true;
@@ -1704,6 +1736,7 @@
 
         row.append(previewWrap, details, controls);
         gallery.append(row);
+        previewUpdates[c.kind] = galleryScheduler.watch(row, preview, () => renderWidgetPreview(preview, c, entry, true));
       }
 
       section.append(gallery);
@@ -1808,7 +1841,30 @@
     }
   }
 
-  window.__TAURI__?.event?.listen('dock-config-changed', event => { dockWidgets = event.payload?.widgets || []; build(); });
+  function updateDockWidgets(widgets) {
+    dockWidgets = Array.isArray(widgets) ? widgets : [];
+    for (const update of dockButtonUpdates.values()) update();
+  }
+
+  window.__TAURI__?.event?.listen('dock-config-changed', event => updateDockWidgets(event.payload?.widgets));
+
+  function applyWidgetUpdate(updated) {
+    if (!updated || typeof updated.kind !== 'string' || typeof updated.enabled !== 'boolean') return;
+    const config = configs.find(item => item.kind === updated.kind);
+    if (!config) return;
+    config.enabled = updated.enabled;
+    syncCardAuth(updated.kind);
+    if (countBadge) {
+      const activeCount = configs.filter(item => item.enabled).length;
+      const visibleCount = list.querySelectorAll('.widget-option').length;
+      countBadge.textContent = `${activeCount} active on desktop · Showing ${visibleCount} of ${configs.length}`;
+    }
+  }
+
+  window.__TAURI__?.event?.listen('widget-updated', event => {
+    if (event.payload?.source === 'main') return;
+    applyWidgetUpdate(event.payload?.config || event.payload);
+  });
 
   window.__TAURI__?.event?.listen('widget-geometry', event => {
     const updated = event.payload;
@@ -1828,11 +1884,17 @@
       return;
     }
     document.querySelector('[data-tab="widgets"]')?.click();
+    if (selectedCategory !== 'all' && categoryForWidget({kind:event.payload}, catalog) !== selectedCategory) {
+      selectedCategory = 'all';
+      renderCategoryTabs();
+      build();
+    }
     selectWidget(event.payload);
     const row = list.querySelector(`[data-kind="${event.payload}"]`);
     row?.scrollIntoView({ block: 'nearest' });
   });
 
+  renderCategoryTabs();
   if (invoke) init();
   else status.textContent = 'Launch Atelier to use desktop widgets.';
 })();
