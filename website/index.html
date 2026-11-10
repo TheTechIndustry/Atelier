@@ -1,43 +1,215 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-54F8XDQCYM"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-54F8XDQCYM');
-  </script>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101110">
-  <meta name="description" content="Make Windows feel like yours. Atelier brings taskbar styling, live wallpapers, widgets, and more into one desktop customization studio.">
-  <title>Atelier — Make your desktop yours</title>
-  <link rel="icon" href="assets/atelier-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#090a0c">
+    <meta name="description"
+          content="Make Windows your own with Atelier: a custom dock, Dynamic Island, widgets and live wallpapers.">
+    <title>Atelier — Your desktop, your way</title>
+    <link rel="icon" href="assets/atelier-mark.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <script defer src="assets/widget-icons.js"></script>
+    <script defer src="assets/widgets-catalog.js"></script>
+    <script defer src="site.js"></script>
 </head>
 <body>
-  <header class="header">
-    <a class="brand" href="#top" aria-label="Atelier home"><span>Atelier</span></a>
-    <nav aria-label="Main navigation"><a href="#explore">Explore</a><a href="#features">Features</a><a href="https://github.com/polichdev/Atelier">GitHub</a></nav>
-    <a class="button button-dark header-cta" href="https://github.com/polichdev/Atelier/releases/latest/download/Atelier-Setup.exe">Download</a>
-  </header>
-  <main id="top">
-    <section class="hero wrap">
-      
-      <h1>Your desktop,<br><em>your kind of</em> space.</h1>
-      <p>Make the place you spend time feel like it belongs to you. Atelier brings your Windows desktop to life, one detail at a time.</p>
-      <div class="actions"><a class="button button-dark" href="https://github.com/polichdev/Atelier/releases/latest/download/Atelier-Setup.exe">Download</a></div>
-      
+
+<main id="top">
+    <section class="hero" id="overview">
+        <header class="header wrap"><a class="brand" href="#top"><img src="assets/atelier-mark.svg" alt="">Atelier</a>
+            <nav aria-label="Main navigation"><a href="#overview">Overview</a><a href="#widgets">Widgets</a><a
+                    href="#island">Dynamic Island</a><a href="#features">Features</a></nav>
+            <a class="button small"
+               href="https://github.com/polichdev/Atelier/releases/download/v0.2.0/Atelier-Setup.exe">Download</a>
+        </header>
+        <div class="desktop-preview" aria-label="Interactive Atelier desktop preview">
+            <div class="hero-copy wrap"><h1>Your desktop,<br><span>your way.</span></h1>
+                <p>Everything you need, right where you need it.<br>Make your Windows desktop feel like yours.</p><a
+                        class="button"
+                        href="https://github.com/polichdev/Atelier/releases/download/v0.2.0/Atelier-Setup.exe">Download
+                    for Windows</a>
+                <div class="meta">Windows 10 &amp; 11 · v0.2.0 · 19.8 MB</div>
+            </div>
+            <div class="floating-widget-preview bitcoin-preview" tabindex="0" role="group"
+                 aria-label="Bitcoin widget. Drag or use arrow keys to move">
+                <div class="bitcoin-head"><span class="bitcoin-icon"
+                                                data-hero-icon="btc"></span><span><strong>Bitcoin</strong><small>BTC / USD</small></span><span
+                        class="bitcoin-change">+4.2%</span></div>
+                <div class="bitcoin-value">$89,450<span>24h</span></div>
+                <svg class="bitcoin-chart" viewBox="0 0 200 38" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M1 32 C16 33 17 23 30 27 S48 31 57 20 S74 26 87 16 S102 22 116 12 S133 17 146 9 S162 15 174 6 S188 8 199 3"
+                          fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </div>
+            <div class="floating-widget-preview music-preview" tabindex="0" role="group"
+                 aria-label="Music widget. Drag or use arrow keys to move">
+                <div class="music-top">
+                    <div class="music-cover" aria-hidden="true"><span></span></div>
+                    <div class="music-info"><small>NOW PLAYING</small><strong>Quiet Hours</strong><span>Atelier</span>
+                    </div>
+                </div>
+                <div class="music-timeline">
+                    <div class="music-timeline-fill"></div>
+                </div>
+                <div class="music-controls"><span class="music-elapsed">0:00</span>
+                    <button type="button" class="music-toggle" aria-label="Play Quiet Hours" aria-pressed="false">▶
+                    </button>
+                    <span>0:16</span></div>
+                <audio class="music-audio" src="assets/quiet-hours.wav" preload="metadata" loop></audio>
+            </div>
+            <div class="desktop-bottom">
+                <div class="demo-dock" data-dock>
+                    <button class="app start" aria-label="Start menu">
+                        <svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>
+                        </svg>
+                    </button>
+                    <button class="app" aria-label="File Explorer"><img src="assets/app-files.png" alt=""></button>
+                    <button class="app" aria-label="Visual Studio Code"><img src="assets/app-code.png" alt=""></button>
+                    <button class="app" aria-label="Telegram"><img src="assets/app-telegram.png" alt=""></button>
+                    <div class="dock-sample" data-sample="ai_chatgpt"></div>
+                    <button class="app" aria-label="Chrome"><img src="assets/app-chrome.png" alt=""></button>
+                    <button class="app" aria-label="Steam"><img src="assets/app-steam.png" alt=""></button>
+                    <button class="app" aria-label="Microsoft Edge"><img src="assets/app-edge.png" alt=""></button>
+                    <button class="app" aria-label="WhatsApp"><img src="assets/app-whatsapp.svg" alt=""></button>
+                    <button class="app" aria-label="Discord"><img src="assets/app-discord.png" alt=""></button>
+                    <button class="app" aria-label="Obsidian"><img src="assets/app-obsidian.png" alt=""></button>
+                    <div class="dock-sample" data-sample="prod_stopwatch"></div>
+                    <button class="app" aria-label="Notepad"><img src="assets/app-notepad.png" alt=""></button>
+                    <div class="dock-sample" data-sample="sys_cpu"></div>
+                    <div class="dock-sample" data-sample="weather"></div>
+                    <div class="dock-clock"><strong data-clock>10:24</strong><span data-date>Tuesday</span></div>
+                </div>
+            </div>
+        </div>
     </section>
-    <section class="showcase wrap" aria-label="Atelier desktop preview"><div class="showcase-top"><span><i></i><i></i><i></i></span><span>YOUR SPACE, REIMAGINED</span><span>ATELIER STUDIO</span></div><img src="assets/custom-taskbar.jpg" alt="A Windows desktop customized with the Atelier dock"></section>
-    <section class="intro section wrap" id="explore"><div class="section-label">01 / A MORE PERSONAL DESKTOP</div><div><h2>It’s your space.<br><em>Make it feel that way.</em></h2><p>From the taskbar you use every day to the wallpaper behind it all, Atelier gives you thoughtful ways to make Windows your own.</p></div></section>
-    <section class="feature section wrap" id="features"><div class="feature-copy"><div class="section-label">02 / MAKE IT YOURS</div><h2>A fresh take<br>on your <em>taskbar.</em></h2><p>Keep the familiar Windows taskbar and make it yours, or switch things up with a custom desktop dock. Adjust the look, position, and behavior to fit the way you work.</p></div><div class="feature-image lilac"><img src="assets/custom-taskbar.jpg" alt="The Atelier custom taskbar dock on a Windows desktop" loading="lazy"></div></section>
-    <section class="feature feature-reverse section wrap"><div class="feature-copy"><div class="section-label">03 / SET THE SCENE</div><h2>Give your desktop<br><em>a little life.</em></h2><p>Bring movement to your background with live video and supported 2D scene wallpapers. Build a personal library and find a look for every mood.</p></div><div class="feature-image peach"><img src="assets/wallpapers.jpg" alt="The wallpaper library in Atelier Studio" loading="lazy"></div></section>
-    <section class="more section wrap"><div class="more-heading"><div class="section-label">04 / THE DETAILS MATTER</div><h2>More ways to make<br>it <em>yours.</em></h2></div><div class="cards"><article class="card"><div class="card-image mint"><img src="assets/widgets.jpg" alt="Desktop widgets configured in Atelier" loading="lazy"></div><div class="card-head"><h3>Widgets</h3><span>01</span></div><p>Keep the little things close, from the time and weather to notes and media.</p></article><article class="card"><div class="card-image sky"><img src="assets/dynamic-island.jpg" alt="The Dynamic Island settings in Atelier" loading="lazy"></div><div class="card-head"><h3>Dynamic Island</h3><span>02</span></div><p>Bring media controls, a calendar, and battery status together at the top of your screen.</p></article><article class="card"><div class="card-image butter"><img src="assets/appearance.jpg" alt="Windows appearance controls in Atelier" loading="lazy"></div><div class="card-head"><h3>Appearance</h3><span>03</span></div><p>Fine-tune materials, transparency, and window details throughout your desktop.</p></article></div></section>
-    <section class="closing"><div class="wrap closing-inner"><div class="section-label">YOUR DESKTOP IS WAITING</div><h2>A space that feels<br>more like <em>you.</em></h2><p>Make the everyday a little more personal.</p><a class="button button-dark" href="https://github.com/polichdev/Atelier/releases/latest/download/Atelier-Setup.exe">Download</a></div></section>
-  </main>
-  <footer class="footer wrap"><a class="brand" href="#top"><span>Atelier</span></a><div><a href="https://github.com/polichdev/Atelier">GitHub</a><a href="https://github.com/polichdev/Atelier#documentation">Documentation</a><a href="https://github.com/polichdev/Atelier/blob/main/LICENSE">License</a></div></footer>
+
+    <section class="widgets-section" id="widgets">
+        <div class="center-heading wrap"><h2>A widget for everything<br>you check.</h2>
+            <p>Keep the details that matter close, on your dock or desktop.</p></div>
+        <div class="widget-gallery" id="widget-gallery" aria-label="Widget examples"></div>
+    </section>
+    <section class="split-section wrap" id="dock">
+        <div class="section-copy"><h2>Your dock.<br><span>Just how you like it.</span></h2>
+            <p>Your favorite apps and widgets, together in one place. Change the look, arrange your layout, and make
+                space for what matters.</p>
+            <div class="style-options" role="group" aria-label="Dock style">
+                <button class="selected" data-style="liquid" aria-pressed="true">Liquid</button>
+                <button data-style="black" aria-pressed="false">Black</button>
+                <button data-style="white" aria-pressed="false">White</button>
+                <button data-style="midnight" aria-pressed="false">Midnight</button>
+            </div>
+        </div>
+        <div class="dock-scene">
+            <div class="scene-dock" data-style-preview>
+                <div class="demo-dock compact-dock" data-dock>
+                    <button class="app start" aria-label="Start menu">
+                        <svg viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>
+                        </svg>
+                    </button>
+                    <button class="app" aria-label="File Explorer"><img src="assets/app-files.png" alt=""></button>
+                    <button class="app" aria-label="Visual Studio Code"><img src="assets/app-code.png" alt=""></button>
+                    <button class="app" aria-label="Chrome"><img src="assets/app-chrome.png" alt=""></button>
+                    <div class="dock-sample" data-sample="ai_chatgpt"></div>
+                </div>
+            </div>
+            <span class="scene-caption">Choose a style above to preview</span></div>
+    </section>
+    <section class="split-section reverse wrap" id="island">
+        <div class="section-copy"><h2>Small at a glance.<br><span>More when you need it.</span></h2>
+            <p>Keep music, weather, notes, and more in a Dynamic Island. Choose the modules and pages that fit your
+                day.</p></div>
+        <div class="island-scene">
+            <div class="large-island" role="button" tabindex="0" aria-expanded="false"
+                 aria-label="Open Dynamic Island preview">
+                <div class="island-time" data-clock>10:24</div>
+                <div class="island-details">
+                    <div class="island-art">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                            <path d="M9 18V5l11-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="17" cy="16" r="3"/>
+                        </svg>
+                    </div>
+                    <div class="island-track"><strong>Nothing playing</strong><span>Open a music app</span>
+                        <div class="track-line"><i></i></div>
+                        <div class="track-controls"><span>◀</span><span class="play">▶</span><span>▶</span></div>
+                    </div>
+                </div>
+            </div>
+            <span class="scene-caption">Hover or click to expand</span></div>
+    </section>
+
+    <section class="everyday wrap">
+        <div class="center-heading"><h2>A little more room to focus.</h2>
+            <p>Keep your desktop organized without losing access to the things you use.</p></div>
+        <div class="everyday-grid">
+            <article class="everyday-card">
+                <div class="everyday-demo">
+                    <div class="folder-preview" id="folder-preview"><img src="assets/app-code.png" alt=""><img
+                            src="assets/app-chrome.png" alt=""><img src="assets/app-telegram.png" alt=""><img
+                            src="assets/app-steam.png" alt=""></div>
+                    <button class="preview-trigger folder-trigger" type="button" aria-expanded="false"
+                            aria-controls="folder-preview" aria-label="Toggle app group preview"><img
+                            src="assets/app-code.png" alt=""><img src="assets/app-chrome.png" alt=""><img
+                            src="assets/app-telegram.png" alt=""><img src="assets/app-steam.png" alt=""></button>
+                </div>
+                <h3>Apps, neatly grouped.</h3>
+                <p>Keep related apps together in a folder on your dock, ready whenever you need them.</p></article>
+            <article class="everyday-card">
+                <div class="everyday-demo">
+                    <div class="tray-preview" id="tray-preview"><img src="assets/atelier-mark.svg" alt=""><img
+                            src="assets/app-telegram.png" alt=""><img src="assets/app-steam.png" alt=""></div>
+                    <button class="preview-trigger tray-trigger" type="button" aria-expanded="false"
+                            aria-controls="tray-preview" aria-label="Toggle system tray preview">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m6 14 6-6 6 6"/>
+                        </svg>
+                    </button>
+                </div>
+                <h3>Your tray, close by.</h3>
+                <p>Access notification area icons from a tray that fits your dock.</p></article>
+        </div>
+    </section>
+    <section class="features wrap" id="features">
+        <div class="center-heading"><h2>Make every detail yours.</h2>
+            <p>Thoughtful tools for the desktop you use every day.</p></div>
+        <div class="feature-grid">
+            <article>
+                <div class="feature-visual wallpaper-preview">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                </div>
+                <h3>Live wallpapers</h3>
+                <p>Bring movement to your desktop with video and supported 2D scenes.</p></article>
+            <article>
+                <div class="feature-visual visualizer-preview" aria-hidden="true"></div>
+                <h3>Audio visualizer</h3>
+                <p>Turn the sound playing on your PC into a customizable visual.</p></article>
+            <article>
+                <div class="feature-visual styling-preview"><span></span><span></span><span></span><span></span></div>
+                <h3>Made to fit</h3>
+                <p>Adjust colors, materials, sizes, and animations to suit your space.</p></article>
+        </div>
+    </section>
+    <section class="closing wrap">
+        <div class="closing-content">
+            <div class="closing-heading"><p class="closing-kicker">A PERSONAL SPACE FOR WINDOWS</p>
+                <h2>Make it yours.</h2>
+                <p>Bring your desktop together, just the way you like it.</p></div>
+            <div class="closing-action"><a class="button"
+                                           href="https://github.com/polichdev/Atelier/releases/download/v0.2.0/Atelier-Setup.exe">Download
+                for Windows</a>
+                <div class="meta">Windows 10 &amp; 11 · v0.2.0 · 19.8 MB</div>
+            </div>
+        </div>
+        <div class="closing-lines" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </section>
+</main>
+<footer class="footer wrap"><a class="brand" href="#top"><img src="assets/atelier-mark.svg" alt="">Atelier</a></footer>
 </body>
 </html>
