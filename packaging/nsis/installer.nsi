@@ -44,7 +44,7 @@ Section "Install"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "DisplayName" "Atelier Desktop Studio"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "DisplayIcon" "$INSTDIR\Atelier.exe,0"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "UninstallString" "$INSTDIR\uninstall.exe"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "DisplayVersion" "0.1.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "DisplayVersion" "0.2.0"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "Publisher" "Atelier"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Atelier" "InstallLocation" "$INSTDIR"
 SectionEnd

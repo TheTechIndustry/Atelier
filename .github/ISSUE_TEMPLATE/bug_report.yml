@@ -68,7 +68,7 @@ body:
     id: version
     attributes:
       label: Atelier Version / Commit
-      placeholder: "e.g., v0.1.0 or git commit sha"
+      placeholder: "e.g., v0.2.0 or git commit sha"
     validations:
       required: true
   - type: textarea
