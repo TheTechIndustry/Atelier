@@ -258,9 +258,10 @@ pub async fn tray_icon_click(
         return match button.as_str() {
             "left" | "double" => crate::show_or_create_studio(window.app_handle()),
             "right" => {
-                let menu = crate::tray_panel::app_menu(window.app_handle())
-                    .map_err(|e| e.to_string())?;
-                window.popup_menu(&menu).map_err(|e| e.to_string())
+                let mut point = windows::Win32::Foundation::POINT::default();
+                unsafe { GetCursorPos(&mut point).map_err(|e| e.to_string())?; }
+                crate::tray_panel::show_app_menu(window.app_handle(), point.x as f64, point.y as f64)
+                    .map_err(|e| e.to_string())
             }
             _ => Err("Invalid click".into()),
         };
