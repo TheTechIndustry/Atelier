@@ -90,7 +90,7 @@
     }
   }
 
-  function updatePreview(previewInactive = false) {
+  function updatePreview(previewInactive = previewCard?.dataset.state === 'inactive') {
     if (!previewCard || !config) return;
     const corner = config.corner_preference === 'square' ? '0px' :
                    config.corner_preference === 'small_rounded' ? '6px' : '12px';

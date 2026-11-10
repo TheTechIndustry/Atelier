@@ -141,6 +141,9 @@ test('preview toggle switches between active and inactive window opacity',async(
   toggle.onclick();
   assert.equal(card.style.opacity,'0.85');
   assert.equal(toggle.textContent,'Preview Active Window');
+  f.get('app-inactive-opacity').value=70;
+  f.get('app-inactive-opacity').events.get('input')?.();
+  assert.equal(card.style.opacity,'0.70');
 
   toggle.onclick();
   assert.equal(card.style.opacity,'1.00');
