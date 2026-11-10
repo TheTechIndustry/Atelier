@@ -3,6 +3,7 @@
   const invoke = window.__TAURI__?.core?.invoke;
   const $ = id => document.getElementById(id);
   const status = $('animation-status');
+  const dockStatus = $('dock-animation-status');
   const previewWindow = $('anim-preview-window');
   let config = null, timer = null, saving = false, revision = 0, queued = false;
 
@@ -34,6 +35,7 @@
       }
     }
     updatePreviewStyles();
+    window.dispatchEvent(new CustomEvent('dock-animation-preview', {detail: c}));
   }
 
   function read() {
@@ -61,8 +63,10 @@
       const saved = await invoke('set_animations_config', { config: next });
       if (revision === startRevision) paint(saved); else queued = true;
       if (status) status.textContent = '';
+      if (dockStatus) dockStatus.textContent = '';
     } catch (e) {
       if (status) status.textContent = String(e);
+      if (dockStatus) dockStatus.textContent = String(e);
     } finally {
       saving = false;
       if (queued) { queued = false; save(); }
@@ -79,10 +83,11 @@
     previewWindow.style.setProperty('--anim-easing', easing);
   }
 
-  let isWindowMinimized = false;
+  let isWindowMinimized = false, animationRevision = 0;
 
   function playWindowAnimation(type) {
     if (!previewWindow || !config) return;
+    const currentAnimation = ++animationRevision;
     updatePreviewStyles();
     previewWindow.className = 'anim-window';
     void previewWindow.offsetWidth;
@@ -94,7 +99,7 @@
       isWindowMinimized = true;
       previewWindow.classList.add('anim-minimizing', 'effect-' + effect);
       setTimeout(() => {
-        if (isWindowMinimized) previewWindow.classList.add('is-minimized');
+        if (currentAnimation === animationRevision && isWindowMinimized) previewWindow.classList.add('is-minimized');
       }, (config.window_duration || 240));
     } else {
       isWindowMinimized = false;
@@ -156,11 +161,14 @@
       }
       config = read();
       updatePreviewStyles();
+      if (['window_effect', 'window_duration', 'window_easing'].includes(f.key)) playWindowAnimation('restore');
+      window.dispatchEvent(new CustomEvent('dock-animation-preview', {detail: config}));
       scheduleSave();
     });
     el.addEventListener('change', () => {
       revision++;
       config = read();
+      window.dispatchEvent(new CustomEvent('dock-animation-preview', {detail: config}));
       scheduleSave();
     });
   }
@@ -171,8 +179,10 @@
     invoke('get_animations_config').then(c => {
       paint(c);
       if (status) status.textContent = '';
+      if (dockStatus) dockStatus.textContent = '';
     }).catch(e => {
       if (status) status.textContent = String(e);
+      if (dockStatus) dockStatus.textContent = String(e);
     });
   } else {
     paint({

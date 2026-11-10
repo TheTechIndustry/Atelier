@@ -64,7 +64,7 @@ function fixture(){
 
   const window={
     __TAURI__:{core:{invoke},event:{listen(){}}},
-    addEventListener(){}
+    addEventListener(){},dispatchEvent(){}
   };
   const document={
     getElementById:get,
@@ -81,7 +81,8 @@ function fixture(){
     Number,
     Object,
     Math,
-    Boolean
+    Boolean,
+    CustomEvent: class CustomEvent { constructor(type,options){this.type=type;this.detail=options.detail} }
   });
 
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../ui/studio-animations.js'),'utf8'),context);
@@ -117,6 +118,7 @@ test('changing window animation effect and duration updates preview and saves',a
 
   const preview=f.get('anim-preview-window');
   assert.equal(preview.style.props.get('--anim-duration'),'320ms');
+  assert.equal(preview.classList.contains('anim-restoring'),true);
 });
 
 test('test buttons trigger minimize and restore animation classes',async()=>{
