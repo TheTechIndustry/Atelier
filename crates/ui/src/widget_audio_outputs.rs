@@ -164,14 +164,48 @@ pub async fn widget_audio_outputs(
     device_id: Option<String>,
     communications: bool,
 ) -> Result<Vec<AudioOutput>, String> {
-    if !["desktop-dock", "widget-ctrl_audio_switch"].contains(&window.label()) {
+    use tauri::{Emitter, Manager};
+    if !["desktop-dock", "widget-ctrl_audio_switch", "audio-output-panel"].contains(&window.label()) {
         return Err("Audio switching unavailable to this window".into());
     }
-    tauri::async_runtime::spawn_blocking(move || {
+    let changed = device_id.is_some();
+    let result = tauri::async_runtime::spawn_blocking(move || {
         audio_outputs(device_id.as_deref(), communications)
     })
     .await
-    .map_err(|_| "Audio output request failed".to_string())?
+    .map_err(|_| "Audio output request failed".to_string())??;
+    if changed { let _ = window.app_handle().emit("widget-audio-output-changed", ()); }
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn widget_open_audio_outputs(window: tauri::Window, communications: bool) -> Result<(), String> {
+    use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
+    use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+    if !["desktop-dock", "widget-ctrl_audio_switch"].contains(&window.label()) {
+        return Err("Audio output menu unavailable to this window".into());
+    }
+    let app = window.app_handle();
+    if let Some(old) = app.get_webview_window("audio-output-panel") {
+        old.close().map_err(|e| e.to_string())?;
+    }
+    let mut point = windows::Win32::Foundation::POINT::default();
+    unsafe { GetCursorPos(&mut point).map_err(|e| e.to_string())?; }
+    let panel = WebviewWindowBuilder::new(app, "audio-output-panel", WebviewUrl::App(format!("audio-output-panel.html?communications={communications}").into()))
+        .title("Audio outputs").decorations(false).transparent(true).shadow(false)
+        .skip_taskbar(true).always_on_top(true).resizable(false).visible(false)
+        .inner_size(280., 220.).build().map_err(|e| e.to_string())?;
+    if let Some(monitor) = window.current_monitor().map_err(|e| e.to_string())? {
+        let area=monitor.work_area();let scale=monitor.scale_factor();
+        let width=(280. * scale).round() as i32;let height=(220. * scale).round() as i32;
+        let left=area.position.x;let top=area.position.y;
+        let right=left+area.size.width as i32;let bottom=top+area.size.height as i32;
+        let x=(point.x-width/2).clamp(left,(right-width).max(left));
+        let y=(point.y-height-(8.*scale) as i32).clamp(top,(bottom-height).max(top));
+        panel.set_position(PhysicalPosition::new(x,y)).map_err(|e| e.to_string())?;
+    }
+    panel.show().map_err(|e| e.to_string())?;
+    panel.set_focus().map_err(|e| e.to_string())
 }
 #[cfg(test)]
 mod tests {
