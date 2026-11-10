@@ -1,8 +1,8 @@
 window.WIDGET_CATEGORIES = [
   {
     "id": "ai",
-    "name": "AI Limits",
-    "desc": "How much of your AI plan is left, read from the tools you already use."
+    "name": "AI",
+    "desc": ""
   },
   {
     "id": "productivity",

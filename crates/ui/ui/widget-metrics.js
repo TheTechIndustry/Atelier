@@ -622,18 +622,18 @@ window.WidgetMetrics = (() => {
     const diffMins = Math.floor((diffMs % 3600000) / 60000);
     let timeStr = '';
     if(nextEvent.allDay){
-      timeStr='All day · '+startDate.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+      timeStr='All day · '+startDate.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     }else if(diffMs<0){
-      timeStr='Now · until '+endDate.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+      timeStr='Now · until '+endDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     }else if (diffHours < 24) {
       timeStr = `in ${diffHours > 0 ? diffHours + 'h ' : ''}${diffMins}m`;
     } else {
-      timeStr = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      timeStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
     const result = {
       title: nextEvent.title,
-      time: nextEvent.allDay||diffMs<0?timeStr:startDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + ' · ' + timeStr
+      time: nextEvent.allDay||diffMs<0?timeStr:startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' · ' + timeStr
     };
     return setCached(cacheKey, result);
   }
@@ -655,9 +655,9 @@ window.WidgetMetrics = (() => {
     return mins > 0 ? `${mins}m` : '<1m';
   }
 
-  async function getLiveAntigravityQuota() {
+  async function getLiveAntigravityQuota(force = false) {
     const now=Date.now();
-    if(_lastAgyQuota && now-_lastAgyFetchTime<10000)return _lastAgyQuota;
+    if(!force && _lastAgyQuota && now-_lastAgyFetchTime<10000)return _lastAgyQuota;
     const invoke=(window.__TAURI__||(new URLSearchParams(location.search).has('compact')?window.parent.__TAURI__:undefined))?.core?.invoke;
     if(!invoke)return null;
     try{
@@ -671,7 +671,7 @@ window.WidgetMetrics = (() => {
         if(!model||!Array.isArray(group.buckets))continue;
         for(const bucket of group.buckets){
           if(!Number.isFinite(bucket.remainingFraction))continue;
-          const windowName=String(bucket.window||'')+' '+String(bucket.bucketId||'');
+          const windowName=(String(bucket.window||'')+' '+String(bucket.bucketId||'')).toLowerCase();
           const key=windowName.includes('weekly')?(model==='gemini'?'geminiWeekly':'claudeWeekly'):windowName.includes('5h')?(model==='gemini'?'gemini5h':'claudeSession'):null;
           if(key)result[key]={pct:Math.max(0,Math.min(100,Math.round(bucket.remainingFraction*100))),reset:formatResetTime(bucket.resetTime)||''};
         }
@@ -929,7 +929,7 @@ window.WidgetMetrics = (() => {
         const buckets=id==='ai_gemini'?[['5h limit',live?.gemini5h],['Weekly limit',live?.geminiWeekly]]:[['Session limit',live?.claudeSession],['Weekly limit',live?.claudeWeekly]];
         const items=buckets.filter(([,bucket])=>bucket).map(([label,bucket])=>({label,value:bucket.pct+'% left',bar:bucket.pct,color:'#22c55e',sub:bucket.reset?'Resets in '+bucket.reset:''}));
         if(!items.length)return {title:entry.name||id,value:'Unavailable',sub:'No matching live quota returned',error:true};
-        return {title:entry.name||id,badge:'Antigravity',items};
+        return {title:entry.name||id,items};
       }
       if(id==='ai_grok'){
         const token=String(custom.api_key||'').trim(),team=String(custom.team_id||'').trim();if(!token||!team)throw Error('Set an xAI management key and team ID');
