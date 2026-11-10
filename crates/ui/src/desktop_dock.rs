@@ -194,7 +194,9 @@ impl DockConfig {
     }
     fn validate(&mut self) -> Result<(), String> {
         self.audio.validate()?;
-        if !["solid", "liquid", "ios"].contains(&self.material.as_str()) { return Err("Unknown dock material".into()); }
+        if !["solid", "liquid", "ios"].contains(&self.material.as_str()) {
+            return Err("Unknown dock material".into());
+        }
         if !["bottom", "top", "left", "right"].contains(&self.position.as_str())
             || !["start", "center", "end"].contains(&self.alignment.as_str())
             || !["original", "rounded", "monochrome"].contains(&self.icon_style.as_str())
@@ -223,7 +225,8 @@ impl DockConfig {
         self.hide_delay = self.hide_delay.clamp(200, 3000);
         self.hide_windows_taskbar = self.enabled;
         let mut widget_seen = HashSet::new();
-        self.widgets.retain(|id| !id.is_empty() && widget_seen.insert(id.clone()));
+        self.widgets
+            .retain(|id| !id.is_empty() && widget_seen.insert(id.clone()));
         if self.hidden_apps.len() > 256 {
             return Err("Too many hidden apps".into());
         }
@@ -286,10 +289,16 @@ unsafe extern "system" fn restore_taskbar_child_proc(child: HWND, _: LPARAM) -> 
 
 impl DockState {
     pub fn widgets_enabled(&self, ids: &[&str]) -> bool {
-        self.config.lock().map(|c| c.enabled && c.widgets.iter().any(|id| ids.contains(&id.as_str()))).unwrap_or(false)
+        self.config
+            .lock()
+            .map(|c| c.enabled && c.widgets.iter().any(|id| ids.contains(&id.as_str())))
+            .unwrap_or(false)
     }
     pub fn audio_widget_enabled(&self) -> bool {
-        self.config.lock().map(|c| c.enabled && c.widgets.iter().any(|id| id == "audio")).unwrap_or(false)
+        self.config
+            .lock()
+            .map(|c| c.enabled && c.widgets.iter().any(|id| id == "audio"))
+            .unwrap_or(false)
     }
     pub fn audio_effects_enabled(&self) -> bool {
         !self.fullscreen_hidden.load(Ordering::Relaxed)
@@ -1464,19 +1473,35 @@ fn placement(
     };
     let (x, y) = match c.position.as_str() {
         "top" => (
-            if c.full_width { 0 } else { align(size.0 as i32, w as i32) },
+            if c.full_width {
+                0
+            } else {
+                align(size.0 as i32, w as i32)
+            },
             if collapsed { 0 } else { gap },
         ),
         "left" => (
             if collapsed { 0 } else { gap },
-            if c.full_width { 0 } else { align(size.1 as i32, h as i32) },
+            if c.full_width {
+                0
+            } else {
+                align(size.1 as i32, h as i32)
+            },
         ),
         "right" => (
             size.0 as i32 - w as i32 - if collapsed { 0 } else { gap },
-            if c.full_width { 0 } else { align(size.1 as i32, h as i32) },
+            if c.full_width {
+                0
+            } else {
+                align(size.1 as i32, h as i32)
+            },
         ),
         _ => (
-            if c.full_width { 0 } else { align(size.0 as i32, w as i32) },
+            if c.full_width {
+                0
+            } else {
+                align(size.0 as i32, w as i32)
+            },
             size.1 as i32 - h as i32 - if collapsed { 0 } else { gap },
         ),
     };
@@ -1558,9 +1583,7 @@ fn apply_bottom_gap(app: &tauri::AppHandle, c: &DockConfig) -> Result<(), String
         return Ok(());
     }
     let previous = *state.gap_appbar.lock().map_err(|e| e.to_string())?;
-    if previous
-        .is_some_and(|(_, monitor, gap)| monitor == c.monitor && gap == gap_val)
-    {
+    if previous.is_some_and(|(_, monitor, gap)| monitor == c.monitor && gap == gap_val) {
         return Ok(());
     }
     if app.get_webview_window("dock-gap").is_none() {
@@ -2198,7 +2221,11 @@ fn native_flyout_candidate(
     false
 }
 
-fn open_native_flyout(action: &str, languages: &[String], anchor: Option<(i32, i32, i32, i32, i32, i32)>) -> Result<(), String> {
+fn open_native_flyout(
+    action: &str,
+    languages: &[String],
+    anchor: Option<(i32, i32, i32, i32, i32, i32)>,
+) -> Result<(), String> {
     use windows::Win32::UI::Accessibility::{
         CUIAutomation, IUIAutomation, IUIAutomationExpandCollapsePattern,
         IUIAutomationInvokePattern, IUIAutomationTogglePattern, TreeScope_Descendants,
@@ -2294,7 +2321,10 @@ fn open_native_flyout(action: &str, languages: &[String], anchor: Option<(i32, i
             std::thread::spawn(move || {
                 let tb = HWND(taskbar_val as *mut _);
                 let flyout_classes: &[&str] = if action_str == "tray" {
-                    &["TopLevelWindowForOverflowXamlIsland", "NotifyIconOverflowWindow"]
+                    &[
+                        "TopLevelWindowForOverflowXamlIsland",
+                        "NotifyIconOverflowWindow",
+                    ]
                 } else {
                     &[
                         "Xaml_WindowedPopupClass",
@@ -2330,7 +2360,15 @@ fn open_native_flyout(action: &str, languages: &[String], anchor: Option<(i32, i
                             let height = r.bottom - r.top;
                             let px = (x - width / 2).clamp(left, (right - width).max(left));
                             let py = (y - height - 8).clamp(top, (bottom - height).max(top));
-                            let _ = SetWindowPos(found_flyout, None, px, py, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+                            let _ = SetWindowPos(
+                                found_flyout,
+                                None,
+                                px,
+                                py,
+                                0,
+                                0,
+                                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+                            );
                         }
                     }
                     while !was_visible && IsWindowVisible(found_flyout).as_bool() {
@@ -2418,7 +2456,10 @@ fn open_native_flyout(action: &str, languages: &[String], anchor: Option<(i32, i
 
 #[tauri::command]
 pub async fn dock_open_system(window: tauri::Window, action: String) -> Result<(), String> {
-    if window.label() != "desktop-dock" && !window.label().starts_with("widget") && window.label() != "main" {
+    if window.label() != "desktop-dock"
+        && !window.label().starts_with("widget")
+        && window.label() != "main"
+    {
         return Err("Only the dock and widgets can open system menus".into());
     }
     use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -2617,7 +2658,10 @@ pub async fn dock_open_folder(
     app_count: Option<usize>,
     is_light: Option<bool>,
 ) -> Result<(), String> {
-    if window.label() != "desktop-dock" && !window.label().starts_with("widget") && window.label() != "main" {
+    if window.label() != "desktop-dock"
+        && !window.label().starts_with("widget")
+        && window.label() != "main"
+    {
         return Err("Only the dock and widgets can open folder menus".into());
     }
     let app = window.app_handle();
@@ -2690,11 +2734,15 @@ pub async fn dock_open_folder(
     popup.set_focus().map_err(|e| e.to_string())?;
     let name = folder_name.unwrap_or_else(|| "Apps".into());
     let light_dock = is_light.unwrap_or(false);
-    let _ = app.emit_to("widget-folder-flyout", "folder-config", serde_json::json!({
-        "name": name,
-        "is_light": light_dock,
-        "app_count": count
-    }));
+    let _ = app.emit_to(
+        "widget-folder-flyout",
+        "folder-config",
+        serde_json::json!({
+            "name": name,
+            "is_light": light_dock,
+            "app_count": count
+        }),
+    );
     Ok(())
 }
 
@@ -2707,16 +2755,20 @@ pub async fn dock_open_tray(
     height: f64,
 ) -> Result<(), String> {
     let _ = height;
-    if window.label() != "desktop-dock" && !window.label().starts_with("widget") && window.label() != "main" {
+    if window.label() != "desktop-dock"
+        && !window.label().starts_with("widget")
+        && window.label() != "main"
+    {
         return Err("Only the dock and widgets can open tray menus".into());
     }
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
     let origin = window.outer_position().map_err(|e| e.to_string())?;
     let ax = origin.x as f64 + (x + width / 2.0) * scale;
     let ay = origin.y as f64 + y * scale;
-    let app=window.app_handle();
-    app.state::<crate::tray_bridge::TrayBridge>().start(app.clone());
-    crate::tray_panel::show(app, ax, ay).map_err(|e|e.to_string())?;
+    let app = window.app_handle();
+    app.state::<crate::tray_bridge::TrayBridge>()
+        .start(app.clone());
+    crate::tray_panel::show(app, ax, ay).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -2933,20 +2985,59 @@ pub async fn dock_widget_set(app: tauri::AppHandle, id: String, added: bool) -> 
     let state = app.state::<DockState>();
     let _write = state.write.lock().map_err(|e| e.to_string())?;
     let mut c = state.config.lock().map_err(|e| e.to_string())?.clone();
-    if id.is_empty() || id.len() > 128 { return Err("Invalid widget ID".into()); }
-    if added && !c.widgets.contains(&id) { c.widgets.insert(0, id.clone()); if !c.item_order.is_empty() { let insert_pos = c.item_order.iter().position(|k| k.starts_with("widget:") || k.starts_with("app:")).unwrap_or(0); c.item_order.insert(insert_pos, format!("widget:{id}")); } }
-    else if !added { c.widgets.retain(|item| item != &id); c.item_order.retain(|item| item != &format!("widget:{id}")); }
+    if id.is_empty() || id.len() > 128 {
+        return Err("Invalid widget ID".into());
+    }
+    if added && !c.widgets.contains(&id) {
+        c.widgets.insert(0, id.clone());
+        if !c.item_order.is_empty() {
+            let insert_pos = c
+                .item_order
+                .iter()
+                .position(|k| k.starts_with("widget:") || k.starts_with("app:"))
+                .unwrap_or(0);
+            c.item_order.insert(insert_pos, format!("widget:{id}"));
+        }
+    } else if !added {
+        c.widgets.retain(|item| item != &id);
+        c.item_order.retain(|item| item != &format!("widget:{id}"));
+    }
     persist(&c)?;
     *state.config.lock().map_err(|e| e.to_string())? = c.clone();
-    app.emit("dock-config-changed", &c).map_err(|e| e.to_string())?;
+    app.emit("dock-config-changed", &c)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 fn validate_dock_item_order(ids: &[String], widgets: &[String]) -> Result<(), String> {
-    let listed_widgets: Vec<&str> = ids.iter().filter_map(|id| id.strip_prefix("widget:")).collect();
-    if ids.len() > 1024 || ids.iter().any(|id| id.len() > 32768 || !(id.starts_with("widget:") || id.starts_with("app:") || matches!(id.as_str(), "system:start" | "system:search" | "system:divider" | "system:tray" | "system:language" | "system:network" | "system:volume" | "system:clock" | "system:studio")))
+    let listed_widgets: Vec<&str> = ids
+        .iter()
+        .filter_map(|id| id.strip_prefix("widget:"))
+        .collect();
+    if ids.len() > 1024
+        || ids.iter().any(|id| {
+            id.len() > 32768
+                || !(id.starts_with("widget:")
+                    || id.starts_with("app:")
+                    || matches!(
+                        id.as_str(),
+                        "system:start"
+                            | "system:search"
+                            | "system:divider"
+                            | "system:tray"
+                            | "system:language"
+                            | "system:network"
+                            | "system:volume"
+                            | "system:clock"
+                            | "system:studio"
+                    ))
+        })
         || ids.iter().collect::<HashSet<_>>().len() != ids.len()
-        || listed_widgets.len() != widgets.len() || listed_widgets.iter().any(|id| !widgets.iter().any(|w| w == id)) {
+        || listed_widgets.len() != widgets.len()
+        || listed_widgets
+            .iter()
+            .any(|id| !widgets.iter().any(|w| w == id))
+    {
         return Err("Dock items changed; try reordering again".into());
     }
     Ok(())
@@ -2961,22 +3052,32 @@ pub async fn dock_items_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Resu
     let mut next = ids;
     for (index, old) in c.item_order.iter().enumerate() {
         if old.starts_with("app:") && !next.contains(old) {
-            let anchor = c.item_order[index + 1..].iter().find_map(|id| next.iter().position(|visible| visible == id)).unwrap_or(next.len());
+            let anchor = c.item_order[index + 1..]
+                .iter()
+                .find_map(|id| next.iter().position(|visible| visible == id))
+                .unwrap_or(next.len());
             next.insert(anchor, old.clone());
         }
     }
-    let sorted_pins: Vec<Pin> = next.iter().filter_map(|key| key.strip_prefix("app:"))
-        .filter_map(|id| c.pinned.iter().find(|pin| pin.path == id).cloned()).collect();
+    let sorted_pins: Vec<Pin> = next
+        .iter()
+        .filter_map(|key| key.strip_prefix("app:"))
+        .filter_map(|id| c.pinned.iter().find(|pin| pin.path == id).cloned())
+        .collect();
     let mut sorted = sorted_pins.iter();
     for pin in &mut c.pinned {
-        if sorted_pins.iter().any(|candidate| candidate.path == pin.path) {
+        if sorted_pins
+            .iter()
+            .any(|candidate| candidate.path == pin.path)
+        {
             *pin = sorted.next().expect("matching pinned order").clone();
         }
     }
     c.item_order = next;
     persist(&c)?;
     *state.config.lock().map_err(|e| e.to_string())? = c.clone();
-    app.emit("dock-config-changed", &c).map_err(|e| e.to_string())?;
+    app.emit("dock-config-changed", &c)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -2985,14 +3086,17 @@ pub async fn dock_widgets_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Re
     let state = app.state::<DockState>();
     let _write = state.write.lock().map_err(|e| e.to_string())?;
     let mut c = state.config.lock().map_err(|e| e.to_string())?.clone();
-    if ids.len() != c.widgets.len() || ids.iter().collect::<HashSet<_>>().len() != ids.len()
-        || ids.iter().any(|id| !c.widgets.contains(id)) {
+    if ids.len() != c.widgets.len()
+        || ids.iter().collect::<HashSet<_>>().len() != ids.len()
+        || ids.iter().any(|id| !c.widgets.contains(id))
+    {
         return Err("Dock widgets changed; try reordering again".into());
     }
     c.widgets = ids;
     persist(&c)?;
     *state.config.lock().map_err(|e| e.to_string())? = c.clone();
-    app.emit("dock-config-changed", &c).map_err(|e| e.to_string())?;
+    app.emit("dock-config-changed", &c)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -3011,10 +3115,16 @@ pub async fn dock_reorder(app: tauri::AppHandle, ids: Vec<String>) -> Result<(),
         .iter()
         .filter_map(|id| c.pinned.iter().find(|p| &p.path == id).cloned())
         .collect();
-    let ordered_keys: Vec<String> = ids.iter().map(|id| format!("app:{id}")).filter(|key| c.item_order.contains(key)).collect();
+    let ordered_keys: Vec<String> = ids
+        .iter()
+        .map(|id| format!("app:{id}"))
+        .filter(|key| c.item_order.contains(key))
+        .collect();
     let mut pinned_keys = ordered_keys.iter();
     for key in &mut c.item_order {
-        if ordered_keys.contains(key) { *key = pinned_keys.next().expect("matching pinned order").clone(); }
+        if ordered_keys.contains(key) {
+            *key = pinned_keys.next().expect("matching pinned order").clone();
+        }
     }
     persist(&c)?;
     *state.config.lock().map_err(|e| e.to_string())? = c.clone();
@@ -3099,7 +3209,6 @@ pub fn dock_native_test_probe(
 
 #[cfg(test)]
 mod tests {
-
 
     use super::*;
 
@@ -3503,23 +3612,43 @@ mod tests {
         let mut c: DockConfig = serde_json::from_str("{}").unwrap();
         assert_eq!(c.material, "solid");
         for material in ["solid", "liquid", "ios"] {
-            c.material = material.into(); c.validate().unwrap();
+            c.material = material.into();
+            c.validate().unwrap();
             let saved = serde_json::to_string(&c).unwrap();
-            assert_eq!(serde_json::from_str::<DockConfig>(&saved).unwrap().material, material);
+            assert_eq!(
+                serde_json::from_str::<DockConfig>(&saved).unwrap().material,
+                material
+            );
         }
-        c.material = "unknown".into(); assert!(c.validate().is_err());
+        c.material = "unknown".into();
+        assert!(c.validate().is_err());
     }
     #[test]
     fn mixed_order_accepts_system_items_and_rejects_invalid_orders() {
         let widgets = vec!["timer".to_string()];
-        let order = ["system:search", "widget:timer", "system:start", "app:editor", "system:divider", "system:clock", "system:studio"]
-            .iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let order = [
+            "system:search",
+            "widget:timer",
+            "system:start",
+            "app:editor",
+            "system:divider",
+            "system:clock",
+            "system:studio",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>();
         assert!(validate_dock_item_order(&order, &widgets).is_ok());
-        let mut duplicate = order.clone(); duplicate.push("system:start".into());
+        let mut duplicate = order.clone();
+        duplicate.push("system:start".into());
         assert!(validate_dock_item_order(&duplicate, &widgets).is_err());
-        let mut unknown = order.clone(); unknown.push("system:unknown".into());
+        let mut unknown = order.clone();
+        unknown.push("system:unknown".into());
         assert!(validate_dock_item_order(&unknown, &widgets).is_err());
-        let missing = order.into_iter().filter(|id| id != "widget:timer").collect::<Vec<_>>();
+        let missing = order
+            .into_iter()
+            .filter(|id| id != "widget:timer")
+            .collect::<Vec<_>>();
         assert!(validate_dock_item_order(&missing, &widgets).is_err());
     }
 

@@ -224,7 +224,9 @@ fn normalize(c: &mut WidgetConfig) -> Result<(), String> {
             156
         };
     }
-    c.width = c.width.clamp(140, if c.kind == "audio" { 16384 } else { 1200 });
+    c.width = c
+        .width
+        .clamp(140, if c.kind == "audio" { 16384 } else { 1200 });
     c.height = c.height.clamp(120, 900);
     c.radius = c.radius.min(80);
     c.opacity = c.opacity.clamp(if c.kind == "audio" { 0 } else { 20 }, 100);
@@ -422,7 +424,7 @@ pub fn pin_to_desktop(w: &tauri::WebviewWindow) {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::UI::WindowsAndMessaging::{
             GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE,
-            HWND_BOTTOM, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+            HWND_BOTTOM, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOWNOACTIVATE,
             WS_EX_NOACTIVATE,
         };
         if let Ok(raw) = w.hwnd() {
@@ -519,7 +521,11 @@ pub async fn set_widget(
     };
     apply(&app, &next[i], i)?;
     let _ = app.emit("widget-config", &next[i]);
-    let _ = app.emit_to("main", "widget-updated", serde_json::json!({"config": &next[i], "source": window.label()}));
+    let _ = app.emit_to(
+        "main",
+        "widget-updated",
+        serde_json::json!({"config": &next[i], "source": window.label()}),
+    );
     let _ = app.emit_to("desktop-dock", "widget-config", &next[i]);
     Ok(next)
 }
@@ -599,16 +605,38 @@ pub async fn widget_stats(
     }).await.map_err(|e|e.to_string())
 }
 #[tauri::command]
-pub fn widget_drive_usage(window: tauri::Window, drive: String) -> Result<serde_json::Value, String> {
-    let label=window.label();
-    if label!="desktop-dock" && label!="widget-sys_disk_c" && label!="widget-sys_disk_d" { return Err("Drive data is unavailable to this window".into()); }
-    let letter=drive.trim().trim_end_matches(':');
-    if letter.len()!=1 || !letter.as_bytes()[0].is_ascii_alphabetic() { return Err("Enter a drive letter such as C:".into()); }
-    let path:Vec<u16>=format!("{}:\\",letter.to_ascii_uppercase()).encode_utf16().chain(Some(0)).collect();
-    let (mut total,mut free)=(0u64,0u64);
-    unsafe { windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW(windows::core::PCWSTR(path.as_ptr()),None,Some(&mut total),Some(&mut free)) }.map_err(|_|"Drive is unavailable".to_string())?;
-    if total==0 { return Err("Drive is unavailable".into()); }
-    Ok(serde_json::json!({"drive":letter.to_ascii_uppercase(),"total":total,"free":free,"percent":100.0*(total.saturating_sub(free)) as f64/total as f64}))
+pub fn widget_drive_usage(
+    window: tauri::Window,
+    drive: String,
+) -> Result<serde_json::Value, String> {
+    let label = window.label();
+    if label != "desktop-dock" && label != "widget-sys_disk_c" && label != "widget-sys_disk_d" {
+        return Err("Drive data is unavailable to this window".into());
+    }
+    let letter = drive.trim().trim_end_matches(':');
+    if letter.len() != 1 || !letter.as_bytes()[0].is_ascii_alphabetic() {
+        return Err("Enter a drive letter such as C:".into());
+    }
+    let path: Vec<u16> = format!("{}:\\", letter.to_ascii_uppercase())
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
+    let (mut total, mut free) = (0u64, 0u64);
+    unsafe {
+        windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW(
+            windows::core::PCWSTR(path.as_ptr()),
+            None,
+            Some(&mut total),
+            Some(&mut free),
+        )
+    }
+    .map_err(|_| "Drive is unavailable".to_string())?;
+    if total == 0 {
+        return Err("Drive is unavailable".into());
+    }
+    Ok(
+        serde_json::json!({"drive":letter.to_ascii_uppercase(),"total":total,"free":free,"percent":100.0*(total.saturating_sub(free)) as f64/total as f64}),
+    )
 }
 #[repr(C)]
 struct PowerStatus {
@@ -761,7 +789,8 @@ pub fn widget_resize(
         return Err("Unknown widget".into());
     }
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
-    let logical_width = ((width as f64 / scale).round() as u32).clamp(140, if kind == "audio" { 16384 } else { 1200 });
+    let logical_width = ((width as f64 / scale).round() as u32)
+        .clamp(140, if kind == "audio" { 16384 } else { 1200 });
     let logical_height = ((height as f64 / scale).round() as u32).clamp(120, 900);
     window
         .set_size(tauri::LogicalSize::new(

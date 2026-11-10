@@ -26,27 +26,27 @@ mod scene_properties;
 mod steam_workshop;
 mod system_animations;
 mod system_appearance;
-mod tray_panel;
 mod tray_bridge;
+mod tray_panel;
 #[allow(dead_code)]
 mod tray_protocol;
 mod wallpaper_performance;
 mod wallpaper_scene;
+mod widget_appstore;
+mod widget_audio_outputs;
 mod widget_auth;
 mod widget_billing;
-mod widget_codex;
-mod widget_google;
-mod widget_appstore;
-mod widget_playstore;
 mod widget_clipboard;
+mod widget_codex;
 mod widget_controls;
-mod widget_audio_outputs;
 mod widget_docker;
+mod widget_google;
 mod widget_gpu;
-mod widget_network;
-mod widget_reminder;
 mod widget_metrics;
+mod widget_network;
 mod widget_photo;
+mod widget_playstore;
+mod widget_reminder;
 mod widget_screentime;
 mod widget_timers;
 pub fn watchdog_args() -> bool {
@@ -773,7 +773,10 @@ pub fn run() {
         .manage(widget_screentime::ScreenTime::default())
         .manage(desktop_wallpaper::Wallpapers::new())
         .setup(|app| {
-            if !dock_test_mode() { widget_screentime::start(app.handle().clone()); widget_timers::start(); }
+            if !dock_test_mode() {
+                widget_screentime::start(app.handle().clone());
+                widget_timers::start();
+            }
             let audio = app.state::<AppState>().audio.clone();
             tauri::async_runtime::spawn(async move {
                 loop {
@@ -812,8 +815,12 @@ pub fn run() {
                 }
             }
             tray_panel::create(app.handle())?;
-            if app.state::<desktop_dock::DockState>().widgets_enabled(&["sys_tray"]) {
-                app.state::<tray_bridge::TrayBridge>().start(app.handle().clone());
+            if app
+                .state::<desktop_dock::DockState>()
+                .widgets_enabled(&["sys_tray"])
+            {
+                app.state::<tray_bridge::TrayBridge>()
+                    .start(app.handle().clone());
             }
             let _tray = TrayIconBuilder::new()
                 .tooltip("Atelier Desktop Engine")
@@ -826,7 +833,9 @@ pub fn run() {
                         position,
                         ..
                     } => {
-                        if let Err(error) = tray_panel::show_app_menu(tray.app_handle(), position.x, position.y) {
+                        if let Err(error) =
+                            tray_panel::show_app_menu(tray.app_handle(), position.x, position.y)
+                        {
                             tracing::error!(%error, "Could not show Atelier menu");
                         }
                     }
@@ -882,152 +891,157 @@ pub fn run() {
         })
         .invoke_handler(|invoke| {
             if invoke.message.webview_ref().label().starts_with("billing-") {
-                invoke.resolver.reject("Billing websites cannot invoke Atelier commands");
+                invoke
+                    .resolver
+                    .reject("Billing websites cannot invoke Atelier commands");
                 return true;
             }
-            let handler:fn(tauri::ipc::Invoke<tauri::Wry>)->bool=tauri::generate_handler![
-            app_usage::atelier_usage,
-            app_usage::widget_top_processes,
-            app_usage::trim_atelier_memory,
-            tray_panel::tray_usage,
-            tray_panel::tray_action,
-            system_appearance::get_system_appearance,
-            system_appearance::set_system_appearance,
-            system_appearance::restore_system_appearance,
-            system_appearance::open_windows_appearance_settings,
-            system_animations::get_animations_config,
-            system_animations::set_animations_config,
-            system_animations::get_window_animation,
-            system_animations::set_window_animation,
-            steam_workshop::workshop_list_local,
-            steam_workshop::workshop_import_video,
-            steam_workshop::workshop_import_scene,
-            steam_workshop::workshop_open_page,
-            steam_workshop::workshop_open_client,
-            steam_workshop::workshop_open_browse,
-            desktop_wallpaper::wallpaper_snapshot,
-            desktop_wallpaper::wallpaper_import_begin,
-            desktop_wallpaper::wallpaper_import_chunk,
-            desktop_wallpaper::wallpaper_import_finish,
-            desktop_wallpaper::wallpaper_add_preset,
-            desktop_wallpaper::wallpaper_apply,
-            desktop_wallpaper::wallpaper_options,
-            desktop_wallpaper::wallpaper_audio_options,
-            desktop_wallpaper::wallpaper_audio_error,
-            desktop_wallpaper::wallpaper_scene_info,
-            desktop_wallpaper::wallpaper_scene_options,
-            desktop_wallpaper::wallpaper_performance_options,
-            desktop_wallpaper::wallpaper_playback_state,
-            desktop_wallpaper::wallpaper_remove,
-            desktop_wallpaper::wallpaper_should_pause,
-            desktop_wallpaper::wallpaper_pause_reason,
-            desktop_wallpaper::wallpaper_repair,
-            desktop_wallpaper::wallpaper_report,
-            widget_photo::photo_upload_begin,
-            widget_photo::photo_upload_chunk,
-            widget_photo::photo_upload_finish,
-            get_native_taskbar_enabled,
-            set_native_taskbar_enabled,
-            desktop_island::get_island,
-            desktop_island::set_island,
-            desktop_island::island_monitors,
-            desktop_island::island_lyrics,
-            desktop_island::island_update_note,
-            desktop_island::island_expand,
-            desktop_island::island_pointer_inside,
-            desktop_widgets::get_widgets,
-            widget_auth::widget_verify_service,
-            widget_auth::widget_service_data,
-            widget_appstore::widget_appstore_sales,
-            widget_codex::widget_codex_quota,
-            widget_billing::widget_billing_open,
-            widget_billing::widget_billing_snapshot,
-            widget_billing::widget_billing_disconnect,
-            widget_google::widget_ga4_service_report,
-            widget_playstore::widget_play_report,
-            widget_screentime::widget_screen_time,
-            widget_screentime::widget_screen_time_clear,
-            widget_controls::widget_audio_device,
-            widget_controls::widget_brightness,
-            widget_controls::widget_open_sound_settings,
-            widget_audio_outputs::widget_audio_outputs,
-            widget_audio_outputs::widget_open_audio_outputs,
-            widget_controls::widget_recycle_bin,
-            widget_clipboard::widget_clipboard_snapshot,
-            widget_clipboard::widget_clipboard_copy,
-            desktop_widgets::fetch_antigravity_quota,
-            desktop_widgets::set_widget,
-            desktop_widgets::audio_spectrum,
-            desktop_widgets::audio_widget_fullscreen,
-            desktop_widgets::widget_stats,
-            desktop_widgets::widget_drive_usage,
-            widget_network::widget_ping,
-            widget_docker::widget_docker,
-            widget_network::widget_wifi,
-            widget_network::widget_bluetooth,
-            widget_metrics::widget_gpu_memory,
-            widget_reminder::widget_break_reminder,
-            widget_timers::widget_timer,
-            desktop_widgets::widget_media,
-            desktop_widgets::widget_media_control,
-            desktop_widgets::widget_media_seek,
-            desktop_widgets::widget_battery,
-            desktop_widgets::widget_open_settings,
-            desktop_widgets::widget_resize_focus,
-            desktop_widgets::widget_bounds,
-            desktop_widgets::widget_resize,
-            desktop_widgets::widget_position,
-            desktop_widgets::widget_move,
-            get_taskbar_config,
-            get_taskbar_capabilities,
-            set_taskbar_config,
-            apply_style,
-            set_floating_dock,
-            apply_preset,
-            reset_defaults,
-            repair_taskbar_icons,
-            hide_window,
-            get_system_status,
-            get_taskbar_preview_info,
-            desktop_dock::get_dock_snapshot,
-            desktop_dock::set_dock_config,
-            desktop_dock::get_dock_audio,
-            desktop_dock::set_dock_audio,
-            desktop_dock::dock_audio_error,
-            desktop_dock::reset_desktop_dock,
-            desktop_dock::dock_resize,
-            desktop_dock::dock_backdrop,
-            desktop_dock::dock_menu_open,
-            desktop_dock::dock_activate,
-            desktop_dock::dock_pin,
-            desktop_dock::dock_set_hidden,
-            desktop_dock::dock_open_system,
-            desktop_dock::dock_input_language,
-            desktop_dock::dock_languages,
-            desktop_dock::dock_open_language,
-            desktop_dock::dock_open_folder,
-            desktop_dock::dock_open_tray,
-            folder_ghost::folder_ghost_start,
-            folder_ghost::folder_ghost_move,
-            folder_ghost::folder_ghost_end,
-            folder_ghost::folder_ghost_icon,
-            tray_bridge::tray_icons,
-            tray_bridge::tray_icon_click,
-            desktop_dock::dock_select_language,
-            desktop_dock::dock_reorder,
-            desktop_dock::dock_widget_set,
-            desktop_dock::dock_widgets_reorder,
-            desktop_dock::dock_items_reorder,
-            desktop_dock::dock_set_icon,
-            desktop_dock::dock_open_studio,
-            desktop_dock::dock_native_test_probe,
+            let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
+                app_usage::atelier_usage,
+                app_usage::widget_top_processes,
+                app_usage::trim_atelier_memory,
+                tray_panel::tray_usage,
+                tray_panel::tray_action,
+                system_appearance::get_system_appearance,
+                system_appearance::set_system_appearance,
+                system_appearance::restore_system_appearance,
+                system_appearance::open_windows_appearance_settings,
+                system_animations::get_animations_config,
+                system_animations::set_animations_config,
+                system_animations::get_window_animation,
+                system_animations::set_window_animation,
+                steam_workshop::workshop_list_local,
+                steam_workshop::workshop_import_video,
+                steam_workshop::workshop_import_scene,
+                steam_workshop::workshop_open_page,
+                steam_workshop::workshop_open_client,
+                steam_workshop::workshop_open_browse,
+                desktop_wallpaper::wallpaper_snapshot,
+                desktop_wallpaper::wallpaper_import_begin,
+                desktop_wallpaper::wallpaper_import_chunk,
+                desktop_wallpaper::wallpaper_import_finish,
+                desktop_wallpaper::wallpaper_add_preset,
+                desktop_wallpaper::wallpaper_apply,
+                desktop_wallpaper::wallpaper_options,
+                desktop_wallpaper::wallpaper_audio_options,
+                desktop_wallpaper::wallpaper_audio_error,
+                desktop_wallpaper::wallpaper_scene_info,
+                desktop_wallpaper::wallpaper_scene_options,
+                desktop_wallpaper::wallpaper_performance_options,
+                desktop_wallpaper::wallpaper_playback_state,
+                desktop_wallpaper::wallpaper_remove,
+                desktop_wallpaper::wallpaper_should_pause,
+                desktop_wallpaper::wallpaper_pause_reason,
+                desktop_wallpaper::wallpaper_repair,
+                desktop_wallpaper::wallpaper_report,
+                widget_photo::photo_upload_begin,
+                widget_photo::photo_upload_chunk,
+                widget_photo::photo_upload_finish,
+                get_native_taskbar_enabled,
+                set_native_taskbar_enabled,
+                desktop_island::get_island,
+                desktop_island::set_island,
+                desktop_island::island_monitors,
+                desktop_island::island_lyrics,
+                desktop_island::island_update_note,
+                desktop_island::island_expand,
+                desktop_island::island_pointer_inside,
+                desktop_widgets::get_widgets,
+                widget_auth::widget_verify_service,
+                widget_auth::widget_service_data,
+                widget_appstore::widget_appstore_sales,
+                widget_codex::widget_codex_quota,
+                widget_billing::widget_billing_open,
+                widget_billing::widget_billing_snapshot,
+                widget_billing::widget_billing_disconnect,
+                widget_google::widget_ga4_service_report,
+                widget_playstore::widget_play_report,
+                widget_screentime::widget_screen_time,
+                widget_screentime::widget_screen_time_clear,
+                widget_controls::widget_audio_device,
+                widget_controls::widget_brightness,
+                widget_controls::widget_open_sound_settings,
+                widget_audio_outputs::widget_audio_outputs,
+                widget_audio_outputs::widget_open_audio_outputs,
+                widget_controls::widget_recycle_bin,
+                widget_clipboard::widget_clipboard_snapshot,
+                widget_clipboard::widget_clipboard_copy,
+                desktop_widgets::fetch_antigravity_quota,
+                desktop_widgets::set_widget,
+                desktop_widgets::audio_spectrum,
+                desktop_widgets::audio_widget_fullscreen,
+                desktop_widgets::widget_stats,
+                desktop_widgets::widget_drive_usage,
+                widget_network::widget_ping,
+                widget_docker::widget_docker,
+                widget_network::widget_wifi,
+                widget_network::widget_bluetooth,
+                widget_metrics::widget_gpu_memory,
+                widget_reminder::widget_break_reminder,
+                widget_timers::widget_timer,
+                desktop_widgets::widget_media,
+                desktop_widgets::widget_media_control,
+                desktop_widgets::widget_media_seek,
+                desktop_widgets::widget_battery,
+                desktop_widgets::widget_open_settings,
+                desktop_widgets::widget_resize_focus,
+                desktop_widgets::widget_bounds,
+                desktop_widgets::widget_resize,
+                desktop_widgets::widget_position,
+                desktop_widgets::widget_move,
+                get_taskbar_config,
+                get_taskbar_capabilities,
+                set_taskbar_config,
+                apply_style,
+                set_floating_dock,
+                apply_preset,
+                reset_defaults,
+                repair_taskbar_icons,
+                hide_window,
+                get_system_status,
+                get_taskbar_preview_info,
+                desktop_dock::get_dock_snapshot,
+                desktop_dock::set_dock_config,
+                desktop_dock::get_dock_audio,
+                desktop_dock::set_dock_audio,
+                desktop_dock::dock_audio_error,
+                desktop_dock::reset_desktop_dock,
+                desktop_dock::dock_resize,
+                desktop_dock::dock_backdrop,
+                desktop_dock::dock_menu_open,
+                desktop_dock::dock_activate,
+                desktop_dock::dock_pin,
+                desktop_dock::dock_set_hidden,
+                desktop_dock::dock_open_system,
+                desktop_dock::dock_input_language,
+                desktop_dock::dock_languages,
+                desktop_dock::dock_open_language,
+                desktop_dock::dock_open_folder,
+                desktop_dock::dock_open_tray,
+                folder_ghost::folder_ghost_start,
+                folder_ghost::folder_ghost_move,
+                folder_ghost::folder_ghost_end,
+                folder_ghost::folder_ghost_icon,
+                tray_bridge::tray_icons,
+                tray_bridge::tray_icon_click,
+                desktop_dock::dock_select_language,
+                desktop_dock::dock_reorder,
+                desktop_dock::dock_widget_set,
+                desktop_dock::dock_widgets_reorder,
+                desktop_dock::dock_items_reorder,
+                desktop_dock::dock_set_icon,
+                desktop_dock::dock_open_studio,
+                desktop_dock::dock_native_test_probe,
             ];
             handler(invoke)
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(false) = event {
                 desktop_widgets::dismiss_resize(window);
-                if window.label() == "dock-language" || window.label() == "tray-panel" || window.label() == "atelier-menu" {
+                if window.label() == "dock-language"
+                    || window.label() == "tray-panel"
+                    || window.label() == "atelier-menu"
+                {
                     let _ = window.hide();
                 }
             }

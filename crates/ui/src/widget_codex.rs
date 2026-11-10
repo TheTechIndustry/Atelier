@@ -18,26 +18,51 @@ impl Drop for Server {
 
 fn packaged_codex() -> Option<PathBuf> {
     use windows::core::{w, PWSTR};
-    use windows::Win32::Storage::Packaging::Appx::{GetPackagePathByFullName, GetPackagesByPackageFamily};
+    use windows::Win32::Storage::Packaging::Appx::{
+        GetPackagePathByFullName, GetPackagesByPackageFamily,
+    };
     unsafe {
-        let mut count=0u32;
-        let mut size=0u32;
-        let family=w!("OpenAI.Codex_2p2nqsd0c76g0");
-        let _=GetPackagesByPackageFamily(family,&mut count,None,&mut size,PWSTR::null());
-        if count==0 || count>128 || size==0 || size>65536 { return None; }
-        let mut names=vec![PWSTR::null();count as usize];
-        let mut buffer=vec![0u16;size as usize];
-        if GetPackagesByPackageFamily(family,&mut count,Some(names.as_mut_ptr()),&mut size,PWSTR(buffer.as_mut_ptr())).0!=0 { return None; }
+        let mut count = 0u32;
+        let mut size = 0u32;
+        let family = w!("OpenAI.Codex_2p2nqsd0c76g0");
+        let _ = GetPackagesByPackageFamily(family, &mut count, None, &mut size, PWSTR::null());
+        if count == 0 || count > 128 || size == 0 || size > 65536 {
+            return None;
+        }
+        let mut names = vec![PWSTR::null(); count as usize];
+        let mut buffer = vec![0u16; size as usize];
+        if GetPackagesByPackageFamily(
+            family,
+            &mut count,
+            Some(names.as_mut_ptr()),
+            &mut size,
+            PWSTR(buffer.as_mut_ptr()),
+        )
+        .0 != 0
+        {
+            return None;
+        }
         for name in names.into_iter().take(count as usize) {
-            if name.is_null() { continue; }
-            let mut len=0u32;
-            let _=GetPackagePathByFullName(name,&mut len,PWSTR::null());
-            if len==0 || len>32768 { continue; }
-            let mut path=vec![0u16;len as usize];
-            if GetPackagePathByFullName(name,&mut len,PWSTR(path.as_mut_ptr())).0!=0 { continue; }
-            let end=path.iter().position(|v| *v==0).unwrap_or(path.len());
-            let candidate=PathBuf::from(String::from_utf16_lossy(&path[..end])).join("app").join("resources").join("codex.exe");
-            if candidate.is_file() { return Some(candidate); }
+            if name.is_null() {
+                continue;
+            }
+            let mut len = 0u32;
+            let _ = GetPackagePathByFullName(name, &mut len, PWSTR::null());
+            if len == 0 || len > 32768 {
+                continue;
+            }
+            let mut path = vec![0u16; len as usize];
+            if GetPackagePathByFullName(name, &mut len, PWSTR(path.as_mut_ptr())).0 != 0 {
+                continue;
+            }
+            let end = path.iter().position(|v| *v == 0).unwrap_or(path.len());
+            let candidate = PathBuf::from(String::from_utf16_lossy(&path[..end]))
+                .join("app")
+                .join("resources")
+                .join("codex.exe");
+            if candidate.is_file() {
+                return Some(candidate);
+            }
         }
         None
     }
@@ -52,23 +77,45 @@ fn executable_path(value: &str) -> Result<PathBuf, String> {
             .filter(|dir| dir.is_absolute())
             .map(|dir| dir.join("codex.exe"))
             .find(|path| path.is_file());
-        if let Some(path) = from_path { return Ok(path); }
-        if let Some(path) = packaged_codex() { return Ok(path); }
-        for (var, suffix) in [("USERPROFILE", ".cargo\\bin\\codex.exe"), ("LOCALAPPDATA", "Microsoft\\WindowsApps\\codex.exe")] {
-            if let Some(path) = std::env::var_os(var).map(|root| PathBuf::from(root).join(suffix)).filter(|path| path.is_file()) {
+        if let Some(path) = from_path {
+            return Ok(path);
+        }
+        if let Some(path) = packaged_codex() {
+            return Ok(path);
+        }
+        for (var, suffix) in [
+            ("USERPROFILE", ".cargo\\bin\\codex.exe"),
+            ("LOCALAPPDATA", "Microsoft\\WindowsApps\\codex.exe"),
+        ] {
+            if let Some(path) = std::env::var_os(var)
+                .map(|root| PathBuf::from(root).join(suffix))
+                .filter(|path| path.is_file())
+            {
                 return Ok(path);
             }
         }
         if let Some(root) = std::env::var_os("ProgramFiles") {
             let mut packages: Vec<_> = std::fs::read_dir(PathBuf::from(root).join("WindowsApps"))
-                .into_iter().flatten().flatten()
-                .filter(|entry| entry.file_name().to_string_lossy().starts_with("OpenAI.Codex_"))
+                .into_iter()
+                .flatten()
+                .flatten()
+                .filter(|entry| {
+                    entry
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with("OpenAI.Codex_")
+                })
                 .map(|entry| entry.path().join("app").join("resources").join("codex.exe"))
-                .filter(|path| path.is_file()).collect();
+                .filter(|path| path.is_file())
+                .collect();
             packages.sort();
-            if let Some(path) = packages.pop() { return Ok(path); }
+            if let Some(path) = packages.pop() {
+                return Ok(path);
+            }
         }
-        return Err("Codex CLI not found; install Codex CLI or set its absolute codex.exe path".into());
+        return Err(
+            "Codex CLI not found; install Codex CLI or set its absolute codex.exe path".into(),
+        );
     }
     if !path.is_absolute()
         || !path
@@ -132,7 +179,7 @@ fn exchange(mut reader: impl BufRead, mut writer: impl Write) -> Result<Value, S
     };
     send(
         &mut writer,
-        json!({"id":0,"method":"initialize","params":{"clientInfo":{"name":"atelier_widgets","title":"Atelier Widgets","version":"0.1.0"}}}),
+        json!({"id":0,"method":"initialize","params":{"clientInfo":{"name":"atelier_widgets","title":"Atelier Widgets","version":env!("CARGO_PKG_VERSION")}}}),
     )?;
     let mut initialized = false;
     let mut total = 0;
@@ -226,9 +273,14 @@ mod tests {
     #[test]
     #[ignore]
     fn live_packaged_codex_connection() {
-        assert!(packaged_codex().is_some(), "Packaged Codex was not detected");
+        assert!(
+            packaged_codex().is_some(),
+            "Packaged Codex was not detected"
+        );
         match quota("codex.exe") {
-            Ok(data) => assert!(data["windows"].as_array().is_some_and(|rows| !rows.is_empty())),
+            Ok(data) => assert!(data["windows"]
+                .as_array()
+                .is_some_and(|rows| !rows.is_empty())),
             Err(error) => panic!("Codex quota request failed: {error}"),
         }
     }

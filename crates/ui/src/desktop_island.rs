@@ -446,7 +446,11 @@ impl IslandConfig {
                         && kinds.insert(item.kind.clone())
                 });
                 for item in &mut page.layout {
-                    if item.artwork_layout.as_deref().is_some_and(|v| !["small", "medium", "large"].contains(&v)) {
+                    if item
+                        .artwork_layout
+                        .as_deref()
+                        .is_some_and(|v| !["small", "medium", "large"].contains(&v))
+                    {
                         item.artwork_layout = None;
                     }
                     if !["glass", "soft", "clear"].contains(&item.style.as_str()) {
@@ -479,7 +483,13 @@ impl IslandConfig {
         }
     }
 }
-pub struct IslandState(Mutex<IslandConfig>, AtomicU64, AtomicBool, Mutex<()>, AtomicBool);
+pub struct IslandState(
+    Mutex<IslandConfig>,
+    AtomicU64,
+    AtomicBool,
+    Mutex<()>,
+    AtomicBool,
+);
 impl IslandState {
     pub fn audio_effects_enabled(&self) -> bool {
         self.0
@@ -500,7 +510,13 @@ impl IslandState {
             .and_then(|b| serde_json::from_slice(&b).ok())
             .unwrap_or_default();
         c.normalize();
-        Self(Mutex::new(c), AtomicU64::new(0), AtomicBool::new(false), Mutex::new(()), AtomicBool::new(false))
+        Self(
+            Mutex::new(c),
+            AtomicU64::new(0),
+            AtomicBool::new(false),
+            Mutex::new(()),
+            AtomicBool::new(false),
+        )
     }
 }
 fn notch_shoulder(c: &IslandConfig) -> u32 {
@@ -573,7 +589,12 @@ fn covers_monitor(rect: (i32, i32, i32, i32), origin: (i32, i32), size: (u32, u3
         && rect.2 >= origin.0.saturating_add(size.0 as i32) - tolerance
         && rect.3 >= origin.1.saturating_add(size.1 as i32) - tolerance
 }
-fn should_hide_for_window(hide_fullscreen: bool, hide_maximized: bool, is_fullscreen: bool, is_maximized: bool) -> bool {
+fn should_hide_for_window(
+    hide_fullscreen: bool,
+    hide_maximized: bool,
+    is_fullscreen: bool,
+    is_maximized: bool,
+) -> bool {
     (hide_fullscreen && (is_fullscreen || is_maximized)) || (hide_maximized && is_maximized)
 }
 fn covers_work_area(rect: (i32, i32, i32, i32), work: (i32, i32, i32, i32)) -> bool {
@@ -583,14 +604,18 @@ fn hide_window(window: &tauri::WebviewWindow) -> Result<(), String> {
     use windows::Win32::Foundation::HWND;
     use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
     let raw = window.hwnd().map_err(|e| e.to_string())?;
-    unsafe { let _ = ShowWindow(HWND(raw.0 as _), SW_HIDE); }
+    unsafe {
+        let _ = ShowWindow(HWND(raw.0 as _), SW_HIDE);
+    }
     Ok(())
 }
 fn show_without_activation(window: &tauri::WebviewWindow) -> Result<(), String> {
     use windows::Win32::Foundation::HWND;
     use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
     let raw = window.hwnd().map_err(|e| e.to_string())?;
-    unsafe { let _ = ShowWindow(HWND(raw.0 as _), SW_SHOWNOACTIVATE); }
+    unsafe {
+        let _ = ShowWindow(HWND(raw.0 as _), SW_SHOWNOACTIVATE);
+    }
     Ok(())
 }
 fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
@@ -602,8 +627,8 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         GetClassNameW, GetClientRect, GetForegroundWindow, GetTopWindow, GetWindow, GetWindowLongW,
-        GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible, IsZoomed, GW_HWNDNEXT,
-        GWL_EXSTYLE, WS_EX_TOOLWINDOW,
+        GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible, IsZoomed, GWL_EXSTYLE,
+        GW_HWNDNEXT, WS_EX_TOOLWINDOW,
     };
 
     if !c.hide_fullscreen && !c.hide_maximized {
@@ -626,7 +651,15 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
     };
     let p = m.position();
     let size = m.size();
-    let target = unsafe { MonitorFromPoint(POINT { x: p.x.saturating_add((size.width / 2) as i32), y: p.y.saturating_add((size.height / 2) as i32) }, MONITOR_DEFAULTTONEAREST) };
+    let target = unsafe {
+        MonitorFromPoint(
+            POINT {
+                x: p.x.saturating_add((size.width / 2) as i32),
+                y: p.y.saturating_add((size.height / 2) as i32),
+            },
+            MONITOR_DEFAULTTONEAREST,
+        )
+    };
 
     let mut mi = MONITORINFO {
         cbSize: std::mem::size_of::<MONITORINFO>() as u32,
@@ -642,10 +675,7 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
             ),
         )
     } else {
-        (
-            (p.x, p.y),
-            (size.width, size.height),
-        )
+        ((p.x, p.y), (size.width, size.height))
     };
 
     let main = app
@@ -666,7 +696,9 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
             return (false, false);
         }
         let mut pid = 0;
-        unsafe { GetWindowThreadProcessId(candidate, Some(&mut pid)); }
+        unsafe {
+            GetWindowThreadProcessId(candidate, Some(&mut pid));
+        }
         if pid == 0 || (pid == std::process::id() && main != Some(raw)) {
             return (false, false);
         }
@@ -688,10 +720,18 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
         let mut class = [0u16; 64];
         let len = unsafe { GetClassNameW(candidate, &mut class) }.max(0) as usize;
         let class_str = String::from_utf16_lossy(&class[..len]);
-        if ["Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd"].contains(&class_str.as_str()) {
+        if [
+            "Progman",
+            "WorkerW",
+            "Shell_TrayWnd",
+            "Shell_SecondaryTrayWnd",
+        ]
+        .contains(&class_str.as_str())
+        {
             return (false, false);
         }
-        let tool = unsafe { GetWindowLongW(candidate, GWL_EXSTYLE) } & WS_EX_TOOLWINDOW.0 as i32 != 0;
+        let tool =
+            unsafe { GetWindowLongW(candidate, GWL_EXSTYLE) } & WS_EX_TOOLWINDOW.0 as i32 != 0;
         if tool {
             return (false, false);
         }
@@ -718,7 +758,11 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
                 rect.bottom += origin.y;
                 rect.left = origin.x;
                 rect.top = origin.y;
-                if covers_monitor((rect.left, rect.top, rect.right, rect.bottom), mon_origin, mon_size) {
+                if covers_monitor(
+                    (rect.left, rect.top, rect.right, rect.bottom),
+                    mon_origin,
+                    mon_size,
+                ) {
                     is_full = true;
                 }
             }
@@ -734,13 +778,17 @@ fn covered_by_foreground(app: &tauri::AppHandle, c: &IslandConfig) -> bool {
         }
     }
 
-    let Ok(mut candidate) = (unsafe { GetTopWindow(HWND::default()) }) else { return false; };
+    let Ok(mut candidate) = (unsafe { GetTopWindow(HWND::default()) }) else {
+        return false;
+    };
     for _ in 0..1024 {
         let (is_max, is_full) = check_window(candidate);
         if should_hide_for_window(c.hide_fullscreen, c.hide_maximized, is_full, is_max) {
             return true;
         }
-        let Ok(next) = (unsafe { GetWindow(candidate, GW_HWNDNEXT) }) else { break; };
+        let Ok(next) = (unsafe { GetWindow(candidate, GW_HWNDNEXT) }) else {
+            break;
+        };
         candidate = next;
     }
     false
@@ -782,7 +830,9 @@ fn apply(app: &tauri::AppHandle, c: &IslandConfig) -> Result<(), String> {
         place(app, c, state.2.load(Ordering::SeqCst))?;
     }
     let _ = app.emit_to("dynamic-island", "island-config", c);
-    let window = app.get_webview_window("dynamic-island").ok_or("Island window unavailable")?;
+    let window = app
+        .get_webview_window("dynamic-island")
+        .ok_or("Island window unavailable")?;
     if covered_by_foreground(app, c) {
         let state = app.state::<IslandState>();
         let _geometry = state.3.lock().map_err(|e| e.to_string())?;
@@ -883,8 +933,14 @@ pub async fn island_lyrics(
     let mut url = url::Url::parse("https://lrclib.net/api/get").map_err(|e| e.to_string())?;
     {
         let mut query = url.query_pairs_mut();
-        query.append_pair("track_name", title).append_pair("artist_name", artist);
-        if let Some(album) = album.as_deref().map(str::trim).filter(|v| !v.is_empty() && v.len() <= 512) {
+        query
+            .append_pair("track_name", title)
+            .append_pair("artist_name", artist);
+        if let Some(album) = album
+            .as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty() && v.len() <= 512)
+        {
             query.append_pair("album_name", album);
         }
         if let Some(seconds) = duration.filter(|v| v.is_finite() && *v >= 1.0 && *v <= 3600.0) {
@@ -895,13 +951,16 @@ pub async fn island_lyrics(
         let response = super::widget_auth::request("public_feed", url.as_str(), None, true)?
             .and_then(|v| v.as_str().map(str::to_owned))
             .ok_or("Lyrics unavailable")?;
-        let record: serde_json::Value = serde_json::from_str(&response).map_err(|_| "Invalid lyrics response")?;
+        let record: serde_json::Value =
+            serde_json::from_str(&response).map_err(|_| "Invalid lyrics response")?;
         Ok(serde_json::json!({
             "plain": record.get("plainLyrics").and_then(|v| v.as_str()),
             "synced": record.get("syncedLyrics").and_then(|v| v.as_str()),
             "instrumental": record.get("instrumental").and_then(|v| v.as_bool()).unwrap_or(false)
         }))
-    }).await.map_err(|e| e.to_string())?
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 #[tauri::command]
 pub fn island_update_note(
@@ -916,8 +975,13 @@ pub fn island_update_note(
     let mut config = state.0.lock().map_err(|e| e.to_string())?;
     config.note_text = text.chars().take(1000).collect();
     let target = path();
-    std::fs::create_dir_all(target.parent().ok_or("Invalid settings path")?).map_err(|e| e.to_string())?;
-    std::fs::write(target, serde_json::to_vec_pretty(&*config).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(target.parent().ok_or("Invalid settings path")?)
+        .map_err(|e| e.to_string())?;
+    std::fs::write(
+        target,
+        serde_json::to_vec_pretty(&*config).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     let _ = app.emit("island-note", &config.note_text);
     Ok(())
 }
@@ -959,7 +1023,10 @@ pub fn island_pointer_inside(window: tauri::Window) -> Result<bool, String> {
         GetWindowRect(HWND(hwnd.0 as _), &mut rect).map_err(|e| e.to_string())?;
     }
     let pad = 2;
-    Ok(point.x >= rect.left - pad && point.x < rect.right + pad && point.y >= rect.top - pad && point.y < rect.bottom + pad)
+    Ok(point.x >= rect.left - pad
+        && point.x < rect.right + pad
+        && point.y >= rect.top - pad
+        && point.y < rect.bottom + pad)
 }
 
 #[tauri::command]
@@ -973,7 +1040,9 @@ pub async fn island_expand(
         return Err("Not the island window".into());
     }
     let c = state.0.lock().map_err(|e| e.to_string())?.clone();
-    let island = app.get_webview_window("dynamic-island").ok_or("Island window unavailable")?;
+    let island = app
+        .get_webview_window("dynamic-island")
+        .ok_or("Island window unavailable")?;
     let hwnd = island.hwnd().map_err(|e| e.to_string())?;
 
     let monitors = app.available_monitors().map_err(|e| e.to_string())?;
@@ -998,18 +1067,19 @@ pub async fn island_expand(
                 &mut rect,
             )
         };
-        let (current_w, current_h) = if ok.is_ok() && rect.right > rect.left && rect.bottom > rect.top {
-            (
-                ((rect.right - rect.left) as f64 / scale).round() as u32,
-                ((rect.bottom - rect.top) as f64 / scale).round() as u32,
-            )
-        } else {
-            let inner = island.inner_size().map_err(|e| e.to_string())?;
-            (
-                (inner.width as f64 / scale).round() as u32,
-                (inner.height as f64 / scale).round() as u32,
-            )
-        };
+        let (current_w, current_h) =
+            if ok.is_ok() && rect.right > rect.left && rect.bottom > rect.top {
+                (
+                    ((rect.right - rect.left) as f64 / scale).round() as u32,
+                    ((rect.bottom - rect.top) as f64 / scale).round() as u32,
+                )
+            } else {
+                let inner = island.inner_size().map_err(|e| e.to_string())?;
+                (
+                    (inner.width as f64 / scale).round() as u32,
+                    (inner.height as f64 / scale).round() as u32,
+                )
+            };
         let sw = current_w.saturating_sub(2 * notch_shoulder(&c));
         (generation, sw, current_h)
     };
@@ -1036,8 +1106,8 @@ pub async fn island_expand(
         let eased = 1.0 - (1.0 - t).powi(3);
         let width =
             (start_width as f64 + (end_width as f64 - start_width as f64) * eased).round() as u32;
-        let height =
-            (start_height as f64 + (end_height as f64 - start_height as f64) * eased).round() as u32;
+        let height = (start_height as f64 + (end_height as f64 - start_height as f64) * eased)
+            .round() as u32;
         {
             let _geometry = state.3.lock().map_err(|e| e.to_string())?;
             if state.1.load(Ordering::SeqCst) != generation {

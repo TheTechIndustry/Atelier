@@ -3,9 +3,17 @@ use windows::{
     core::{Interface, Result},
     Foundation::Numerics::Vector2,
     System::{DispatcherQueue, DispatcherQueueController},
-    UI::Composition::{Compositor, CompositionRoundedRectangleGeometry, SpriteVisual, Desktop::DesktopWindowTarget},
-    Win32::{Foundation::{BOOL, HWND}, Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_HOSTBACKDROPBRUSH},
-        System::WinRT::{CreateDispatcherQueueController, DispatcherQueueOptions, DQTYPE_THREAD_CURRENT, DQTAT_COM_STA, Composition::ICompositorDesktopInterop}},
+    Win32::{
+        Foundation::{BOOL, HWND},
+        Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_HOSTBACKDROPBRUSH},
+        System::WinRT::{
+            Composition::ICompositorDesktopInterop, CreateDispatcherQueueController,
+            DispatcherQueueOptions, DQTAT_COM_STA, DQTYPE_THREAD_CURRENT,
+        },
+    },
+    UI::Composition::{
+        CompositionRoundedRectangleGeometry, Compositor, Desktop::DesktopWindowTarget, SpriteVisual,
+    },
 };
 
 #[allow(dead_code)]
@@ -44,10 +52,13 @@ pub fn clear() {
 pub fn update(hwnd: isize, width: f32, height: f32, radius: f32) -> Result<()> {
     QUEUE.with(|slot| -> Result<()> {
         if slot.borrow().is_none() && DispatcherQueue::GetForCurrentThread().is_err() {
-            *slot.borrow_mut() = Some(unsafe { CreateDispatcherQueueController(DispatcherQueueOptions {
-                dwSize: std::mem::size_of::<DispatcherQueueOptions>() as u32,
-                threadType: DQTYPE_THREAD_CURRENT, apartmentType: DQTAT_COM_STA,
-            })? });
+            *slot.borrow_mut() = Some(unsafe {
+                CreateDispatcherQueueController(DispatcherQueueOptions {
+                    dwSize: std::mem::size_of::<DispatcherQueueOptions>() as u32,
+                    threadType: DQTYPE_THREAD_CURRENT,
+                    apartmentType: DQTAT_COM_STA,
+                })?
+            });
         }
         Ok(())
     })?;
@@ -57,8 +68,14 @@ pub fn update(hwnd: isize, width: f32, height: f32, radius: f32) -> Result<()> {
             glass.take();
             let handle = HWND(hwnd as _);
             let enabled = BOOL(1);
-            unsafe { DwmSetWindowAttribute(handle, DWMWA_USE_HOSTBACKDROPBRUSH,
-                &enabled as *const _ as _, std::mem::size_of_val(&enabled) as u32)?; }
+            unsafe {
+                DwmSetWindowAttribute(
+                    handle,
+                    DWMWA_USE_HOSTBACKDROPBRUSH,
+                    &enabled as *const _ as _,
+                    std::mem::size_of_val(&enabled) as u32,
+                )?;
+            }
             let compositor = Compositor::new()?;
             let interop: ICompositorDesktopInterop = compositor.cast()?;
             let target = unsafe { interop.CreateDesktopWindowTarget(handle, true)? };
@@ -67,13 +84,25 @@ pub fn update(hwnd: isize, width: f32, height: f32, radius: f32) -> Result<()> {
             let geometry = compositor.CreateRoundedRectangleGeometry()?;
             visual.SetClip(&compositor.CreateGeometricClipWithGeometry(&geometry)?)?;
             target.SetRoot(&visual)?;
-            *glass = Some(Glass { hwnd, _compositor: compositor, _target: target, visual, geometry });
+            *glass = Some(Glass {
+                hwnd,
+                _compositor: compositor,
+                _target: target,
+                visual,
+                geometry,
+            });
         }
         let g = glass.as_ref().unwrap();
-        let size = Vector2 { X: width.max(0.), Y: height.max(0.) };
+        let size = Vector2 {
+            X: width.max(0.),
+            Y: height.max(0.),
+        };
         let radius = radius.max(0.).min(size.X / 2.).min(size.Y / 2.);
         g.geometry.SetSize(size)?;
-        g.geometry.SetCornerRadius(Vector2 { X: radius, Y: radius })?;
+        g.geometry.SetCornerRadius(Vector2 {
+            X: radius,
+            Y: radius,
+        })?;
         g.visual.SetSize(size)?;
         Ok(())
     })

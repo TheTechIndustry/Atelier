@@ -223,7 +223,6 @@ pub async fn tray_icons(
         }
     }
 
-
     out.push(IconView {
         id: "atelier:self".into(),
         title: "Atelier".into(),
@@ -259,9 +258,15 @@ pub async fn tray_icon_click(
             "left" | "double" => crate::show_or_create_studio(window.app_handle()),
             "right" => {
                 let mut point = windows::Win32::Foundation::POINT::default();
-                unsafe { GetCursorPos(&mut point).map_err(|e| e.to_string())?; }
-                crate::tray_panel::show_app_menu(window.app_handle(), point.x as f64, point.y as f64)
-                    .map_err(|e| e.to_string())
+                unsafe {
+                    GetCursorPos(&mut point).map_err(|e| e.to_string())?;
+                }
+                crate::tray_panel::show_app_menu(
+                    window.app_handle(),
+                    point.x as f64,
+                    point.y as f64,
+                )
+                .map_err(|e| e.to_string())
             }
             _ => Err("Invalid click".into()),
         };
@@ -301,7 +306,6 @@ pub async fn tray_icon_click(
     };
     let owner = icon_owner_executable(&icon);
 
-
     if owner == "securityhealthsystray.exe"
         && matches!(kind, TrayClick::Left | TrayClick::DoubleLeft)
     {
@@ -323,8 +327,6 @@ pub async fn tray_icon_click(
     }
     let kind = normalize_click(&owner, kind);
     if icon.callback.is_none() {
-
-
         request_icon_registration(hwnd);
         return Err("The app has not registered its tray action. Restart that app after Atelier starts, then try again.".into());
     }
@@ -337,7 +339,6 @@ pub async fn tray_icon_click(
         let mut pid = 0;
         GetWindowThreadProcessId(handle, Some(&mut pid));
         let _ = AllowSetForegroundWindow(pid);
-
 
         if matches!(kind, TrayClick::Right) {
             let _ = SetForegroundWindow(handle);
@@ -365,8 +366,6 @@ fn request_icon_registration(hwnd: u32) {
         }
     }
 }
-
-
 
 fn registered_nvidia_icon() -> Option<IconView> {
     use windows::Win32::{
@@ -426,7 +425,6 @@ fn registered_nvidia_icon() -> Option<IconView> {
         unsafe {
             let param = LPARAM(&mut state as *mut _ as isize);
             let _ = EnumWindows(Some(visit), param);
-
 
             if state.hwnd.is_none() {
                 let mut previous = HWND::default();

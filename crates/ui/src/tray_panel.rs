@@ -22,19 +22,23 @@ pub fn create(app: &tauri::AppHandle) -> tauri::Result<()> {
         .disable_drag_drop_handler()
         .inner_size(220., 120.)
         .build()?;
-    WebviewWindowBuilder::new(app, "atelier-menu", WebviewUrl::App("atelier-menu.html".into()))
-        .title("Atelier menu")
-        .decorations(false)
-        .transparent(true)
-        .shadow(false)
-        .skip_taskbar(true)
-        .always_on_top(true)
-        .resizable(false)
-        .visible(false)
-        .focused(false)
-        .disable_drag_drop_handler()
-        .inner_size(240., 228.)
-        .build()?;
+    WebviewWindowBuilder::new(
+        app,
+        "atelier-menu",
+        WebviewUrl::App("atelier-menu.html".into()),
+    )
+    .title("Atelier menu")
+    .decorations(false)
+    .transparent(true)
+    .shadow(false)
+    .skip_taskbar(true)
+    .always_on_top(true)
+    .resizable(false)
+    .visible(false)
+    .focused(false)
+    .disable_drag_drop_handler()
+    .inner_size(240., 228.)
+    .build()?;
     Ok(())
 }
 
@@ -46,7 +50,14 @@ pub fn show_app_menu(app: &tauri::AppHandle, x: f64, y: f64) -> tauri::Result<()
     show_window(app, "atelier-menu", x, y, 240., 228.)
 }
 
-fn show_window(app: &tauri::AppHandle, label: &str, x: f64, y: f64, logical_width: f64, logical_height: f64) -> tauri::Result<()> {
+fn show_window(
+    app: &tauri::AppHandle,
+    label: &str,
+    x: f64,
+    y: f64,
+    logical_width: f64,
+    logical_height: f64,
+) -> tauri::Result<()> {
     let Some(window) = app.get_webview_window(label) else {
         return Ok(());
     };

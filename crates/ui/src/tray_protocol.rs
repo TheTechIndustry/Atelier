@@ -1,5 +1,3 @@
-
-
 use std::collections::HashMap;
 
 const NIF_MESSAGE: u32 = 1;
@@ -181,7 +179,6 @@ impl TrayIcons {
             image: None,
         });
 
-
         if event.hwnd != 0 {
             icon.hwnd = event.hwnd;
             icon.uid = event.uid;
@@ -209,7 +206,6 @@ impl TrayIcons {
         self.icons.values()
     }
 }
-
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TrayClick {

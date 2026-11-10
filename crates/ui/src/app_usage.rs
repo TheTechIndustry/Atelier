@@ -131,26 +131,79 @@ fn query_system_processes() -> Result<Vec<RawProcessEntry>, String> {
 }
 
 #[derive(Clone, serde::Serialize)]
-struct WidgetProcess { name: String, cpu: Option<f64>, memory_bytes: u64 }
+struct WidgetProcess {
+    name: String,
+    cpu: Option<f64>,
+    memory_bytes: u64,
+}
 #[derive(Default)]
-struct ProcessSample { system: u64, times: HashMap<usize,u64>, at: Option<std::time::Instant>, entries: Vec<WidgetProcess> }
+struct ProcessSample {
+    system: u64,
+    times: HashMap<usize, u64>,
+    at: Option<std::time::Instant>,
+    entries: Vec<WidgetProcess>,
+}
 #[tauri::command]
-pub fn widget_top_processes(window: tauri::Window, count: usize) -> Result<Vec<serde_json::Value>, String> {
-    if window.label()!="desktop-dock" && window.label()!="widget-sys_processes" { return Err("Process data is unavailable to this window".into()); }
+pub fn widget_top_processes(
+    window: tauri::Window,
+    count: usize,
+) -> Result<Vec<serde_json::Value>, String> {
+    if window.label() != "desktop-dock" && window.label() != "widget-sys_processes" {
+        return Err("Process data is unavailable to this window".into());
+    }
     static SAMPLE: std::sync::OnceLock<Mutex<ProcessSample>> = std::sync::OnceLock::new();
-    let mut sample=SAMPLE.get_or_init(||Mutex::new(ProcessSample::default())).lock().map_err(|e|e.to_string())?;
-    if sample.at.is_none_or(|time|time.elapsed() >= std::time::Duration::from_secs(3)) {
-        let (mut idle,mut kernel,mut user)=(FILETIME::default(),FILETIME::default(),FILETIME::default());
-        unsafe{GetSystemTimes(Some(&mut idle),Some(&mut kernel),Some(&mut user))}.map_err(|_|"System CPU data unavailable")?;
-        let system=ticks(kernel).saturating_add(ticks(user));let elapsed=system.saturating_sub(sample.system);
-        let processes=query_system_processes()?;let mut next=HashMap::new();let mut entries=Vec::new();
+    let mut sample = SAMPLE
+        .get_or_init(|| Mutex::new(ProcessSample::default()))
+        .lock()
+        .map_err(|e| e.to_string())?;
+    if sample
+        .at
+        .is_none_or(|time| time.elapsed() >= std::time::Duration::from_secs(3))
+    {
+        let (mut idle, mut kernel, mut user) = (
+            FILETIME::default(),
+            FILETIME::default(),
+            FILETIME::default(),
+        );
+        unsafe { GetSystemTimes(Some(&mut idle), Some(&mut kernel), Some(&mut user)) }
+            .map_err(|_| "System CPU data unavailable")?;
+        let system = ticks(kernel).saturating_add(ticks(user));
+        let elapsed = system.saturating_sub(sample.system);
+        let processes = query_system_processes()?;
+        let mut next = HashMap::new();
+        let mut entries = Vec::new();
         for process in processes {
-            if process.pid==0 || process.name.is_empty() {continue}
-            let cpu=sample.times.get(&process.pid).and_then(|previous|if elapsed>0{Some((process.cpu_time.saturating_sub(*previous) as f64*100.0/elapsed as f64).clamp(0.0,100.0))}else{None});
-            next.insert(process.pid,process.cpu_time);entries.push(WidgetProcess{name:process.name,cpu,memory_bytes:process.ws_private});
+            if process.pid == 0 || process.name.is_empty() {
+                continue;
+            }
+            let cpu = sample.times.get(&process.pid).and_then(|previous| {
+                if elapsed > 0 {
+                    Some(
+                        (process.cpu_time.saturating_sub(*previous) as f64 * 100.0
+                            / elapsed as f64)
+                            .clamp(0.0, 100.0),
+                    )
+                } else {
+                    None
+                }
+            });
+            next.insert(process.pid, process.cpu_time);
+            entries.push(WidgetProcess {
+                name: process.name,
+                cpu,
+                memory_bytes: process.ws_private,
+            });
         }
-        entries.sort_by(|a,b|b.cpu.unwrap_or(0.0).total_cmp(&a.cpu.unwrap_or(0.0)).then_with(||b.memory_bytes.cmp(&a.memory_bytes)));
-        sample.system=system;sample.times=next;sample.entries=entries;sample.at=Some(std::time::Instant::now());
+        entries.sort_by(|a, b| {
+            b.cpu
+                .unwrap_or(0.0)
+                .total_cmp(&a.cpu.unwrap_or(0.0))
+                .then_with(|| b.memory_bytes.cmp(&a.memory_bytes))
+        });
+        sample.system = system;
+        sample.times = next;
+        sample.entries = entries;
+        sample.at = Some(std::time::Instant::now());
     }
     Ok(sample.entries.iter().take(count.clamp(1,10)).map(|entry|serde_json::json!({"name":entry.name,"cpu":entry.cpu,"memory_bytes":entry.memory_bytes})).collect())
 }
