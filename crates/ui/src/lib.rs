@@ -815,14 +815,21 @@ pub fn run() {
             if app.state::<desktop_dock::DockState>().widgets_enabled(&["sys_tray"]) {
                 app.state::<tray_bridge::TrayBridge>().start(app.handle().clone());
             }
-            let menu = tray_panel::app_menu(app.handle())?;
-            app.on_menu_event(tray_panel::handle_menu_event);
             let _tray = TrayIconBuilder::new()
                 .tooltip("Atelier Desktop Engine")
                 .icon(icon)
-                .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| match event {
+                    TrayIconEvent::Click {
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Up,
+                        position,
+                        ..
+                    } => {
+                        if let Err(error) = tray_panel::show_app_menu(tray.app_handle(), position.x, position.y) {
+                            tracing::error!(%error, "Could not show Atelier menu");
+                        }
+                    }
                     TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
@@ -924,7 +931,10 @@ pub fn run() {
             desktop_island::get_island,
             desktop_island::set_island,
             desktop_island::island_monitors,
+            desktop_island::island_lyrics,
+            desktop_island::island_update_note,
             desktop_island::island_expand,
+            desktop_island::island_pointer_inside,
             desktop_widgets::get_widgets,
             widget_auth::widget_verify_service,
             widget_auth::widget_service_data,
@@ -941,6 +951,7 @@ pub fn run() {
             widget_controls::widget_brightness,
             widget_controls::widget_open_sound_settings,
             widget_audio_outputs::widget_audio_outputs,
+            widget_audio_outputs::widget_open_audio_outputs,
             widget_controls::widget_recycle_bin,
             widget_clipboard::widget_clipboard_snapshot,
             widget_clipboard::widget_clipboard_copy,
@@ -1016,7 +1027,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(false) = event {
                 desktop_widgets::dismiss_resize(window);
-                if window.label() == "dock-language" || window.label() == "tray-panel" {
+                if window.label() == "dock-language" || window.label() == "tray-panel" || window.label() == "atelier-menu" {
                     let _ = window.hide();
                 }
             }
