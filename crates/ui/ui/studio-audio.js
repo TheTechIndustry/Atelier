@@ -9,7 +9,7 @@
  for(const [id,key] of [['gradient','gradient'],['hide-when-silent','hide_when_silent'],['pause-fullscreen','pause_fullscreen']])$(id).onchange=()=>{if(config){config[key]=$(id).checked;save()}};
  for(const [id,key] of [['foreground','foreground'],['background','background'],['gradient-color','gradient_color']])$(id).oninput=()=>{if(config){config[key]=$(id).value;save()}};
  for(const [id,key] of sliders)$(id).oninput=()=>{if(config){config[key]=Number($(id).value);save()}};
- for(const [key,min,max] of [['width',140,1200],['height',120,900],['radius',0,80]])$(key).onchange=()=>{if(config){config[key]=Math.min(max,Math.max(min,Number($(key).value)||min));save()}};
+ for(const [key,min,max] of [['width',140,16384],['height',120,900],['radius',0,80]])$(key).onchange=()=>{if(config){config[key]=Math.min(max,Math.max(min,Number($(key).value)||min));save()}};
 
  window.__TAURI__?.event?.listen('widget-geometry',e=>{if(e.payload?.kind==='audio'&&config){Object.assign(config,{width:e.payload.width,height:e.payload.height,x:e.payload.x,y:e.payload.y});paint()}});
  if(invoke)invoke('get_widgets').then(items=>{config=items.find(c=>c.kind==='audio');if(config)paint();else notice.textContent='Visualizer unavailable.'}).catch(e=>{notice.textContent=String(e)});else notice.textContent='Launch Atelier to use the visualizer.';
