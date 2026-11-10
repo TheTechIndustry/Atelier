@@ -5,6 +5,8 @@
   "windows": [
     "main",
     "tray-panel",
+    "atelier-menu",
+    "audio-output-panel",
     "installer",
     "dynamic-island",
     "desktop-dock",
