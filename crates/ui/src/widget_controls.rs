@@ -90,6 +90,8 @@ pub async fn widget_audio_device(
 ) -> Result<AudioState, String> {
     let label = window.label();
     if label != "desktop-dock"
+        && !(label == "dynamic-island" && kind == "volume")
+        && !(label == "main" && kind == "volume" && action == "get")
         && !(label == "widget-ctrl_volume" && kind == "volume")
         && !(label == "widget-ctrl_mic_mute" && kind == "microphone")
     {
