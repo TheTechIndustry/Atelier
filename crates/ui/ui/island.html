@@ -1,13 +1,56 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dynamic Island</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#f8f8fa;font:12px 'Segoe UI',sans-serif}button{font:inherit;color:inherit;cursor:pointer}#island{height:100%;width:100%;background:rgba(var(--bg,8,9,12),var(--opacity,.96));border-radius:var(--radius,24px);overflow:hidden;color:var(--text-color,#f8f8fa);font-size:var(--text-size,12px);box-shadow:inset 0 0 0 var(--border-width,0px) var(--border-color,#fff),inset 0 0 18px rgba(var(--audio-color,139,92,246),var(--audio-alpha,0));transition:box-shadow .12s}.compact{height:100%;display:flex;align-items:center;position:relative;padding:4px 24px;cursor:pointer}.compact-content{display:flex;align-items:center;gap:8px;min-width:0;width:100%;height:100%;justify-content:var(--compact-align,flex-start)}.compact img{width:var(--art-size,30px);height:var(--art-size,30px);max-height:calc(100% - 4px);max-width:35%;flex:none;aspect-ratio:1;border-radius:7px;object-fit:cover}.compact .track{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}.compact-time{white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums}.pulse{position:absolute;top:50%;transform:translateY(-50%);right:9px;color:#a9a5ff;font-size:16px}.compact.indicator-left .pulse{right:auto;left:9px}.expanded .compact{display:none}.body{display:none;height:100%;padding:17px 20px}.expanded .body{display:flex;gap:20px;animation:reveal var(--reveal-duration,80ms) ease-out}@keyframes reveal{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}.media{flex:1;min-width:0;display:flex;flex-direction:column}.media-top{display:flex;gap:12px;align-items:center}.art{width:60px;height:60px;border-radius:12px;object-fit:cover;background:#262630}.info{min-width:0}.title,.artist{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.title{font-weight:700;font-size:13px}.artist,.sub,.times{color:#9c9da8}.artist{margin-top:4px}.progress{width:100%;accent-color:#eee;margin:16px 0 0}.times{display:flex;justify-content:space-between;font-size:10px}.controls{display:flex;justify-content:center;gap:22px;margin-top:auto}.controls button,.close{border:0;background:none;font-size:19px;padding:4px}.controls button:disabled{opacity:.3;cursor:default}.body.info-first .media{order:2}.body.info-first .calendar{order:1;border-left:0;border-right:1px solid #ffffff1c;padding-left:0;padding-right:18px}.clock-module{font-size:18px;font-weight:650;font-variant-numeric:tabular-nums;margin-bottom:5px}.system-module{font-size:10px;color:#b5b5bd;margin-top:6px}.calendar{width:170px;flex:none;display:flex;flex-direction:column;border-left:1px solid #ffffff1c;padding-left:18px}.month-head{display:flex;align-items:center;gap:4px;margin:0 0 8px}.month{font-size:12px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.month-nav{border:0;background:none;color:#b8b8c4;font-size:17px;line-height:1;padding:1px 4px;border-radius:4px}.month-nav:hover{background:#ffffff18;color:white}.calendar:has(.month-head.hidden) .battery{margin-top:4px}.body.no-media .calendar{border:0;padding-left:0;width:100%}.body.no-media .grid{max-width:260px}.status{font-size:10px;color:#e6a8a8;min-height:12px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.empty-message{align-self:center;color:#a5a5ae}.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px 2px;text-align:center;font-size:10px}.grid .weekday{color:#858591}.grid .today{background:#7772d8;border-radius:50%;font-weight:bold}.battery{margin-top:12px;color:#b5b5bd;font-size:11px}.close{position:absolute;right:10px;top:4px;font-size:16px;color:#999}.empty{color:#999}.hidden{display:none!important}
-.expanded .body{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(12,minmax(0,1fr));gap:0;padding:12px}.body>div:not(.empty-message){min-width:0;min-height:0;overflow:hidden}.body .media,.body .calendar-module{display:block;position:relative;padding:0}.media .island-fit-content{display:flex;flex-direction:column}.calendar-module .island-fit-content{display:flex;flex-direction:column}.body .calendar-module .grid{min-height:0;overflow:hidden}.body .battery,.body .system-module,.body .clock-module{margin:0;padding:0;position:relative;white-space:nowrap}.body .empty-message{grid-column:1/-1;grid-row:1/-1;text-align:center}.body .close{z-index:3}
-
-.body .media .island-fit-content,.body .calendar-module .island-fit-content{display:flex;flex-direction:column;min-width:0;min-height:0;padding:2px;overflow:hidden}
-.media .media-top{gap:8px;min-height:0;flex:0 1 auto}.media .art{width:clamp(28px,20cqh,52px);height:clamp(28px,20cqh,52px);max-height:100%;flex:none;border-radius:8px}.media .info{flex:1;min-width:0}.media .title{font-size:12px}.media .artist{font-size:11px;margin-top:2px}.media .progress{height:12px;flex:none;margin:4px 0 0}.media .times{font-size:9px;line-height:10px}.media .status:empty{display:none}.media .status{min-height:0;flex:none}.media .controls{gap:18px;align-items:center;margin-top:auto;min-height:22px}.media .controls button{font-size:15px;line-height:1;padding:3px}
-.media[data-layout="compact"] .art{width:30px;height:30px}.media[data-layout="compact"] .times,.media[data-layout="compact"] .artist,.media[data-layout="compact"] .status{display:none}.media[data-layout="compact"] .controls{min-height:18px}.media[data-layout="compact"] .controls button{font-size:12px;padding:2px}
-.media[data-layout="dense"] .art{width:24px;height:24px}.media[data-layout="dense"] .artist,.media[data-layout="dense"] .progress,.media[data-layout="dense"] .times,.media[data-layout="dense"] .status{display:none}.media[data-layout="dense"] .controls{min-height:18px}.media[data-layout="dense"] .controls button{font-size:12px;padding:2px}
-.media[data-layout="tiny"] .art,.media[data-layout="tiny"] .artist,.media[data-layout="tiny"] .progress,.media[data-layout="tiny"] .times,.media[data-layout="tiny"] .controls,.media[data-layout="tiny"] .status{display:none}.media[data-layout="tiny"] .title{font-size:10px}
-.calendar-module .month-head{flex:none;min-height:15px;margin:0 0 1px;gap:2px}.calendar-module .month{font-size:11px}.calendar-module .month-nav{font-size:14px;padding:0 3px}.calendar-module .grid{flex:1;grid-template-rows:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:0;font-size:9px;line-height:1;align-items:center}.calendar-brief{display:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:600}.calendar-module[data-layout="compact"] .grid,.calendar-module[data-layout="tiny"] .grid,.calendar-module[data-layout="tiny"] .month-head{display:none}.calendar-module[data-layout="compact"] .calendar-brief,.calendar-module[data-layout="tiny"] .calendar-brief{display:block}
-.body .battery .island-fit-content,.body .system-module .island-fit-content,.body .clock-module .island-fit-content{display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.body .island-extra{margin:0;padding:0;position:relative;min-width:0;min-height:0;font-size:12px}.body .island-extra .island-fit-content{display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.body .note-module .island-fit-content{align-items:flex-start;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.25}
-</style><link rel="stylesheet" href="island-shape.css"></head><body><div id="island"><div class="compact" id="compact" role="button" tabindex="0" aria-label="Open Dynamic Island"><div class="compact-content"><img id="small-art" alt="" hidden><span class="track" id="small-title">Dynamic Island</span><span class="compact-time hidden" id="small-time"></span></div><span class="pulse" id="small-state">●</span></div><div class="body"><div class="media" id="media"><div class="media-top"><img class="art" id="art" alt=""><div class="info"><div class="title" id="title">Nothing playing</div><div class="artist" id="artist">Play something to get started</div></div></div><input id="progress" class="progress" type="range" min="0" max="100" value="0" aria-label="Playback position"><div class="times"><span id="position">0:00</span><span id="duration">0:00</span></div><div class="status" id="media-status" role="status"></div><div class="controls"><button id="previous" title="Previous" aria-label="Previous track">◀◀</button><button id="play" title="Play or pause" aria-label="Play or pause">▶</button><button id="next" title="Next" aria-label="Next track">▶▶</button></div></div><div class="calendar-module" id="calendar-module"><div class="calendar-brief" id="calendar-brief"></div><div class="month-head" id="month-head"><div class="month" id="month"></div><button class="month-nav" id="month-prev" aria-label="Previous month">‹</button><button class="month-nav" id="month-next" aria-label="Next month">›</button></div><div class="grid" id="grid"></div></div><div class="clock-module hidden" id="clock-module"></div><div class="battery" id="battery"></div><div class="system-module hidden" id="system-module">CPU — · RAM —</div><div class="system-module hidden" id="disk-module">Disk —</div><div class="system-module hidden" id="network-module">Network —</div><div class="island-extra hidden" id="weather-module"></div><div class="island-extra note-module hidden" id="note-module"></div><div class="island-extra hidden" id="countdown-module"></div><div class="empty-message hidden" id="empty">Enable a module in Atelier settings</div></div></div><script src="island-fit.js"></script><script src="island-extras.js"></script><script src="island-calendar.js"></script><script src="island.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dynamic Island</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;color:#f8f8fa;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+    button{font:inherit;color:inherit;cursor:pointer}
+    #island{height:100%;width:100%;background:rgba(var(--bg,8,9,12),var(--opacity,.96));border-radius:var(--radius,24px);overflow:hidden;color:var(--text-color,#f8f8fa);font-size:var(--text-size,12px);box-shadow:inset 0 0 0 var(--border-width,0px) var(--border-color,#fff),inset 0 0 18px rgba(var(--audio-color,139,92,246),var(--audio-alpha,0));transition:box-shadow .15s ease}
+    .compact{height:var(--compact-height,46px);width:100%;display:flex;align-items:center;position:relative;padding:4px 24px;cursor:pointer}
+    .compact-content{display:flex;align-items:center;gap:8px;min-width:0;width:100%;height:100%;justify-content:var(--compact-align,flex-start)}
+    .compact img{width:var(--art-size,30px);height:var(--art-size,30px);max-height:calc(100% - 4px);max-width:35%;flex:none;aspect-ratio:1;border-radius:7px;object-fit:cover}
+    .compact .track{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+    .compact-time{white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums}
+    .pulse{position:absolute;top:50%;transform:translateY(-50%);right:9px;color:#a9a5ff;font-size:16px}
+    .compact.indicator-left .pulse{right:auto;left:9px}
+    .expanded .compact{display:none!important}
+    .body{display:none;height:100%;width:100%;position:relative;overflow:hidden;box-sizing:border-box}
+    .expanded .body{display:flex;animation:reveal var(--reveal-duration,140ms) cubic-bezier(0.16,1,0.3,1)}
+    @keyframes reveal{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+    .island-page-content{position:relative;flex:1;width:100%;height:100%;min-width:0;min-height:0;box-sizing:border-box}
+    .island-page-content>div:not(.empty-message){position:absolute!important;min-width:0;min-height:0;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.05);backdrop-filter:blur(10px);box-sizing:border-box}
+    .island-page-content>.empty-message{position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.4)}
+    .hidden{display:none!important}
+  </style>
+  <link rel="stylesheet" href="island-shape.css">
+  <link rel="stylesheet" href="island-builder.css">
+  <link rel="stylesheet" href="island-widgets.css">
+</head>
+<body>
+  <div id="island">
+    <div class="compact" id="compact" role="button" tabindex="0" aria-label="Open Dynamic Island">
+      <div class="compact-content">
+        <img id="small-art" alt="" hidden>
+        <span class="track" id="small-title">Dynamic Island</span>
+        <span class="compact-time hidden" id="small-time"></span>
+      </div>
+      <span class="pulse" id="small-state">●</span>
+    </div>
+    <div class="body" id="island-body">
+      <button type="button" class="island-nav-arrow island-nav-prev" id="island-nav-prev" aria-label="Previous page" hidden><span>‹</span></button>
+      <button type="button" class="island-nav-arrow island-nav-next" id="island-nav-next" aria-label="Next page" hidden><span>›</span></button>
+      <nav id="island-page-nav" class="island-page-nav" aria-label="Island pages"></nav>
+      <div class="island-page-content" id="island-content"></div>
+    </div>
+  </div>
+  <script src="island-fit.js"></script>
+  <script src="island-extras.js"></script>
+  <script src="island-calendar.js"></script>
+  <script src="island-lyrics.js"></script>
+  <script src="island-module-preview.js"></script>
+  <script src="island.js"></script>
+</body>
+</html>
