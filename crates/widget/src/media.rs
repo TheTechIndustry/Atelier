@@ -22,11 +22,28 @@ pub struct MediaTrackInfo {
 
 pub struct SystemMediaMonitor;
 
+fn media_manager() -> Result<GlobalSystemMediaTransportControlsSessionManager> {
+    static MANAGER: std::sync::OnceLock<GlobalSystemMediaTransportControlsSessionManager> = std::sync::OnceLock::new();
+    if let Some(manager) = MANAGER.get() { return Ok(manager.clone()); }
+    let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+        .and_then(|operation| operation.get())
+        .map_err(|e| AtelierError::Platform(format!("Media session unavailable: {e}")))?;
+    let _ = MANAGER.set(manager.clone());
+    Ok(manager)
+}
+
+fn position_at(position: f64, updated: i64, now: i64, playing: bool, duration: Option<f64>) -> f64 {
+    let current = if playing && updated > 0 && now >= updated {
+        position + (now - updated) as f64 / 10_000_000.0
+    } else {
+        position
+    };
+    duration.map_or(current.max(0.0), |length| current.clamp(0.0, length))
+}
+
 impl SystemMediaMonitor {
     pub fn control(action: &str) -> Result<bool> {
-        let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
-            .and_then(|op| op.get())
-            .map_err(|e| AtelierError::Platform(format!("Media session unavailable: {e}")))?;
+        let manager = media_manager()?;
         let session = manager
             .GetCurrentSession()
             .map_err(|e| AtelierError::Platform(format!("No active media session: {e}")))?;
@@ -43,9 +60,7 @@ impl SystemMediaMonitor {
             .map_err(|e| AtelierError::Platform(format!("Media control failed: {e}")))
     }
     pub fn seek(position: i64) -> Result<bool> {
-        let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
-            .and_then(|op| op.get())
-            .map_err(|e| AtelierError::Platform(format!("Media session unavailable: {e}")))?;
+        let manager = media_manager()?;
         let session = manager
             .GetCurrentSession()
             .map_err(|e| AtelierError::Platform(format!("No active media session: {e}")))?;
@@ -55,12 +70,7 @@ impl SystemMediaMonitor {
             .map_err(|e| AtelierError::Platform(format!("Seeking unavailable: {e}")))
     }
     pub fn poll() -> Result<MediaTrackInfo> {
-        let async_op = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
-            .map_err(|e| AtelierError::Platform(format!("GSMTC request failed: {e}")))?;
-
-        let manager = async_op.get().map_err(|e| {
-            AtelierError::Platform(format!("Failed to retrieve GSMTC manager: {e}"))
-        })?;
+        let manager = media_manager()?;
 
         let session = match manager.GetCurrentSession() {
             Ok(s) => s,
@@ -111,6 +121,9 @@ impl SystemMediaMonitor {
             .and_then(|t| t.EndTime().ok())
             .map(|t| t.Duration as f64 / 10_000_000.0)
             .filter(|n| *n > 0.0);
+        let updated = timeline.as_ref().and_then(|t| t.LastUpdatedTime().ok()).map(|t| t.UniversalTime).unwrap_or(0);
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok().map(|t| ((t.as_secs() + 11_644_473_600) as i64).saturating_mul(10_000_000).saturating_add(t.subsec_nanos() as i64 / 100)).unwrap_or(0);
+        let position = position.map(|p| position_at(p, updated, now, is_playing, duration));
         let media_props = match session.TryGetMediaPropertiesAsync() {
             Ok(async_props) => match async_props.get() {
                 Ok(props) => props,
@@ -189,5 +202,17 @@ impl SystemMediaMonitor {
             album,
             is_playing,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::position_at;
+    #[test]
+    fn media_position_advances_only_while_playing_and_stays_in_range() {
+        assert_eq!(position_at(10.0, 100_000_000, 125_000_000, true, Some(60.0)), 12.5);
+        assert_eq!(position_at(10.0, 100_000_000, 125_000_000, false, Some(60.0)), 10.0);
+        assert_eq!(position_at(59.0, 100_000_000, 125_000_000, true, Some(60.0)), 60.0);
+        assert_eq!(position_at(10.0, 0, 125_000_000, true, None), 10.0);
     }
 }
