@@ -5,16 +5,26 @@ The **Custom Taskbar** tab in Studio controls Atelier's standalone floating desk
 ```mermaid
 flowchart TD
     subgraph Frontend ["Dock Frontend (crates/ui/ui/dock.html)"]
-        DockBar["Dock Container (CSS Flexbox & Glassmorphism)"]
-        AppNodes["Application Nodes (Magnification & Badges)"]
+        DockBar["Dock Container (CSS Flexbox, Materials & Presets)"]
+        AppNodes["Application Nodes (Drag Reorder, Magnification & Badges)"]
+        EmbeddedWidgets["Embedded Widget Capsules (dock-capsule iframes)"]
         SystemNodes["System Controls (Start, Search, Tray, Language, Audio)"]
-        AudioGlowCanvas["Audio Glow Backdrop (Canvas / SVG Glow)"]
+        AudioGlowCanvas["Audio Glow Backdrop & Glass (dock_glass.rs)"]
     end
 
-    subgraph Backend ["Tauri Rust Backend (desktop_dock.rs)"]
-        DockState["DockState (Pins, Running Apps, AppBar State)"]
+    subgraph Popups ["Dock & Tray Popup Windows"]
+        TrayPopup["Hidden Tray Icons (tray.html)"]
+        AtelierMenu["Custom Atelier Menu (atelier-menu.html)"]
+        FolderFlyout["App Folder Flyout (dock-folder.html & dock-drag-ghost.html)"]
+        LangPopup["Input Language Switcher (dock-language.html)"]
+        AudioPopup["Audio Output Switcher (audio-output-panel.html)"]
+    end
+
+    subgraph Backend ["Tauri Rust & Native C++ Backend"]
+        DockState["DockState (Pins, Running Windows, Mixed Order, AppBar)"]
         IconResolver["Shell Icon Extractor (PrivateExtractIconsW)"]
         WindowTracker["Window Enumeration (EnumWindows & UWP Matcher)"]
+        TrayBridge["C++20 Tray Bridge (atelier_tray_bridge.dll / Named Pipe)"]
         AppBarMgr["AppBar Manager (SHAppBarMessage ABM_NEW / ABM_SETPOS)"]
         Watchdogs["Watchdogs (--dock-watchdog & --dock-appbar-watchdog)"]
     end
@@ -22,17 +32,25 @@ flowchart TD
     subgraph WindowsOS ["Windows Operating System"]
         Taskbars["Native Explorer Taskbars (Shell_TrayWnd)"]
         WorkArea["Monitor Usable Work Area (SPI_SETWORKAREA)"]
-        UIA["Windows UI Automation (Shell Tray Popups)"]
+        UIA["Windows UI Automation & PolicyConfig COM"]
         AudioEngine["atelier-audio (Spectrum Capture)"]
     end
 
     DockBar --> AppNodes
+    DockBar --> EmbeddedWidgets
     DockBar --> SystemNodes
     DockBar --> AudioGlowCanvas
 
     AppNodes <--> DockState
+    EmbeddedWidgets <--> DockState
     SystemNodes <--> DockState
     AudioGlowCanvas <--> AudioEngine
+
+    SystemNodes --> TrayPopup
+    SystemNodes --> LangPopup
+    SystemNodes --> AudioPopup
+    AppNodes --> FolderFlyout
+    TrayPopup <--> TrayBridge
 
     DockState --> IconResolver
     DockState --> WindowTracker
@@ -97,24 +115,30 @@ stateDiagram-v2
 
 ---
 
-### 4. System Controls and Windows Tray Limitations
+### 4. System Controls, Native Tray Bridge & Popups
 
-| System Button | Windows API / Shell Hook | Behavior |
+| System Button / Popup | Windows API / Subsystem | Behavior |
 | :--- | :--- | :--- |
 | **Start** | `keybd_event(VK_LWIN)` | Opens the native Windows Start Menu. |
 | **Search** | `keybd_event(VK_LWIN + 'S')` | Opens Windows Search overlay. |
-| **Network & Volume**| Shell Notification invocation | Opens the Windows 11 Quick Settings flyout. |
+| **Network** | Shell Notification invocation | Opens the Windows 11 Quick Settings flyout. |
+| **Volume / Audio Outputs** | `widget_audio_outputs.rs` (`PolicyConfig` COM) | Opens the custom [`audio-output-panel.html`](../crates/ui/ui/audio-output-panel.html) popup to switch active render/communications devices directly. |
 | **Clock / Calendar** | `keybd_event(VK_LWIN + 'N')` | Opens the Notification Center and Monthly Calendar. |
-| **Input Language** | UI Automation on Tray | Cycles or opens the Windows input language switcher. |
-| **Hidden Icons** | UI Automation on SysTray | Expands the notification overflow chevron. |
-
-> [!NOTE]
-> Third-party notification area (system tray) icons remain hidden while the native taskbar is hidden. Atelier intentionally does not replicate third-party tray icons because Microsoft Windows does not expose a public API for foreign tray icon hosting.
+| **Input Language** | `dock_languages` / `dock_select_language` | Opens [`dock-language.html`](../crates/ui/ui/dock-language.html) to view and switch active Windows input layouts. |
+| **Hidden Tray Icons** | `atelier_tray_bridge.dll` (`tray_bridge.rs`) | Captures Shell_NotifyIcon updates over a local-only named pipe (`\\.\pipe\atelier_systray_monitor`) and renders third-party tray icons inside [`tray.html`](../crates/ui/ui/tray.html), forwarding left/right clicks cleanly. |
+| **Atelier Context Menu** | `tray_panel.rs` (`atelier-menu.html`) | Right-clicking the Atelier tray icon opens a custom dark HTML menu displaying live CPU/RAM usage, quick theme presets, reset, and quit actions. |
 
 ---
 
-### 5. Workarea Reservation (AppBar Gap)
-When maximized windows are open, they normally expand across the entire monitor workarea. Atelier provides a **Space below maximized apps** slider:
+### 5. Materials, Embedded Widgets, Folders & Drag Reordering
+- **Style Presets & Native Glass (`dock_glass.rs`)**: Supports **Black**, **White**, **Liquid Glass**, **iOS**, and **Midnight** presets, full-width or custom-width layouts (`full_width`, `dock_width`), and WinRT Composition host-backdrop glass (`DWMWA_USE_HOSTBACKDROPBRUSH` + `CreateHostBackdropBrush`) with rounded geometry clipping.
+- **Embedded Dock Widgets**: Compact `widget.html` capsules (`dock_widget_set`, `dock_widgets_reorder`) can live directly inside the dock alongside pinned apps and system controls.
+- **App Folders & Drag Ghost (`dock-folder.html`, `folder_ghost.rs`)**: Apps can be grouped into folder capsules that open a styled popup flyout, with pointer drag-and-drop reordering across mixed dock items (`dock_reorder`) and a translucent drag preview window (`dock-drag-ghost.html`).
+
+---
+
+### 6. Workarea Reservation (AppBar Gap)
+When maximized windows are open, they normally expand across the entire monitor workarea. Atelier provides a **Space below maximized apps** slider (plus an `auto_adjust_workarea` calculation):
 - Registers a temporary system Application Desktop Toolbar (`SHAppBarMessage` with `ABM_NEW`).
 - Updates `ABM_SETPOS` to set the exact bottom reservation height.
 - Maximized applications respect this reserved boundary without overlapping the dock.
