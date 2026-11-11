@@ -1,8 +1,64 @@
 # Widget integration status
 
-Updated: 2026-11-08. The catalog contains 107 entries. Data paths now exist for every card, including service connections, local state and native Windows functions. The supported metrics and remaining service/hardware limits are specified below.
+Updated: 2026-11-08. The catalog contains 107 entries across 8 categories (backed by 109 registered kinds in `desktop_widgets.rs`, including desktop, dock capsule, and utility widgets). Data paths now exist for every card, including service connections, local state and native Windows functions. The supported metrics and remaining service/hardware limits are specified below.
 
 Automated tests exercise local logic and mocked service responses. They do not establish successful access to a real customer account or visual correctness in the running application.
+
+```mermaid
+flowchart TD
+    subgraph Studio ["Studio Widget Browser (studio-widgets.js)"]
+        Catalog["widgets-catalog.js<br/>(107 Entries / 8 Categories)"]
+        Inspector["Inspector Drawer<br/>(Desktop & Taskbar Mode Tabs)"]
+    end
+
+    subgraph Presentation ["Widget Presentation Targets"]
+        DesktopWins["Desktop Overlay Windows<br/>(widget-*.html)"]
+        DockCapsules["Embedded Dock Capsules<br/>(dock.html / dock-folder.html)"]
+        AudioPanel["Audio Output Popup<br/>(audio-output-panel.html)"]
+    end
+
+    subgraph NativeEngine ["Native Rust Integration Modules (crates/ui/src)"]
+        AuthClients["Service Clients & OAuth<br/>(widget_auth, widget_google, widget_appstore, widget_playstore)"]
+        LocalProviders["Local & CLI Providers<br/>(widget_codex, widget_docker, widget_timers, widget_screentime, widget_clipboard)"]
+        SystemDevices["Hardware & Win32 Controls<br/>(widget_gpu, widget_network, widget_controls, widget_audio_outputs)"]
+        BillingWindow["Isolated Billing WebView2<br/>(widget_billing.rs -> billing-*)"]
+    end
+
+    Catalog --> Inspector
+    Inspector --> DesktopWins
+    Inspector --> DockCapsules
+    DockCapsules --> AudioPanel
+    DesktopWins --> AudioPanel
+
+    DesktopWins --> NativeEngine
+    DockCapsules --> NativeEngine
+```
+
+---
+
+## Integration & Security Data Paths
+
+```mermaid
+flowchart LR
+    subgraph BillingIsolation ["Billing Page Mode (No API Key)"]
+        BillingWV["Isolated billing-* WebView2<br/>(IPC Commands Rejected)"] -->|"DOM Selection Sample"| BillingCache["billing-snapshots.json<br/>(1m Reload, 3m Stale Limit)"]
+    end
+
+    subgraph NativeServices ["Native Authenticated APIs"]
+        KeyFile["Service Account / .p8 Key<br/>(Stays in Native Rust)"] --> TokenEx["Short-Lived OAuth / ES256 JWT"]
+        TokenEx --> ProviderAPI["HTTPS Provider APIs<br/>(GA4, App Store, Play Store, SaaS)"]
+    end
+
+    subgraph CalendarWorker ["Calendar Feed Processing"]
+        FeedURL["HTTPS ICS / RSS Feed<br/>(Max 5 Redirects, No Auth Forward)"] --> Worker["Terminable Web Worker<br/>(ICAL.js 2.2.1, 50k Limit)"]
+    end
+
+    BillingCache --> WidgetRender["Widget Renderer<br/>(widget-metrics.js)"]
+    ProviderAPI --> WidgetRender
+    Worker --> WidgetRender
+```
+
+---
 
 ## Implemented integrations added in this work
 

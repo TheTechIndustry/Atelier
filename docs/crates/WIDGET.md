@@ -20,17 +20,13 @@ flowchart TD
         Layered["layered.rs<br/>WS_EX_LAYERED Windows<br/>Click-through, Topmost, Frame bounds"]
     end
 
-    subgraph Widgets ["Desktop Widgets Hosted in atelier-ui"]
-        W1["Clock Widget"]
-        W2["Calendar Widget"]
-        W3["System Stats Widget"]
-        W4["Media Controls Widget"]
-        W5["Battery Status Widget"]
-        W6["Sticky Notes Widget"]
-        W7["Weather Forecast Widget"]
-        W8["Photo / GIF Widget"]
-        W9["Countdown Widget"]
-        W10["Audio Visualizer Widget"]
+    subgraph Widgets ["Desktop & Dock Widgets Hosted in atelier-ui (107 Catalog Entries / 109 Kinds)"]
+        W1["Productivity (Clock, Calendar, Timers, ScreenTime, Clipboard)"]
+        W2["AI Quotas (Claude, ChatGPT/Codex, Gemini, GLM, Perplexity, Cursor)"]
+        W3["Revenue & SaaS (Stripe, Paddle, Dodo, Shopify, App Store, Play, GA4)"]
+        W4["Dev Life & Finance (GitHub, Docker, Vercel, Crypto, Stocks, Metals)"]
+        W5["System & Quick Controls (CPU, GPU/NVML, Audio Output Switcher, Wi-Fi)"]
+        W6["Media & Feeds (SMTC Now Playing, Weather, Photo/GIF, Visualizer, RSS)"]
     end
 
     CPU --> Aggregator
@@ -74,8 +70,8 @@ sequenceDiagram
 ---
 
 ### 2. Media Transport Controls Integration
-- Interfaces with the Windows `GlobalSystemMediaTransportControlsSessionManager` (SMTC) to display currently playing songs from Spotify, Apple Music, YouTube in web browsers, and media players.
-- Exposes metadata (title, artist, album art) and dispatches media controls (Play, Pause, Skip, Previous).
+- Interfaces with the Windows `GlobalSystemMediaTransportControlsSessionManager` (SMTC) to display currently playing songs from Spotify, Apple Music, YouTube in web browsers, and media players, caching the session manager and extrapolating real-time playback position while playing.
+- Exposes metadata (title, artist, album art, timeline position) and dispatches media controls (Play, Pause, Skip, Previous, Seek).
 
 ---
 
@@ -88,18 +84,18 @@ sequenceDiagram
 
 ## Widget Catalog
 
-| Widget | Key Features | Update Frequency |
+In addition to the core desktop widgets (`clock`, `calendar`, `system`, `media`, `battery`, `notes`, `weather`, `photo`, `countdown`, `audio`), [`widgets-catalog.js`](../../crates/ui/ui/widgets-catalog.js) and [`desktop_widgets.rs`](../../crates/ui/src/desktop_widgets.rs) provide **107 catalog entries across 8 categories** (`ai`, `productivity`, `dev`, `revenue`, `finance`, `system`, `controls`, `utilities`) plus dock-specific utility kinds (`sys_tray`, `app_folder`), supporting both desktop overlays and embedded dock capsules.
+
+For detailed API integrations, OAuth scopes, billing page isolation, and hardware limitations, see **[Widget Integrations](../WIDGET_INTEGRATIONS.md)**.
+
+| Category | Representative Widgets | Backing Modules |
 | :--- | :--- | :--- |
-| **Clock** | Analog, digital, and typography styles; customizable 12h/24h formats; accent colors. | 1 second |
-| **Calendar** | Monthly grid, current day highlight, week numbers, compact header. | 1 minute |
-| **System** | Real-time CPU, GPU, RAM, and VRAM utilization dials; temperature and process counts. | 1 second |
-| **Media** | Album artwork, track title, artist name, interactive play/pause and seek buttons. | On change / 500ms |
-| **Battery** | Charge percentage, charging/plugged indicator, estimated runtime, low-power alerts. | 5 seconds |
-| **Notes** | Markdown/plain-text sticky notes with customizable colors and persistent local storage. | On edit |
-| **Weather** | Real-time weather and temperature powered by Open-Meteo (no API key required). | 15 minutes |
-| **Photo** | Framed personal photos or animated GIFs with aspect ratio fit/cover options. | Static / Animation |
-| **Countdown** | Target event countdown displaying remaining days, hours, and minutes with progress ring. | 1 minute |
-| **Visualizer** | 64-band real-time audio spectrum reacting to system sound with bars, waves, dots, or circle. | 60 FPS (on sound) |
+| **Productivity** | Clock, Calendar (ICAL.js), Focus Timers / Pomodoro / Stopwatch, Screen Time, Clipboard History, Notes | `widget_timers.rs`, `widget_screentime.rs`, `widget_clipboard.rs`, `widget-calendar-worker.js` |
+| **AI** | Antigravity Claude/Gemini, ChatGPT (Codex CLI), GLM, Perplexity, Cursor, Copilot, OpenCode, OpenAI/Anthropic Spend & Prepaid | `widget_codex.rs`, `widget_auth.rs`, `widget_billing.rs` |
+| **Revenue & SaaS** | Stripe MRR/Net/Today, Paddle, Dodo, Shopify, Polar, Lemon Squeezy, DataFast, GA4, App Store, Google Play | `widget_auth.rs`, `widget_billing.rs`, `widget_google.rs`, `widget_appstore.rs`, `widget_playstore.rs` |
+| **Dev Life & Finance** | GitHub, GitLab CI, Docker Containers, Vercel, LeetCode, Crypto, S&P 500, NASDAQ-100, Gold/Silver | `widget_docker.rs`, `widget_auth.rs` |
+| **System & Quick Controls** | CPU, RAM, GPU/VRAM (NVML), Thermals, Disk, Ping, Wi-Fi, Bluetooth, Volume, Brightness, Audio Output Switcher | `widget_gpu.rs`, `widget_metrics.rs`, `widget_network.rs`, `widget_controls.rs`, `widget_audio_outputs.rs` |
+| **Media & Feeds** | SMTC Media Player, Weather (Open-Meteo), Photo/GIF, Audio Visualizer, Hacker News, RSS, NASA APOD | `media.rs`, `widget_photo.rs`, `widget_auth.rs` |
 
 ---
 
