@@ -15,14 +15,15 @@
 [![Desktop dock](https://img.shields.io/badge/Custom%20Taskbar-Desktop%20Dock-8B5CF6)](docs/DOCK.md)
 [![System Appearance](https://img.shields.io/badge/DWM-System%20Appearance-0EA5E9)](docs/SYSTEM_APPEARANCE.md)
 [![Window Animations](https://img.shields.io/badge/Animations-Window%20Transitions-F43F5E)](docs/SYSTEM_ANIMATIONS.md)
-[![Dynamic Island](https://img.shields.io/badge/Desktop-Dynamic%20Island-F59E0B)](#features)
+[![Dynamic Island](https://img.shields.io/badge/Desktop-Dynamic%20Island-F59E0B)](docs/DYNAMIC_ISLAND.md)
+[![Widgets](https://img.shields.io/badge/Widgets-107%20Catalog%20Cards-EC4899)](docs/WIDGET_INTEGRATIONS.md)
 [![Multi-monitor](https://img.shields.io/badge/Dock-Multi--monitor-14B8A6)](docs/crates/UI.md)
 [![Live wallpapers](https://img.shields.io/badge/Wallpapers-Video%20%26%20Scenes-8B5CF6)](docs/SCENE_PLAYBACK.md)
 [![Audio reactivity](https://img.shields.io/badge/Audio-Reactive%20Visualizer-7C3AED)](docs/AUDIO_REACTIVITY.md)
 [![Performance](https://img.shields.io/badge/Performance-Zero--alloc%20%26%20Trimmed%20RAM-10B981)](#resource-efficiency-and-performance)
 [![Recovery](https://img.shields.io/badge/Shell-Recovery%20Helpers-22A06B)](docs/FAILURES_AND_RECOVERY.md)
 
-**Atelier** is an all-in-one desktop customization suite for Windows 10 and 11 built with Rust and Tauri v2. Through its Studio, Atelier styles the native Windows taskbar or provides a standalone Custom Taskbar dock, tailors system surface materials with Mica and Acrylic backdrops, and adds fluid physics-based window animations. It features an interactive Dynamic Island, live video and 2D scene wallpapers, audio-reactive visualizers, and customizable desktop widgets — all engineered with zero-allocation telemetry and automatic memory trimming for near-zero idle CPU and RAM usage.
+**Atelier** is an all-in-one desktop customization suite for Windows 10 and 11 built with Rust and Tauri v2. Through its Studio, Atelier styles the native Windows taskbar or provides a standalone Custom Taskbar dock, tailors system surface materials with Mica and Acrylic backdrops, and adds fluid physics-based window animations. It features an interactive Dynamic Island, live video and 2D scene wallpapers, audio-reactive visualizers, and customizable desktop widgets all engineered with zero-allocation telemetry and automatic memory trimming for near-zero idle CPU and RAM usage.
 
 <p align="center">
   <img src="assets/preview.gif" alt="Atelier Desktop Studio Preview" width="100%">
@@ -45,7 +46,7 @@
 ## Features
 
 - **Windows Taskbar:** configure materials, floating geometry and presets. On supported Windows 11 XAML taskbars, adjust app button and icon appearance.
-- **Custom Taskbar:** a separate dock for pinned shortcuts and running windows, with display and edge selection, appearance controls, per-app visibility, auto-hide and a configurable gap below maximized windows. It hides the native Windows taskbar while enabled and hides itself when a fullscreen app is active on its display. Some native tray and language controls are not reliably accessible while the taskbar is hidden; see [Desktop dock](docs/DOCK.md).
+- **Custom Taskbar:** a standalone desktop dock for pinned shortcuts, running windows, app folders (`dock-folder.html`), and embedded compact widgets (`dock-capsule`), with style presets (Black, White, Liquid Glass, iOS, Midnight), WinRT host-backdrop glass, full-width or centered geometry, pointer drag-and-drop reordering, auto-hide, and an AppBar gap below maximized windows. Includes a C++20 tray bridge (`atelier_tray_bridge.dll`) for the hidden tray icons popup (`tray.html`), a custom Atelier tray context menu (`atelier-menu.html`), an input language switcher, and a native audio output switcher (`audio-output-panel.html`). See [Desktop dock](docs/DOCK.md).
 
   <p align="center">
     <img src="assets/custom-taskbar.jpg" alt="Custom Taskbar and Desktop Dock" width="100%">
@@ -59,25 +60,25 @@
   </p>
 
 - **Scenes:** play supported 2D Wallpaper Engine scenes with per-wallpaper and author-provided controls. Compatibility is partial: custom shaders, SceneScript, 3D models and some effects and animations are not supported. See [Scene playback](docs/SCENE_PLAYBACK.md).
-- **Widgets:** configure desktop clock, calendar, system, media, battery, notes, weather, photo and countdown widgets.
+- **Widgets:** 107 catalog entries across 8 categories (AI quotas, Productivity, Dev Life, Revenue & SaaS, Crypto & Stocks, System & Stats, Quick Controls, and Media & Feeds) supporting both movable desktop overlays and embedded dock capsules, with native integrations for timers/stopwatch persistence, clipboard history, screen time, Docker stats, Codex CLI quotas, isolated billing page snapshots, ICAL.js calendar feeds, and direct audio output switching. See [Widget integrations](docs/WIDGET_INTEGRATIONS.md).
 
   <p align="center">
     <img src="assets/widgets.jpg" alt="Desktop Widgets" width="100%">
   </p>
 
-- **Dynamic Island:** an optional top-of-screen panel with media controls, a monthly calendar and battery status. Choose a display, position, appearance, modules and opening behavior in the Dynamic Island tab. The panel expands and collapses with an animation. Calendar events are not connected.
+- **Dynamic Island:** an optional top-of-screen capsule (`rounded`, `pill`, `square`, or `notch`) configured with an interactive visual grid designer (`100×100` freeform layout with collision detection) supporting up to 6 tabbed pages, synchronized `lrclib.net` lyrics, media & volume controls, built-in monthly calendar grid, weather, notes, countdown, battery, and hardware telemetry, with fullscreen/maximized window hiding and audio-reactive glow. See [Dynamic Island](docs/DYNAMIC_ISLAND.md).
 
   <p align="center">
     <img src="assets/dynamic-island.jpg" alt="Dynamic Island" width="100%">
   </p>
 
-- **Animations:** customize window opening, minimizing, and restoring transitions with Scale, Genie, Glide, and Spring physics, alongside dock icon launch bouncing, hover wave magnification, and click feedback.
+- **Animations:** customize window opening, minimizing, and restoring transitions with Scale, Genie, Glide, and Spring physics, alongside dock icon launch bouncing, hover wave magnification, and click feedback — complete with an interactive File Explorer preview in Studio.
 
   <p align="center">
     <img src="assets/animations.jpg" alt="Window Animations and Transitions" width="100%">
   </p>
 
-- **System Appearance:** customize surface materials and transparency across Windows system surfaces (File Explorer, Clock, Tray, Language switcher, and Settings) with Mica, Mica Alt, Acrylic, and Glass backdrops, active and inactive window opacity, rounded/square corner preferences, and custom window borders.
+- **System Appearance:** customize surface materials and transparency across Windows system surfaces (File Explorer, Dialogs, Tools, Terminal, Flyouts, and Settings) with Mica, Mica Alt, Acrylic, and Glass backdrops, active and inactive window opacity, rounded/square corner preferences, and custom window borders, previewed live on Studio's interactive File Explorer stage.
 
   <p align="center">
     <img src="assets/appearance.jpg" alt="System Appearance and DWM Theming" width="100%">
@@ -98,12 +99,13 @@ flowchart LR
     Taskbar --> Explorer["Explorer taskbar"]
     Taskbar --> Bridge["C++ XAML bridge"]
     Bridge --> Explorer
-    App --> Dock["Dock window and state"]
+    App --> Dock["Dock, Popups & Tray Bridge"]
     Dock --> Explorer
-    Dock --> Apps["Windows apps and shortcuts"]
+    Dock --> Apps["Windows apps, folders & tray"]
+    App --> Island["Dynamic Island · Multi-page"]
     App --> Wallpaper["Wallpaper library and player"]
     Wallpaper --> Steam["Downloaded Steam Workshop items"]
-    App --> Widgets["Desktop widgets"]
+    App --> Widgets["Desktop & Dock Widgets (107 catalog)"]
     App --> Audio["Audio capture and analysis"]
     App --> Appearance["System Appearance & Animations"]
     Appearance --> DWM["Windows DWM & Shell"]
@@ -127,7 +129,10 @@ Atelier is engineered to run continuously in the background with a minimal footp
 - [System Appearance](docs/SYSTEM_APPEARANCE.md)
 - [System Animations & Window Transitions](docs/SYSTEM_ANIMATIONS.md)
 - [Desktop dock](docs/DOCK.md)
+- [Dynamic Island](docs/DYNAMIC_ISLAND.md)
+- [Widget integrations](docs/WIDGET_INTEGRATIONS.md)
 - [Wallpapers and Workshop](docs/WALLPAPERS.md)
+- [Wallpaper preset catalog](docs/WALLPAPER_CATALOG.md)
 - [Audio reactivity](docs/AUDIO_REACTIVITY.md)
 - [Architecture and data flow](docs/ARCHITECTURE.md)
 - [Repository structure](docs/STRUCTURE.md)
@@ -166,9 +171,12 @@ For a development copy that does not lock `target\debug\Atelier.exe`, run `scrip
 
 ```powershell
 cargo test -p atelier-common
+cargo test -p atelier-audio --lib
+cargo test -p atelier-widget --lib
 cargo test -p atelier-ui --lib
 cargo test -p atelier-wallpaper --lib
 node --test crates/ui/tests/*.test.cjs
+node --test scripts/tests/*.test.cjs
 cargo check --workspace
 ```
 

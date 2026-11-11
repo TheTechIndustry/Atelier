@@ -51,16 +51,20 @@ atelier/
 │   │   └── native/             # C++20 XAML bridge (xaml_bridge.cpp, xaml_probe.cpp)
 │   ├── ui/                     # atelier-ui: Main Tauri 2.0 interactive application
 │   │   ├── capabilities/       # Tauri 2.0 window capabilities & security permissions
-│   │   ├── src/                # Rust backend modules (dock, wallpaper, widgets)
-│   │   ├── tests/              # Node.js automated test suites (*.test.cjs)
-│   │   └── ui/                 # Frontend web assets (HTML, CSS, JS, scene engine)
+│   │   ├── native/             # C++20 tray bridge (tray_bridge.cpp) compiled via build.rs
+│   │   ├── src/                # Rust backend modules (dock, island, wallpaper, widgets, tray)
+│   │   ├── tests/              # Node.js & Playwright automated test suites (*.test.cjs)
+│   │   └── ui/                 # Frontend web assets (Studio, Dock, Island, Popups, Widgets, Scene)
 │   ├── wallpaper/              # atelier-wallpaper: WorkerW, D3D11, PKG/TEX decoders
 │   ├── audio/                  # atelier-audio: WASAPI loopback, Radix-2 FFT
 │   └── widget/                 # atelier-widget: Hardware metrics & layered windows
+├── assets/                     # README screenshots, preview GIF, download badges
 ├── docs/                       # Comprehensive documentation portal & guides
 │   └── crates/                 # In-depth technical documentation for each crate
 ├── packaging/                  # Release installers (NSIS installer.nsi, MSIX Appx)
-└── scripts/                    # Developer scripts (run-dev.cmd, dock tests)
+├── scripts/                    # Developer scripts (run-dev.cmd, build-installer.ps1)
+│   └── tests/                  # Widget integration & dock verification test suites (*.test.cjs)
+└── website/                    # Public product landing page with interactive dock/island/widgets
 ```
 
 ---

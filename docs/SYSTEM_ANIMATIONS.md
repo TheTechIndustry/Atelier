@@ -54,6 +54,7 @@ Atelier provides customizable physics curves to match user preference:
 - **Genie**: Fluid bottom-anchored taper transition.
 - **Glide**: Upward/downward vertical slide with motion blur effect.
 - **Fade & Pop**: Rapid opacity fade accompanied by subtle magnification pulse.
+- **Interactive Studio Preview**: The Animations tab includes a File Explorer demo window stage (`studio-window-preview.js`) and a synchronized secondary dock preview (`studio-dock-preview.js`) to test minimize/restore transitions and click feedback live inside Studio.
 
 ---
 

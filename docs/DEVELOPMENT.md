@@ -14,8 +14,8 @@ flowchart LR
     subgraph BuildPipeline ["Build & Verification Pipeline"]
         Check["cargo check --workspace"]
         Clippy["cargo clippy --all-targets"]
-        RustTests["cargo test --workspace (47 UI, 10 Wall, 3 Audio, 3 Common)"]
-        NodeTests["node --test crates/ui/tests/*.test.cjs (30 JS Tests)"]
+        RustTests["cargo test --workspace (Lib & Unit Suites)"]
+        NodeTests["node --test crates/ui/tests/*.test.cjs & scripts/tests/*.test.cjs"]
     end
 
     subgraph OutputArtifacts ["Binary Targets"]
@@ -42,7 +42,7 @@ flowchart LR
    ```powershell
    rustup default stable-x86_64-pc-windows-msvc
    ```
-2. **C++20 Build Tools**: Visual Studio 2022 Build Tools with the "Desktop development with C++" workload installed (needed by `crates/taskbar/build.rs` to compile `native/xaml_bridge.cpp`).
+2. **C++20 Build Tools**: Visual Studio 2022 Build Tools with the "Desktop development with C++" workload installed (needed by `crates/taskbar/build.rs` to compile `native/xaml_bridge.cpp` and `crates/ui/build.rs` to compile `native/tray_bridge.cpp`).
 3. **Windows SDK**: Version 10.0.19041.0 or higher.
 4. **WebView2**: Microsoft Edge WebView2 Runtime.
 5. **Node.js**: Required to execute the JavaScript test runner suites (`crates/ui/tests/`).
@@ -73,10 +73,13 @@ cargo test -p atelier-audio
 cargo test -p atelier-common
 ```
 
-### 2. Frontend & Runtime JavaScript Tests
+### 2. Frontend & Integration JavaScript Tests
 ```powershell
-# Run the 30 JavaScript unit tests using Node.js native test runner
+# Run Studio, Dock, Island, Appearance, Animations, and Scene JS unit tests
 node --test crates/ui/tests/*.test.cjs
+
+# Run widget integration, billing, calendar, tray, and dock layout tests
+node --test scripts/tests/*.test.cjs
 ```
 
 ### 3. Isolated Dock Test Fixtures

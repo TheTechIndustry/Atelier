@@ -8,16 +8,19 @@ Directory: [`crates/ui`](../../crates/ui/) · Cargo package: `atelier-ui`
 flowchart TD
     subgraph Windows ["Tauri Multi-Window Architecture"]
         MainWin["Main Window ('main')<br/>Studio Control Panel<br/>ui/index.html"]
-        DockWin["Dock Window ('desktop-dock')<br/>Floating Layered AppBar<br/>ui/dock.html"]
-        WidgetWins["Widget Windows ('widget-*')<br/>Movable Overlay Windows<br/>ui/widget.html"]
+        DockWin["Dock Window ('desktop-dock')<br/>Floating AppBar & Capsules<br/>ui/dock.html"]
+        IslandWin["Dynamic Island ('dynamic-island')<br/>Multi-Page Top Panel<br/>ui/island.html"]
+        PopupWins["Popups & Tray Menus<br/>tray, atelier-menu, audio-output-panel,<br/>dock-language, dock-folder, dock-drag-ghost"]
+        WidgetWins["Widget Windows ('widget-*')<br/>Movable Overlays & Isolated billing-*<br/>ui/widget.html"]
         WallpaperWin["Wallpaper Window ('desktop-wallpaper')<br/>WorkerW Injected Canvas<br/>ui/wallpaper.html"]
     end
 
     subgraph State ["Tauri Managed State"]
-        AppState["AppState<br/>(Taskbar, Audio, Core Mutex)"]
-        DockState["DockState<br/>(Running Apps, Pins, AppBar State)"]
+        AppState["AppState & TrayBridge<br/>(Taskbar, Audio, Core Mutex, Tray Pipe)"]
+        DockState["DockState<br/>(Running Apps, Pins, Glass, AppBar)"]
+        IslandState["IslandState<br/>(Pages, Freeform Grid, Lyrics, Audio)"]
         WallState["Wallpapers<br/>(Active Wallpaper, Settings, Profiles)"]
-        WidgetState["Widgets<br/>(Positions, Sizes, Enabled States)"]
+        WidgetState["Widgets & Providers<br/>(109 Kinds, Timers, Clipboard, ScreenTime)"]
     end
 
     subgraph Protocols ["Asynchronous Custom URI Protocols"]
@@ -29,6 +32,8 @@ flowchart TD
 
     MainWin --> State
     DockWin --> State
+    IslandWin --> State
+    PopupWins --> State
     WidgetWins --> State
     WallpaperWin --> State
 
@@ -43,9 +48,10 @@ flowchart TD
 ## Architectural Highlights
 
 ### 1. Multi-Window Lifecycle & Window Management
-- **Mica Studio Shell**: The main configuration window utilizes Windows 11 Mica backdrop composition with dark mode styling, providing access to Taskbar, Dock, Wallpapers, Widgets, Audio, and General settings.
-- **Desktop Dock Window**: Operates as a transparent, layered, frameless window anchored to display edges (bottom, top, left, right). It communicates directly with Windows shell services using custom AppBars to reserve work areas.
-- **Desktop Widgets**: Each enabled desktop widget runs in its own lightweight WebView window with transparent background, click-through toggles, and DPI-aware positioning.
+- **Mica Studio Shell**: The main configuration window utilizes Windows 11 Mica backdrop composition with dark mode styling, providing access to Taskbar, Custom Taskbar, Animations, Appearance, Wallpapers, Audio, Dynamic Island, Widgets, and General settings.
+- **Desktop Dock & Popups**: Operates as a transparent, layered, frameless window (`dock.html`) with WinRT Composition host-backdrop glass (`dock_glass.rs`), app folder flyouts (`dock-folder.html`), drag ghosts (`dock-drag-ghost.html`), input language switcher (`dock-language.html`), audio output switcher (`audio-output-panel.html`), hidden tray popup (`tray.html`), and custom Atelier context menu (`atelier-menu.html`).
+- **Dynamic Island**: A multi-page top-of-screen capsule (`island.html`) with freeform grid layout, synchronized lyrics (`lrclib.net`), and occlusion hiding.
+- **Desktop Widgets**: Enabled desktop widgets run in lightweight WebView windows (`widget-*`) or as embedded `.dock-capsule` iframes inside the dock; billing page captures use isolated `billing-*` windows with IPC commands rejected.
 - **Desktop Wallpaper Window**: Injected directly behind the desktop icons into the Windows `WorkerW` layer (between `SHELLDLL_DefView` and the desktop background).
 
 ```mermaid
@@ -76,7 +82,9 @@ sequenceDiagram
 | **System Appearance** | [`src/system_appearance.rs`](../../crates/ui/src/system_appearance.rs) | DWM window backdrop materials (Mica, Mica Alt, Acrylic, Glass), active/inactive opacity, corner preference, titlebar mode, and granular system surface filters. |
 | **System Animations** | [`src/system_animations.rs`](../../crates/ui/src/system_animations.rs) | WinEvent hooks (`EVENT_SYSTEM_MINIMIZESTART/END`), live DWM thumbnail transitions, spring physics easing curves, and dock-origin zoom animations. |
 | **App Usage & Memory** | [`src/app_usage.rs`](../../crates/ui/src/app_usage.rs) | Zero-allocation NT query sampling (`WorkingSetPrivateSize` and CPU %), automatic background `EmptyWorkingSet` memory trimming, and studio sidebar telemetry. |
-| **Desktop Dock** | [`src/desktop_dock.rs`](../../crates/ui/src/desktop_dock.rs) | Taskbar enumeration, Explorer icon extraction, UWP ApplicationFrameWindow matching, pinned shortcut persistence, Windows AppBar space reservation, and UI Automation system tray popups. |
+| **Desktop Dock & Glass** | [`src/desktop_dock.rs`](../../crates/ui/src/desktop_dock.rs), [`src/dock_glass.rs`](../../crates/ui/src/dock_glass.rs), [`src/folder_ghost.rs`](../../crates/ui/src/folder_ghost.rs) | Taskbar enumeration, Explorer icon extraction, UWP matching, pinned shortcuts, AppBar reservation, WinRT host-backdrop glass, embedded widget capsules, and folder drag ghosts. |
+| **Tray Bridge & Panels** | [`src/tray_bridge.rs`](../../crates/ui/src/tray_bridge.rs), [`src/tray_panel.rs`](../../crates/ui/src/tray_panel.rs), [`src/tray_protocol.rs`](../../crates/ui/src/tray_protocol.rs) | C++20 `atelier_tray_bridge.dll` named-pipe server capturing hidden tray icons, plus custom HTML `tray-panel` and `atelier-menu` context popup windows. |
+| **Dynamic Island** | [`src/desktop_island.rs`](../../crates/ui/src/desktop_island.rs) | Multi-page Dynamic Island state (`island.json`), `lrclib.net` synchronized lyrics lookup, persistent quick notes, and fullscreen/maximized occlusion hiding. |
 | **Desktop Wallpaper** | [`src/desktop_wallpaper.rs`](../../crates/ui/src/desktop_wallpaper.rs) | Live wallpaper lifecycle controller, profile persistence, audio reactivity options, and `wallpaper-media://` byte-range video streaming. |
 | **Scene Engine Bridge** | [`src/wallpaper_scene.rs`](../../crates/ui/src/wallpaper_scene.rs) | Extraction of Wallpaper Engine `.pkg` archives, JSON project parsing, and `wallpaper-scene://` protocol asset server. |
 | **Scene Geometry** | [`src/scene_geometry.rs`](../../crates/ui/src/scene_geometry.rs) | Scene layer transformations, parent-child hierarchies, 2D bone rigs, and mesh deformation resolution. |
@@ -84,7 +92,8 @@ sequenceDiagram
 | **Scene Preview** | [`src/scene_preview.rs`](../../crates/ui/src/scene_preview.rs) | Offscreen CPU/GPU thumbnail composition engine generating full-fidelity PNG previews of 2D scenes. |
 | **Performance Watcher**| [`src/wallpaper_performance.rs`](../../crates/ui/src/wallpaper_performance.rs) | Real-time monitoring of fullscreen/maximized applications, battery status, process execution pause rules, and display frame rate caps. |
 | **Steam Workshop** | [`src/steam_workshop.rs`](../../crates/ui/src/steam_workshop.rs) | Automatic detection of Steam install folders and Wallpaper Engine Workshop downloads (`workshop/content/431960`), VDF parsing, and safe importing. |
-| **Desktop Widgets** | [`src/desktop_widgets.rs`](../../crates/ui/src/desktop_widgets.rs) | Widget position normalization, multi-monitor bounds validation, drag-and-drop coordinate persistence, and audio spectrum dispatch. |
+| **Desktop Widgets & Providers** | [`src/desktop_widgets.rs`](../../crates/ui/src/desktop_widgets.rs), `src/widget_*.rs` | 109 widget kinds, coordinate/size bounds, audio spectrum dispatch, and native integrations (`widget_auth`, `widget_billing`, `widget_codex`, `widget_docker`, `widget_audio_outputs`, `widget_timers`, `widget_screentime`, `widget_clipboard`, `widget_google`, `widget_appstore`, `widget_playstore`, `widget_gpu`, `widget_network`, `widget_controls`, `widget_metrics`, `widget_photo`, `widget_reminder`). |
+| **Installer** | [`src/installer.rs`](../../crates/ui/src/installer.rs) | Self-installer / uninstaller mode (`--installer`, `--uninstall`) UI and shortcut creation. |
 | **Desktop Background** | [`src/desktop_background.rs`](../../crates/ui/src/desktop_background.rs) | Safe backup and atomic restoration of the native Windows wallpaper when live wallpapers are toggled or on application exit. |
 
 ---
@@ -103,9 +112,12 @@ sequenceDiagram
 ## Testing
 
 ```powershell
-# Run Rust unit tests for atelier-ui (62 tests)
-cargo test -p atelier-ui
+# Run Rust library unit tests for atelier-ui
+cargo test -p atelier-ui --lib
 
-# Run JavaScript frontend unit tests (55 tests)
+# Run JavaScript frontend unit tests (81 tests)
 node --test crates/ui/tests/*.test.cjs
+
+# Run widget integration & dock layout test suites
+node --test scripts/tests/*.test.cjs
 ```

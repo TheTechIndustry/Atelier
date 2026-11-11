@@ -7,13 +7,16 @@ flowchart TB
     subgraph UI ["atelier-ui (Tauri 2.0 Host)"]
         Studio["Studio SPA (Main Window)"]
         DockWin["Desktop Dock (Layered AppBar Window)"]
-        WidgetWin["Desktop Widgets (Movable Layered Overlays)"]
+        IslandWin["Dynamic Island (Top-of-Screen Multi-Page Panel)"]
+        WidgetWin["Desktop Widgets & Dock Capsules"]
+        Popups["Tray, Menu, Audio Output & Folder Popups"]
         WallHost["Wallpaper Host Window (Injected into WorkerW)"]
     end
 
     subgraph CoreEngine ["Workspace Engine Subsystems"]
         Core["atelier-core (Watchdogs & Guardians)"]
         TaskbarCrate["atelier-taskbar (Explorer Hooks & XAML Bridge)"]
+        TrayBridge["C++20 Tray Bridge (atelier_tray_bridge.dll)"]
         WallpaperCrate["atelier-wallpaper (D3D11 & Media Foundation)"]
         AudioCrate["atelier-audio (WASAPI Loopback & FFT Analyzer)"]
         WidgetCrate["atelier-widget (Hardware & OS Metric Polling)"]
@@ -23,19 +26,24 @@ flowchart TB
     subgraph WindowsOS ["Windows Operating System Subsystems"]
         Explorer["Windows Explorer (Shell_TrayWnd & Progman)"]
         DWM["Desktop Window Manager (DWM / Composition)"]
-        AudioDevice["Default Audio Render Endpoint"]
+        AudioDevice["Default Audio Render Endpoint & PolicyConfig"]
         UIA["Windows UI Automation & Shell Tray"]
     end
 
     Studio --> CoreEngine
     DockWin --> TaskbarCrate
     DockWin --> AudioCrate
+    DockWin --> Popups
+    Popups --> TrayBridge
+    IslandWin --> WidgetCrate
+    IslandWin --> AudioCrate
     WallHost --> WallpaperCrate
     WidgetWin --> WidgetCrate
     WidgetWin --> AudioCrate
 
     TaskbarCrate --> Explorer
     TaskbarCrate --> DWM
+    TrayBridge --> Explorer
     WallpaperCrate --> Explorer
     AudioCrate --> AudioDevice
     DockWin --> UIA
@@ -83,8 +91,11 @@ sequenceDiagram
 | :--- | :--- | :--- |
 | **[System Appearance](SYSTEM_APPEARANCE.md)** | DWM backdrops & transparency | Mica, Acrylic, Glass backdrops, active/inactive opacity, corner preference, titlebar mode, system surface filters. |
 | **[System Animations](SYSTEM_ANIMATIONS.md)** | Window transitions & physics | DWM thumbnail minimize/restore transitions, Spring/Snappy easing curves, zoom-from-icon origin, dock bounce & hover wave. |
-| **[Desktop Dock](DOCK.md)** | Standalone Custom Taskbar dock | Pinning shortcuts, running app detection, AppBar gap reservation, system tray popups, multi-monitor behavior. |
+| **[Desktop Dock](DOCK.md)** | Standalone Custom Taskbar dock | Pinning shortcuts, running app detection, embedded widgets, folders, native tray bridge, AppBar gap, multi-monitor behavior. |
+| **[Dynamic Island](DYNAMIC_ISLAND.md)** | Top-of-screen interactive panel | Visual grid designer, up to 6 tabbed pages, synchronized lyrics (`lrclib.net`), notch/pill shapes, fullscreen/maximized hiding. |
+| **[Widget Integrations](WIDGET_INTEGRATIONS.md)** | 107-entry widget catalog & APIs | Billing page snapshots, OAuth/service-account clients, Codex CLI, Docker, timers, audio output switcher, ICAL.js calendar worker. |
 | **[Live Wallpapers](WALLPAPERS.md)** | Video and 2D scene wallpapers | MP4/WebM video looping, Wallpaper Engine 2D scene parsing, Steam Workshop discovery, multi-monitor rules. |
+| **[Wallpaper Catalog](WALLPAPER_CATALOG.md)** | Bundled presets vs local imports | `wallpaper-catalog.json`, bundled video presets, local import library, and Workshop offline copying. |
 | **[Audio Reactivity](AUDIO_REACTIVITY.md)** | Real-time audio spectrum | WASAPI loopback, 64-band logarithmic FFT, visualizer widget, dock audio glow, wallpaper pulse. |
 | **[Scene Playback](SCENE_PLAYBACK.md)** | 2D Wallpaper Engine parser | PKG unpacking, TEX/DXT decoding, layer hierarchies, bone animation, shader effects, author properties. |
 | **[Configuration & State](CONFIGURATION.md)** | Storage and environment | `%APPDATA%\Atelier`, JSON schemas, portable data directories, registry and command-line flags. |

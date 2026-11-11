@@ -5,21 +5,25 @@ Atelier is an advanced Windows-focused desktop personalization engine built on a
 ```mermaid
 flowchart TB
     subgraph FrontendLayer ["Presentation Layer (Tauri 2.0 & WebView2)"]
-        Studio["Studio Shell (index.html)<br/>Settings & Customization Panels"]
-        Dock["Desktop Dock (dock.html)<br/>Floating AppBar & App Launcher"]
-        Widgets["Overlay Widgets (widget.html)<br/>Movable Transparent Overlays"]
+        Studio["Studio Shell (index.html)<br/>Settings & Visual Designers"]
+        Dock["Desktop Dock (dock.html)<br/>Floating AppBar, Folders & Capsules"]
+        Island["Dynamic Island (island.html)<br/>Multi-Page Panel & Synced Lyrics"]
+        Popups["Dock & Tray Popups<br/>(tray, atelier-menu, audio-output-panel, dock-language)"]
+        Widgets["Overlay Widgets (widget.html)<br/>Movable Overlays & Isolated billing-*"]
         WallpaperHost["Wallpaper Host (wallpaper.html)<br/>Video & 2D Scene WebGL Player"]
     end
 
     subgraph StateLayer ["Application State Management (atelier-ui)"]
-        AppState["AppState<br/>(Taskbar, Audio Mutex)"]
-        DockState["DockState<br/>(Pins, Running Windows, AppBar)"]
+        AppState["AppState & TrayBridge<br/>(Taskbar, Audio, Core Mutex, Tray Pipe)"]
+        DockState["DockState<br/>(Pins, Running Windows, Glass, AppBar)"]
+        IslandState["IslandState<br/>(Pages, Grid Layout, Lyrics, Audio)"]
         WallState["Wallpapers<br/>(Profiles, Playback Rules)"]
-        WidgetState["Widgets<br/>(Coordinates, Visual Presets)"]
+        WidgetState["Widgets & Providers<br/>(109 Kinds, Auth, Timers, Billing, Docker)"]
     end
 
     subgraph Subsystems ["Engine Subsystems"]
         TaskbarEngine["atelier-taskbar<br/>(DWM Accents & XAML Bridge)"]
+        TrayEngine["Native C++20 Tray Bridge<br/>(atelier_tray_bridge.dll)"]
         WallpaperEngine["atelier-wallpaper<br/>(WorkerW, D3D11, PKG Decoders)"]
         AudioEngine["atelier-audio<br/>(WASAPI Capture & FFT Analyzer)"]
         WidgetEngine["atelier-widget<br/>(PDH Hardware Metrics & SMTC)"]
@@ -28,27 +32,35 @@ flowchart TB
     subgraph OSIntegration ["Windows Operating System"]
         Explorer["Windows Explorer (Shell_TrayWnd & Progman)"]
         DWM["Desktop Window Manager (Composition & Acrylic)"]
-        AudioDev["Audio Render Endpoint (WASAPI Loopback)"]
+        AudioDev["Audio Endpoints (WASAPI & PolicyConfig COM)"]
         Metrics["Windows Kernel (PDH / DXGI / SystemPower)"]
     end
 
     Studio <--> AppState
     Dock <--> DockState
+    Popups <--> DockState
+    Popups <--> AppState
+    Island <--> IslandState
     Widgets <--> WidgetState
     WallpaperHost <--> WallState
 
     AppState --> TaskbarEngine
+    AppState --> TrayEngine
     DockState --> TaskbarEngine
     WallState --> WallpaperEngine
     WidgetState --> WidgetEngine
+    IslandState --> WidgetEngine
     AppState --> AudioEngine
     DockState --> AudioEngine
+    IslandState --> AudioEngine
     WallState --> AudioEngine
 
     TaskbarEngine --> Explorer
     TaskbarEngine --> DWM
+    TrayEngine --> Explorer
     WallpaperEngine --> Explorer
     AudioEngine --> AudioDev
+    WidgetState --> AudioDev
     WidgetEngine --> Metrics
 ```
 
@@ -110,7 +122,13 @@ sequenceDiagram
 ---
 
 ### 3. Audio Reactivity Path
-1. When the desktop visualizer, dock glow, or wallpaper pulse is active, the consumer calls `request_spectrum()`.
+1. When the desktop visualizer, dock glow, Dynamic Island glow, or wallpaper pulse is active, the consumer calls `request_spectrum()`.
 2. `atelier-audio` initializes a WASAPI loopback capture thread on the default audio endpoint.
 3. Samples pass through a Hanning window and Radix-2 FFT, mapping 512 frequency samples into 64 musical logarithmic bands.
 4. If all consumers are closed or silent for 3 consecutive seconds, the worker thread automatically suspends (0% CPU).
+
+---
+
+### 4. Dynamic Island & Widget Integrations Path
+1. **Dynamic Island (`desktop_island.rs`)**: Studio's visual designer (`studio-island.js`) saves multi-page freeform layouts to `island.json`; the `dynamic-island` window (`island.html`) switches between compact pill/notch and expanded tabbed views, polling SMTC media, `lrclib.net` synchronized lyrics (`island_lyrics`), weather, and system metrics while hiding on fullscreen or maximized apps.
+2. **Widgets & Dock Capsules (`desktop_widgets.rs`, `widget_*.rs`)**: 107 catalog entries render either in standalone `widget-*` desktop windows or embedded `.dock-capsule` iframes inside `dock.html`, backed by native Rust providers (`widget_auth.rs`, `widget_codex.rs`, `widget_docker.rs`, `widget_audio_outputs.rs`, `widget_timers.rs`, `widget_billing.rs`) and an ICAL.js Web Worker.

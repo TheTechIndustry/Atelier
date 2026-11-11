@@ -47,6 +47,7 @@ Direct control over `DWMWA_WINDOW_CORNER_PREFERENCE`:
 - **Active Window Opacity**: Configurable from 50% to 100%.
 - **Inactive Window Opacity**: Configurable independently from 50% to 100% to emphasize the active focus window.
 - **Layered Style Management**: Dynamically sets `WS_EX_LAYERED` and `SetLayeredWindowAttributes` with alpha transparency, tracking original styles to ensure only Atelier-modified layered attributes are restored upon exit.
+- **Interactive Studio Preview**: Studio embeds a live interactive File Explorer demo window (`studio-window-preview.js`) allowing instant preview of backdrop materials, opacity (active/inactive toggle), corner rounding, and border styling before applying changes system-wide.
 
 ---
 

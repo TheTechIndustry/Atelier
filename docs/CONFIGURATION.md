@@ -6,35 +6,40 @@ Atelier persists user preferences, widget coordinates, wallpaper libraries, and 
 flowchart LR
     subgraph DiskStorage ["Persistent Disk Storage (%APPDATA%\Atelier)"]
         S1["settings.json<br/>(Taskbar Styles & Appearance)"]
-        S2["dock-settings.json<br/>(Dock Layout, Pins, Audio Glow)"]
-        S3["widgets.json<br/>(Widget Positions & Configs)"]
-        S4["wallpapers/library.json<br/>(Imported Wallpaper Metadata)"]
-        S5["widget-photos/<br/>(Stored GIF/PNG Assets)"]
+        S2["dock-settings.json<br/>(Dock Layout, Pins, Material, Widgets)"]
+        S3["island.json<br/>(Dynamic Island Pages & Modules)"]
+        S4["widgets.json / timers.json / billing-snapshots.json<br/>(Widget State & Integrations)"]
+        S5["wallpapers/library.json<br/>(Imported Wallpaper Metadata)"]
+        S6["widget-photos/<br/>(Stored GIF/PNG Assets)"]
     end
 
     subgraph MemoryModel ["In-Memory State Handlers (Tauri Managed State)"]
         M1["AppState (atelier-ui)"]
         M2["DockState (desktop_dock.rs)"]
-        M3["Widgets (desktop_widgets.rs)"]
-        M4["Wallpapers (desktop_wallpaper.rs)"]
+        M3["IslandState (desktop_island.rs)"]
+        M4["Widgets (desktop_widgets.rs)"]
+        M5["Wallpapers (desktop_wallpaper.rs)"]
     end
 
     subgraph Presentation ["Presentation & Runtime"]
         W1["Mica Studio UI"]
         W2["Floating Desktop Dock"]
-        W3["Overlay Widgets"]
-        W4["WorkerW Wallpaper Canvas"]
+        W3["Dynamic Island Panel"]
+        W4["Overlay Widgets & Dock Capsules"]
+        W5["WorkerW Wallpaper Canvas"]
     end
 
     S1 <--> M1
     S2 <--> M2
     S3 <--> M3
     S4 <--> M4
+    S5 <--> M5
 
     M1 --> W1
     M2 --> W2
     M3 --> W3
     M4 --> W4
+    M5 --> W5
 ```
 
 ---
@@ -49,12 +54,18 @@ By default, Atelier uses `%APPDATA%\Atelier`. You can override this path by sett
 | `native-taskbar-enabled.json` | Whether native taskbar customization is enabled. Saved styling is retained when disabled. | JSON |
 | `animations.json` | Window transitions, duration, easing, dock bouncing, hover wave, and click feedback. | JSON |
 | `appearance.json` | System surface materials (Mica/Acrylic/Glass), opacity, corners, borders, and target surface toggles. | JSON |
-| `dock-settings.json` | Dock edge, icon size, magnification, pinned shortcuts, AppBar gap, and audio glow. | JSON |
-| `widgets.json` | Grid coordinates, dimensions, enabled states, and visual presets for all desktop widgets. | JSON |
+| `dock-settings.json` | Dock edge, icon size, material/presets, full-width mode, pinned shortcuts, embedded widgets, mixed item order, AppBar gap, and audio glow. | JSON |
+| `island.json` | Dynamic Island monitor, shape, compact/expanded dimensions, multi-page tabs, freeform module grid, notes, and audio reactivity. | JSON |
+| `widgets.json` | Grid coordinates, dimensions, enabled states, dock capsule modes, and visual presets for all desktop widgets. | JSON |
+| `timers.json` | Shared native state and lap history (up to 100 laps) for Timer, Pomodoro, and Stopwatch widgets. | JSON |
+| `screen-time.json` | Hourly and per-application screen-time tracking totals. | JSON |
+| `billing-snapshots.json` | Cached USD balance/MRR samples selected in isolated `billing-*` WebView2 sessions. | JSON |
+| `desktop-background-restore.json` | Journal storing the original Windows desktop wallpaper path for safe restoration on exit. | JSON |
 | `wallpapers/` | Contains `library.json`, imported video/scene directories, and extracted PKG assets. | Directory |
 | `widget-photos/` | User-uploaded GIF and image assets displayed by the photo widget. | PNG / GIF |
 | `cache/workshop-previews/`| Pre-composed composite thumbnails for downloaded Steam Workshop scenes. | Cached PNG |
 | `atelier_xaml_<hash>.dll` | Extracted copy of the embedded C++20 XAML bridge DLL. | Native Binary |
+| `atelier_tray_bridge.dll` | Embedded C++20 tray hook DLL compiled during build and loaded for hidden tray icon capture. | Native Binary |
 
 ---
 

@@ -5,16 +5,19 @@ Atelier operates with standard user permissions while interacting with native Wi
 ```mermaid
 flowchart TD
     subgraph External ["External & Untrusted Data"]
-        Net["Remote Web (Open-Meteo Weather)"]
+        Net["Remote Web (Open-Meteo, lrclib.net, Widget APIs)"]
+        BillingSites["External Billing Pages (billing-* WebView2)"]
         ScenePkg["User / Steam Workshop Archives (.pkg)"]
         UserFiles["Imported Video & Photo Files"]
     end
 
     subgraph Sandbox ["WebView2 Sandboxed Security Boundary"]
         MainUI["Studio UI (index.html)"]
-        DockUI["Dock UI (dock.html)"]
+        DockUI["Dock, Popups & Tray (dock.html, tray.html)"]
+        IslandUI["Dynamic Island (island.html)"]
         WallpaperUI["Wallpaper Host (wallpaper.html)"]
         WidgetUI["Widget Windows (widget.html)"]
+        BillingUI["Isolated Billing WebView2 (IPC Blocked)"]
     end
 
     subgraph Protocols ["Strict Custom URI Protocol Handlers"]
@@ -26,20 +29,26 @@ flowchart TD
     subgraph RustBackend ["Trusted Rust Backend (Tauri IPC & Win32)"]
         IPCRouter["Tauri IPC Router (capabilities/default.json)"]
         ASTParser["Safe Expression Parser (No eval / No SceneScript)"]
-        ShellManager["Win32 Shell & Window Managers"]
+        NativeAuth["Native Key & OAuth Signer (widget_auth, widget_google, widget_appstore)"]
+        ShellManager["Win32 Shell & Local-Only Tray Pipe"]
     end
 
     Net --> MainUI
+    Net --> NativeAuth
+    BillingSites --> BillingUI
     ScenePkg --> P1
     UserFiles --> P2
     UserFiles --> P3
 
     MainUI <--> IPCRouter
     DockUI <--> IPCRouter
+    IslandUI <--> IPCRouter
     WallpaperUI <--> IPCRouter
     WidgetUI <--> IPCRouter
+    BillingUI -.->|"Rejected by invoke_handler"| IPCRouter
 
     P1 --> ASTParser
+    IPCRouter --> NativeAuth
     IPCRouter --> ShellManager
 ```
 
@@ -65,5 +74,14 @@ flowchart TD
 
 ---
 
-### 4. Least Privilege & UAC Elevation
+### 4. Window Capabilities, Billing Isolation & Native Credentials
+- **Window Capability Scoping (`capabilities/default.json`)**: Tauri IPC permissions are scoped strictly to trusted application windows (`main`, `tray-panel`, `atelier-menu`, `audio-output-panel`, `installer`, `dynamic-island`, `desktop-dock`, `dock-language`, `widget-*`, `desktop-wallpaper`).
+- **Billing WebView2 Isolation (`widget_billing.rs`)**: Any `billing-*` WebView2 window used to inspect prepaid balances is explicitly blocked in `invoke_handler` (`"Billing websites cannot invoke Atelier commands"`).
+- **Native Key & Token Handling**: Service-account JSON keys (Google Analytics / Play Store) and App Store `.p8` keys are read and signed natively in Rust (`widget_google.rs`, `widget_appstore.rs`) without exposing private keys to WebViews. Public feed redirects (`widget_auth.rs`) allow up to 5 HTTPS redirects without forwarding authorization headers.
+- **Local-Only Tray Named Pipe (`tray_bridge.rs`)**: The `\\.\pipe\atelier_systray_monitor` server configures `reject_remote_clients(true)` and bounds incoming frame/icon dimensions in `tray_protocol.rs`.
+- **Terminable Calendar Worker**: ICS/RSS parsing runs inside a dedicated Web Worker with explicit size, time, and 50,000-occurrence limits.
+
+---
+
+### 5. Least Privilege & UAC Elevation
 - Atelier does not require Administrator privileges to run. All taskbar composition styling, dock AppBar reservations, and wallpaper injections execute under standard user security tokens.
